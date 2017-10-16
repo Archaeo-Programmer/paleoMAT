@@ -12,44 +12,25 @@ output:
     keep_md: true
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include=FALSE, results='hide'}
 
 knitr::opts_chunk$set(echo = TRUE)
 
 #update.packages(ask=F, repos = "http://cran.rstudio.com")
 
-suppressMessages(library(dplyr, quietly = TRUE))
-suppressMessages(library(ggplot2, quietly = TRUE))
-suppressMessages(library(purrr, quietly = TRUE))
-suppressMessages(library(palaeoSig, quietly = TRUE))
-suppressMessages(library(rioja, quietly = TRUE))
-suppressMessages(library(analogue, quietly = TRUE))
-suppressMessages(library(neotoma, quietly = TRUE))
-#devtools::install_github("hadley/tidyverse")
-#install.packages("devtools", dependencies=T, repos = "http://cran.rstudio.com")
-suppressMessages(library(devtools, quietly = TRUE))
-suppressMessages(library(tidyverse, quietly = TRUE))
-suppressMessages(library(magrittr, quietly = TRUE))
-library(rgdal)
-library(sp)
-suppressMessages(library(raster, quietly = TRUE))
-library(leaflet)
-suppressMessages(library(foreach, quietly = TRUE))
-library(tibble)
-#devtools::install_github("bocinsky/FedData@2.0.0")
-library(FedData)
-FedData::pkg_test("sp")
-FedData::pkg_test("raster")
-FedData::pkg_test("magrittr")
-FedData::pkg_test("dplyr")
-FedData::pkg_test("analogue")
-FedData::pkg_test("parallel")
-FedData::pkg_test("Hmisc")
-library(prism)
-library(rebus)
-library(purrrlyr)
-library(tidyr)
-library(reshape2)
+if(!require("FedData")) install.packages("FedData")
+if(!require("purrr")) install.packages("purrr")
+
+packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
+              "foreach", "doParallel", # Packages for parallel processeing
+              "rgdal", "sp", "raster", "leaflet", # For spatial data
+              "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
+              "ggplot2", # For plotting
+              "rebus", "Hmisc" # For other useful functions
+              )
+
+purrr::walk(.x = packages,
+            .f = FedData::pkg_test)
 
 ```
 
@@ -91,7 +72,7 @@ NAID <-  gpids %>%
 MP_datasets <- get_dataset(datasettype='pollen surface sample', gpid = NAID) %>% 
   get_download()
 
-# Get the modern pollen datasets in North America and use lapply to apply the compile function to simply return a list of the metadata of each sample.
+# Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
 # Then, combine the rows from the datasets together so that they are now in one tibble.
 MP_metadata <- MP_datasets %>%
   map(compile_MP) %>%
