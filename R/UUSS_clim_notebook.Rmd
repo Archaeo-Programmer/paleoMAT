@@ -1,15 +1,18 @@
 ---
 title: "Upland United States Southwest Pollen-based Climate Reconstruction"
-author: 'Andrew Gillreath-Brown'
-output: 
+author: "Andrew Gillreath-Brown"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
   html_document:
-    theme: sandstone
-    toc: true
-    toc_depth: 3
-    toc_float: false
-    number_sections: true
     code_folding: show
-    keep_md: true
+    keep_md: yes
+    number_sections: yes
+    theme: sandstone
+    toc: yes
+    toc_depth: 3
+    toc_float: no
 ---
 
 ```{r setup, include=FALSE, results='hide'}
@@ -26,7 +29,8 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
               "rgdal", "sp", "raster", "leaflet", # For spatial data
               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
               "ggplot2", # For plotting
-              "rebus", "Hmisc" # For other useful functions
+              "rebus", "Hmisc", # For other useful functions
+              "rgdal"
               )
 
 purrr::walk(.x = packages,
@@ -39,8 +43,6 @@ purrr::walk(.x = packages,
 Pollen data can be used to reconstruct past climates. Pollen-based modeling is often difficult to program and interpret. Further, a variety of factors including ecological processes and topographic position can inevitably affect the data; thus, it takes time to be able to understand these models. However, improvements in these techniques, and the increasing breadth of paleoclimatic proxies available have furthered our understanding of the effects of climate-driven variability on past societies. 
 
 This program allows you to reconstruct the climate for muttiple locations across North America (when possible). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin.
-
-The first step is to understand the relationship between the two models and the climate data:
 
 # Modern Pollen Data from Neotoma
 
@@ -64,7 +66,7 @@ compile_MP <- function(x){
 gpids <- get_table(table.name='GeoPoliticalUnits')
   
 NAID <-  gpids %>%
-  dplyr::filter(GeoPoliticalName %in% c('United States'),
+  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada'),
               GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
 
@@ -120,12 +122,12 @@ map %>% addMarkers(lng = Modernlocations$long, lat = Modernlocations$lat,
 ```
 
 
-# Load Climate Data
+# Load Prism Climate Data
 
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from Bocinsky et al. (2016). 
 
 ```{r echo = FALSE, warning=FALSE}
-# Load Climate data.
+# Load Prism Climate data.
 
 # Get Modern Pollen locational data.
 names <- rownames(MP_counts)
@@ -211,6 +213,8 @@ monthly.files <- grep("/cai", monthly.files, value=TRUE)
 # Generate the raster stack.
 type.list <- raster::stack(monthly.files,native=F,quick=T)
 
+#END Bocinsky et al. 2016 adapted script.
+
 # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
 climate.points <- raster::extract(x = type.list, y = coordsPoints, df = TRUE)
 
@@ -247,6 +251,79 @@ clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>%
   
 ```
 
+# Load WorldClim Climate Data
+
+
+
+```{r echo = FALSE, warning=FALSE}
+# Load WorldClim Climate data.
+
+## Set the working directory to the directory of this file!
+setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R")
+
+# Create an output directory
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA", showWarnings = F, recursive = T)
+
+# Load all the auxillary functions
+all.functions <- lapply(list.files("./src",full.names=T),source)
+
+# Suppress scientific notation
+options(scipen=999)
+
+# Force Raster to load large rasters into memory
+raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
+
+# This MUST point at an original LT81 dataset available from the PRISM climate group (http://www.prism.oregonstate.edu).
+WC.DIR <- "/Volumes/DATA/WORLDCLIM_2.0/"
+
+# Specify a directory for extraction
+EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/"
+
+# The climate parameters to be extracted
+types <- c("ppt", "tmin","tmax")
+
+##### BEGIN RAW DATA EXTRACTION #####
+# Create data output directory if it doesn't already exist
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/EXTRACTION", showWarnings = F, recursive = T)
+
+# Get list of all file names in the prism directory.
+wc.files <- list.files(paste0(WC.DIR), recursive=T, full.names=T)
+
+wc.files <- grep("*\\.tif$", wc.files, value=TRUE)
+
+# Generate the raster stack.
+wc.list <- raster::stack(wc.files,native=F,quick=T)
+
+# Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
+WCclimate.points <- raster::extract(x = wc.list, y = coordsPoints, df = TRUE)
+
+
+WCdata_long <- melt(WCclimate.points,
+        # ID variables - all the variables to keep but not split apart.
+    id.vars="ID") %>% 
+  tidyr::separate(col = "variable", into = c("garbage1", "garbage2", "variable", "month"), sep = "_") %>% 
+  select(-starts_with("garbage"))
+
+# The precipitation averages are extracted into its own dataframe.
+WCppt_avgs <- WCdata_long %>% 
+  dplyr::filter(variable == "prec")
+
+#The temperature (min. and max) are extracted into its own dataframe, so that we can get the temp. average for each month. We also create a new column for the variable type (i.e., tmp). Finally, we select the data that we want to keep in the dataframe.
+WCtmp_avgs <- WCdata_long %>% 
+  dplyr::filter(variable == "tmin" | variable == "tmax") %>% 
+  dplyr::group_by(ID, month) %>% 
+  dplyr::summarize(value = mean(value)) %>% 
+  dplyr::mutate(variable = "tmp") %>% 
+  dplyr::select(ID, variable, month, value)
+
+# Now, combine the precipitation and temperature data back into one dataframe, and convert from long back to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. The, rename all the column names. 
+WCclim_wide <- bind_rows(WCppt_avgs, WCtmp_avgs) %>% 
+  dcast(ID ~ variable + month, value.var="value") %>% 
+  dplyr::select(-one_of("ID")) %>% 
+  set_colnames(c('pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+
+```
+
 Modern Pollen data contains `r nrow(MP_counts_noNAs)` samples, representing `r ncol(MP_counts_noNAs)` different pollen taxa. 
 
 # Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
@@ -266,6 +343,8 @@ MP_counts_noNAs <- MP_counts[-(NAindex),]
 
 
 ### Checking the calibration data set
+
+The first step is to understand the relationship between the two models and the climate data.
 
 To test the models I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. Significance for any climate variable indicates that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data. This is done for each method used for calibration. This is testing the methods to see whether the modern calibration is able to detect signals in each of the climate parameters.
 
@@ -466,9 +545,16 @@ ggplot(get_clim, aes(x = age, y = reconst)) + geom_line(aes(col = model)) +
 Save values to file.
 ```{r save_reconstruction, echo=FALSE}
 
-write.csv(reshape2::dcast(get_clim, age ~ model + climate, value.var = "reconst"), 
+write.csv(get_clim %>% 
+            dplyr::select(-one_of("err")) %>% 
+            tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+            tidyr::spread(model_climate, reconst), 
           "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/clim_reconst.csv")
-write.csv(reshape2::dcast(get_clim, age ~ model + climate, value.var = "err"), 
+
+write.csv(get_clim %>% 
+            dplyr::select(-one_of("reconst")) %>% 
+            tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+            tidyr::spread(model_climate, err), 
           "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/clim_err.csv")
 
 ```
