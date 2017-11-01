@@ -1,6 +1,8 @@
 ---
 title: "Upland United States Southwest Pollen-based Climate Reconstruction"
 author: "Andrew Gillreath-Brown"
+always_allow_html: yes
+mainfont: Calibri
 output:
   pdf_document:
     toc: yes
@@ -12,7 +14,7 @@ output:
     theme: sandstone
     toc: yes
     toc_depth: 3
-    toc_float: no
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE, results='hide'}
@@ -30,7 +32,8 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
               "ggplot2", # For plotting
               "rebus", "Hmisc", # For other useful functions
-              "rgdal"
+              "rgdal",
+              "knitr" # For rmarkdown
               )
 
 purrr::walk(.x = packages,
@@ -40,13 +43,17 @@ purrr::walk(.x = packages,
 
 # Introduction
 
-Pollen data can be used to reconstruct past climates. Pollen-based modeling is often difficult to program and interpret. Further, a variety of factors including ecological processes and topographic position can inevitably affect the data; thus, it takes time to be able to understand these models. However, improvements in these techniques, and the increasing breadth of paleoclimatic proxies available have furthered our understanding of the effects of climate-driven variability on past societies. 
+Pollen data can be used to do paleo-temperature reconstructions. However, this type of modeling can be affected by a lot of different aspects, such as paleoecological processes, chronology, and topographic effects on communities and species. 
 
-This program allows you to reconstruct the climate for muttiple locations across North America (when possible). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin.
+However, improvements in these techniques, and the increasing breadth of paleoclimatic proxies available have furthered our understanding of the effects of climate-driven variability on past societies. 
 
-# Modern Pollen Data from Neotoma
+This program allows you to reconstruct the climate for multiple locations across North America (when data are sufficient to do). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too.
 
-```{r load_files, echo = FALSE, warning=FALSE}
+# Load and cleanup modern data (i.e., modern pollen, climate, and locations).
+
+## Modern Pollen Data from Neotoma
+
+```{r load_modernPollen, echo = FALSE, message=FALSE, warning=FALSE}
 
 # Load and compile modern pollen data from the Neotoma Paleoecological database.
 
@@ -94,7 +101,37 @@ MP_metadata_counts <- bind_cols(MP_metadata,
 
 ```
 
-# Map Modern Pollen Sample Locations
+## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
+
+```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE}
+
+# Get the fossil pollen datasets for the United States and Canada, then download the sites. Next, get the chronology data for each site, so that we can identify the core tops from each site (if available). Next, use lapply to limit to the first data frame in the list of lists (each site has multiple dataframes associated with it); so we limit to the chron.control dataframe. Next, we can strip away the upper most list, which is just the site ID, but we are still left with "siteID.chron.control", as the name of the dataframe.
+NAfossil_datasets <- neotoma::get_dataset(gpid = NAID, datasettype='pollen') %>% 
+                        get_chroncontrol() %>% 
+                        lapply("[", 1) %>% 
+                        unlist(recursive=F)
+
+# Get a list of the site IDs that are identifying the chron.control dataframes. Here, we get the unique site ID, then add it to the chronology data frames. 
+NAfd_chronList <- lapply(names(NAfossil_datasets), function(x) x) %>% unlist() %>% as.data.frame()
+
+# Create a loop to go through the list of dataframes, and add a new column, which will hold the site ID. Then, bind all the dataframes together to create one large dataframe of the chron.control with all sites.
+
+# Set an initial empty dataframe and add new site ID column.
+coreTops <- NAfossil_datasets[[1]] %>% cbind(site.ID="site.ID") %>% dplyr::slice(0)
+
+for(i in 1:length(NAfossil_datasets))
+{
+  tmpFrame <- cbind(NAfossil_datasets[[i]], site.ID=as.character(NAfd_chronList[i]))
+  coreTops <- rbind(coreTops, tmpFrame)
+}
+
+coreTops <- coreTops[grep("Core top", coreTops$control.type), ]
+
+```
+
+The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, representing `r ncol(MP_counts)` different pollen taxa.
+
+## Map Modern Pollen Sample Locations
 
 To examine locations of the modern pollen data, we can use `leaflet` to plot the modern pollen locations.
 
@@ -124,9 +161,9 @@ map %>% addMarkers(lng = Modernlocations$long, lat = Modernlocations$lat,
 
 # Load Prism Climate Data
 
-The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from Bocinsky et al. (2016). 
+The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
 
-```{r echo = FALSE, warning=FALSE}
+```{r load_Prsim, echo = FALSE, warning=FALSE}
 # Load Prism Climate data.
 
 # Get Modern Pollen locational data.
@@ -223,7 +260,7 @@ data_long <- melt(climate.points,
         # ID variables - all the variables to keep but not split apart.
     id.vars="ID") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
-  select(-starts_with("garbage")) %>% 
+  dplyr::select(-starts_with("garbage")) %>% 
   separate(col = "yearmonth", into = c("year", "month"), sep = 4)
 
 # Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., and max temp.), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
@@ -253,9 +290,9 @@ clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>%
 
 # Load WorldClim Climate Data
 
+[WorldClim 2.0](http://worldclim.org/version2) has 31 years (1970-2000) of averaged climate data and here we use a resolution of 30 seconds (~1 km^2^).
 
-
-```{r echo = FALSE, warning=FALSE}
+```{r load_WordClim, echo = FALSE, warning=FALSE}
 # Load WorldClim Climate data.
 
 ## Set the working directory to the directory of this file!
@@ -302,7 +339,7 @@ WCdata_long <- melt(WCclimate.points,
         # ID variables - all the variables to keep but not split apart.
     id.vars="ID") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "garbage2", "variable", "month"), sep = "_") %>% 
-  select(-starts_with("garbage"))
+  dplyr::select(-starts_with("garbage"))
 
 # The precipitation averages are extracted into its own dataframe.
 WCppt_avgs <- WCdata_long %>% 
@@ -324,9 +361,9 @@ WCclim_wide <- bind_rows(WCppt_avgs, WCtmp_avgs) %>%
 
 ```
 
-Modern Pollen data contains `r nrow(MP_counts_noNAs)` samples, representing `r ncol(MP_counts_noNAs)` different pollen taxa. 
+## Clean up datasets to remove NAs
 
-# Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
+Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
 
 ```{r echo=FALSE, warning=FALSE}
 
@@ -341,16 +378,17 @@ MP_counts_noNAs <- MP_counts[-(NAindex),]
 
 ```
 
+Modern Pollen data contains `r nrow(MP_counts_noNAs)` samples, representing `r ncol(MP_counts_noNAs)` different pollen taxa. 
 
 ### Checking the calibration data set
 
-The first step is to understand the relationship between the two models and the climate data.
+To test the model, I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. If we do get a significance for a climate variable, then we know that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data. Here, we use a wrapper function for [randomTF](https://github.com/NeotomaDB/Workbooks/blob/master/PollenClimate/R/sig_test.R).
 
-To test the models I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. Significance for any climate variable indicates that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data. This is done for each method used for calibration. This is testing the methods to see whether the modern calibration is able to detect signals in each of the climate parameters.
+The MAT method is testing whether the modern calibration is able to detect signals in each of the climate parameters. The example here uses the entire North American Modern Pollen Database, rather than a targeted data subset.
 
 #### WA - Monotone Deshrinking
 
-```{r WA_SigTesting, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r WA_sigTesting_init, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is a wrapper for the randomTF function.
 source('sig_test.R', local = TRUE)
@@ -366,7 +404,7 @@ The columns are standard weighted average. One positive of using monotone shrink
 
 #### MAT - ten closest
 
-```{r MAT_sigtesting, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r MAT_sigTesting_init, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
 mat_sig <- run_tf(pollen = MP_counts_noNAs, 
@@ -377,83 +415,140 @@ mat_sig[[1]]
 
 ```
 
+The variance explained is very low for some variables, although the p value is very low. This highlights that in some cases you may not just want to rely on the p value. This also shows the issue with temporal autocorrelation on temperature and, to some extent also, on precipitation variables.
+
 # Reconstruction Statistics
 
 ## Reconstruction Significance
 
+Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
+
 ### Obtaining a fossil pollen record from Neotoma
 
-Then we apply a reconstruction to a real dataset. In this case we will select a record with coverage across multiple timescales. For this example, I will restrict the analysis to a record from Colorado.
+Now, we apply a reconstruction to a real dataset. The record has coverage across multiple timescales.  For this example, we will restrict the analysis to a record from Colorado.
 
-```{r, can_sites, echo=TRUE, message=FALSE, warning=FALSE}
+```{r, SW_sites, echo=TRUE, message=FALSE, warning=FALSE}
 
-# Currently using a work around to get data from specific sites by defining the states in the Neotoma GeoPolitical Units table (http://api.neotomadb.org/apdx/geopol.htm). It occasionally will not pull in the correct data. This is the same thing that was done with the modern pollen data from Neotoma above.
+# Use gpids to get the Four Corners area (or geopolitical unit) in North America.
+# Then get the datasets for the pollen data from each of the gpids.
+
+# Retrieve the GeoPolitical Units table, which has country, state, and county level names 
+# with associated IDs. 
+gpids <- get_table(table.name='GeoPoliticalUnits')
+
+# Currently using a work around to get data from specific sites by defining the states in 
+# the Neotoma GeoPolitical Units table (http://api.neotomadb.org/apdx/geopol.htm). It 
+# occasionally will not pull in the correct data. This is the same thing that was done 
+# with the modern pollen data from Neotoma above.
 SWID <-  gpids %>%
   dplyr::filter(GeoPoliticalName %in% c('Colorado', 'Utah', 'Arizona', 'New Mexico', 'Texas'),
               GeoPoliticalUnit == 'state') %$%
   GeoPoliticalID
 
+# We want to restrict to fossil pollen datasets for the Four Corners from the last 
+# 2000 years.
 UUSS_sites <- neotoma::get_dataset(ageold = 2000, 
                                   ageyoung = -50, 
                                   gpid = SWID,
                                   datasettype = 'pollen')
 
+# Here, we map the dataset IDs to the FourCorners, so that we can use this for mapping 
+# below.
 datasets <- UUSS_sites %>% map_int(function(x) x$dataset.meta$dataset.id)
 
 ```
 
-This returns `r length(UUSS_sites)` sites. We can also plot this using 'leaflet'.
+This returns `r length(FourCorners)` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
 
 ```{r, echo = TRUE, warning=TRUE, echo=FALSE}
 
 library(leaflet)
 
+# Here, we set up how we want our map to look like.
 map <- leaflet(width = 800, height = 800) %>% 
   addTiles %>% 
   setView(lng = -109.05,
           lat = 31.68,
           zoom = 4)
 
+# Now, we need to get the site data for the Four Corners. This is another step from 
+# Neotoma.
 locations <- UUSS_sites %>% get_site
 
-map %>% addMarkers(lng = locations$long, lat = locations$lat, 
-                   popup = paste0('<b>', as.character(locations$site.name), '</b><br>',
-                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', datasets, '>Neotoma Database</a>'))
+# If you wanted a simple map, then you would just need lat and long. However, I have made 
+# the addition, so that you can click on each site and get the site name and can also be 
+# redirected to Neotoma webpage to get more information about each site.
+map %>% addMarkers(lng = locations$long, 
+                   lat = locations$lat, 
+                   popup = paste0('<b>', 
+                   as.character(locations$site.name), 
+                   '</b><br>',
+                   
+                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', 
+                   datasets, 
+                   '>Neotoma Database</a>'))
+
+# For plotting all modern pollen locations.
+# Modernmap <- leaflet(width = 800, height = 800) %>%
+#   addTiles %>%
+#   setView(lng = -109.05,
+#           lat = 34.28,
+#           zoom = 2)
+# Modernmap %>% addMarkers(lng = Location$Longitude, lat = Location$Latitude)
 
 
 ```
 
-Data record `9` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans  7,900 years, which provides some information for environmental change at the site.
+Data record `12` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans  7,900 years, which provides some information for environmental change at the site.
 
-```{r}
+```{r echo = TRUE}
 
-EldoraFen <- get_download(UUSS_sites[[9]])
+# Another step from Neotoma, we need to download the data for the site.
+EldoraFen <- get_download(FourCorners[[12]])
 
-analogue::Stratiplot(EldoraFen)
+# Here we can also use Stratiplot to look at the pollen profile and change over time for 
+# the Eldora Fen site.
+analogue::Stratiplot(EldoraFen$`790`$sample.meta$age ~ 
+                       Juniperus + 
+                       `Pinus undiff.` + 
+                       Salix + 
+                       Quercus,
+                   data = (as.data.frame(EldoraFen$`790`$counts)), 
+                   xlab = "Depth (cm)", 
+                   ylab = "Age")
 
 ```
 
-Here we will get data for the Eldora Fen site to start the reconstruction.
+Using the complete North American dataset, we focus on a reconstruction of summer temperature for this record (`tjul`).  We also need to clean up the data sets too:
 
 ```{r, warning=FALSE, echo=FALSE, results='hide'}
 
-fossil_data <-  EldoraFen %>% 
-  compile_taxa(list.name = "WhitmoreFull") %>% 
+# Another step in Neotoma is to compile the taxa according to the Whitmore compilation function. This allows to group the taxa in a particular way.
+fossil_data <-  EldoraFen %>%
+  compile_taxa(list.name = "WhitmoreFull") %>%
+  
   compile_downloads()
 
 # Prediction requires the addition of all Pollen taxa:
 
-fossil_data <- fossil_data %>% bind_rows(as.data.frame(MP_counts_noNAs[1,]))
+# First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
+fossil_data <- fossil_data %>% 
+  bind_rows(as.data.frame(Pollen[1,]))
+
+#Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
 fossil_data <- fossil_data[-nrow(fossil_data),]
+
+#Third, change any NA values to zero.
 fossil_data[is.na(fossil_data)] <- 0
 
-fossil_data <- fossil_data[,colnames(MP_counts_noNAs)]
+#Last, re-order the column names to that of the North American Pollen Dataset.
+fossil_data <- fossil_data[,colnames(Pollen)]
 
 ```
 
 #### WA - Monotone Deshrinking
 
-```{r WA_SigTesting2, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r WA_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is an altered wrapper for the randomTF function.
 source('sig_test2.R', local = TRUE)
@@ -470,7 +565,7 @@ wa_reconst[[1]]
 
 #### MAT - ten closest
 
-```{r MAT_sigtesting_fPine, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r MAT_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
        climate = Clim_noNAs[,13:24], 
@@ -480,9 +575,11 @@ mat_reconst[[1]]
 
 ```
 
+Again, no significance for the model. This indicates that we are just not able to see a signal within the data, but this is probably due to the calibration dataset being too broad.
 
 ## Reconstruction
 
+Once we have validated the methods, we re-run the analyses using the two methods, MAT and WA.
 
 ### Model Summary
 
@@ -523,20 +620,27 @@ if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUT
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-get_clim <-  data.frame(age = 1:nrow(wa_reconst$fit),
-                        reconst = c(wa_reconst$fit[,1],
-                                     mat_reconst$fit[,1]),
-                         err     = c(wa_reconst$SEP.boot[,1],
-                                     mat_reconst$SEP[,1]),
-                         model   = rep(c("WA", "MAT"), 
+# Here, the data is put into one data frame to allow for ease of plotting.
+get_clim <-  data.frame(age = EldoraFen$`790`$sample.meta$age,
+                        reconst = mat_reconst$fit[,1],
+                         err     = mat_reconst$SEP[,1],
+                         model   = rep("MAT", 
                                        each = nrow(fossil_data)),
-                         climate = 'tjan')
+                         climate = 'tjul')
 
-ggplot(get_clim, aes(x = age, y = reconst)) + geom_line(aes(col = model)) +
-  geom_ribbon(aes(ymin = reconst - err, ymax = reconst + err, group = model), alpha = 0.2) +
-  facet_wrap(~climate, scales = 'free', ncol = 2) +
-  xlab("Age - kyr BP") +
-  ylab("Reconstructed Parameter")
+# Now, we use ggplot to plot the July temperature reconstruction.
+ggplot(get_clim, aes(x = age, y = reconst)) + 
+  geom_line(aes(col = model)) +
+  geom_ribbon(aes(ymin = reconst - err, 
+                  ymax = reconst + err, 
+                  group = model), 
+              alpha = 0.2) +
+  
+    facet_wrap(~climate, scales = 'free', ncol = 2) +
+  
+    xlab("Age - kyr BP") +
+  
+    ylab("Reconstructed Parameter")
 
 ```
 
