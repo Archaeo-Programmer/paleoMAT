@@ -1,12 +1,8 @@
 ---
 title: "Upland United States Southwest Pollen-based Climate Reconstruction"
 author: "Andrew Gillreath-Brown"
-always_allow_html: yes
 mainfont: Calibri
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '3'
   html_document:
     code_folding: show
     keep_md: yes
@@ -14,7 +10,11 @@ output:
     theme: sandstone
     toc: yes
     toc_depth: 3
-    toc_float: true
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+always_allow_html: yes
 ---
 
 ```{r setup, include=FALSE, results='hide'}
@@ -49,11 +49,11 @@ However, improvements in these techniques, and the increasing breadth of paleocl
 
 This program allows you to reconstruct the climate for multiple locations across North America (when data are sufficient to do). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too.
 
-# Load and cleanup modern data (i.e., modern pollen, climate, and locations).
+# Load and cleanup modern data (i.e., pollen, climate, and locations)
 
 ## Modern Pollen Data from Neotoma
 
-```{r load_modernPollen, echo = FALSE, message=FALSE, warning=FALSE}
+```{r load_modernPollen, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
 
 # Load and compile modern pollen data from the Neotoma Paleoecological database.
 
@@ -99,6 +99,7 @@ MP_counts <- MP_datasets %>%
 MP_metadata_counts <- bind_cols(MP_metadata,
                                             MP_counts)
 
+
 ```
 
 ## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
@@ -106,26 +107,82 @@ MP_metadata_counts <- bind_cols(MP_metadata,
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE}
 
 # Get the fossil pollen datasets for the United States and Canada, then download the sites. Next, get the chronology data for each site, so that we can identify the core tops from each site (if available). Next, use lapply to limit to the first data frame in the list of lists (each site has multiple dataframes associated with it); so we limit to the chron.control dataframe. Next, we can strip away the upper most list, which is just the site ID, but we are still left with "siteID.chron.control", as the name of the dataframe.
-NAfossil_datasets <- neotoma::get_dataset(gpid = NAID, datasettype='pollen') %>% 
-                        get_chroncontrol() %>% 
-                        lapply("[", 1) %>% 
-                        unlist(recursive=F)
+NAfossil_datasets <- neotoma::get_dataset(ageold = 41000, 
+                                  ageyoung = -50, 
+                                  gpid = NAID,
+                                  datasettype = 'pollen')
 
-# Get a list of the site IDs that are identifying the chron.control dataframes. Here, we get the unique site ID, then add it to the chronology data frames. 
-NAfd_chronList <- lapply(names(NAfossil_datasets), function(x) x) %>% unlist() %>% as.data.frame()
+NAfossil.chron <- NAfossil_datasets %>% 
+                  get_chroncontrol() %>% 
+                  lapply("[", 1) %>% 
+                  unlist(recursive=F)
+
+# Get a list of the site IDs that are identifying the chron.control dataframes. Here, we get the unique site ID and turn it into a list. 
+NAfd_chronList <- lapply(names(NAfossil.chron), function(x) x) %>%
+  unlist()
+
+# Next, we remove the string ".chron.control" that is part of each dataframe name, then turn it into a dataframe.
+NAfd_chronList <- sapply(strsplit(NAfd_chronList, split='.', fixed=TRUE), function(x) (x[1])) %>% 
+  as.data.frame() %>% 
+  set_colnames("site.ID")
+
 
 # Create a loop to go through the list of dataframes, and add a new column, which will hold the site ID. Then, bind all the dataframes together to create one large dataframe of the chron.control with all sites.
 
 # Set an initial empty dataframe and add new site ID column.
-coreTops <- NAfossil_datasets[[1]] %>% cbind(site.ID="site.ID") %>% dplyr::slice(0)
+coreTops <- NAfossil.chron[[1]] %>% cbind(site.ID="site.ID") %>% dplyr::slice(0)
 
-for(i in 1:length(NAfossil_datasets))
+for(i in 1:length(NAfossil.chron))
 {
-  tmpFrame <- cbind(NAfossil_datasets[[i]], site.ID=as.character(NAfd_chronList[i]))
+  tmpFrame <- cbind(NAfossil.chron[[i]], site.ID=as.character(NAfd_chronList[i,1]))
   coreTops <- rbind(coreTops, tmpFrame)
 }
 
+# Get only rows that have "Core top" in the description, since these will be added to our modern pollen dataset.
 coreTops <- coreTops[grep("Core top", coreTops$control.type), ]
+
+# Create a list of site IDs in order to download only those fossil pollen sites.
+coreTopsites <- as.vector(coreTops$site.ID)
+
+# Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
+NAfossil_download <- NAfossil_datasets %>% 
+  get_download() %>%
+  compile_taxa(list.name = "WhitmoreFull") %>%
+  compile_downloads()
+
+# Use site IDs from coreTopsites to get only those fossil pollen sites from the downloaded and compiled fossil datasets (still in one dataframe), which is the variable, NAfossil_download (this was all of the fossil pollen locations in the United States and Canada).
+NAfossil_CT <- NAfossil_download[NAfossil_download$.id %in% coreTopsites,]
+
+# Next, need to identify the row at each site that has the core top. Then, extract that row of data for each site.
+NACT <- subset(coreTops, select = c("site.ID", "depth", "age"))
+colnames(NACT)[1] <- ".id"
+NACT2 <- merge(NAfossil_CT, NACT)
+
+# Drop columns that are not in the modern pollen data above.
+NACT2 <- subset(NACT2, select = - c(age, age.young, age.old, date.type, dataset))
+colnames(NACT2)[1] <- "dataset"
+
+# Switch site name and depth columns. Then, need to rename those two headings.
+NACT2[ , c(2,3)] <- NACT2[ , c(3,2)]
+colnames(NACT2)[c(2, 3)] <- c("site.name", "depth")
+
+# Change dataset column data type from character to integer.
+NACT2$dataset <- as.integer(NACT2$dataset)
+
+# First, additional pollen taxa from the modern surface samples should be added, since we need to have the same column headings before adding the core tops data to the rest of the modern pollen data.
+NACT3 <- NACT2 %>% 
+  bind_rows(as.data.frame(MP_metadata_counts[1,]))
+
+#Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
+NACT3 <- NACT3[-nrow(NACT3),]
+
+#Third, change any NA values to zero.
+NACT3[is.na(NACT3)] <- 0
+
+#Last, re-order the column names to that of the modern pollen data.
+NACT3 <- NACT3[,colnames(MP_metadata_counts)]
+
+MP_metadata_counts_CTs <- rbind(MP_metadata_counts, NACT3)
 
 ```
 
@@ -148,6 +205,14 @@ Modernlocations <- MP_datasets %>% get_site
 map %>% addMarkers(lng = Modernlocations$long, lat = Modernlocations$lat, 
                    popup = paste0('<b>', as.character(Modernlocations$site.name), '</b><br>',
                                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MP_datasets, '>Neotoma Database</a>'))
+
+# Map Core top locations.
+map %>% addMarkers(lng = NACT3$long, lat = NACT3$lat, 
+                   popup = paste0('<b>', as.character(NACT3$site.name), '</b><br>'))
+
+map %>% addMarkers(lng = NAfossil_CT$long, lat = NAfossil_CT$lat, 
+                   popup = paste0('<b>', as.character(NAfossil_CT$site.name), '</b><br>'))
+                                  
 
 # #Find locations that have missing climate data
 # missingLocations <- d[d$ID %in% missing2 ,]
@@ -175,12 +240,12 @@ lats <- unlist(lapply(all,FUN=function(x){MP_metadata_counts$lat}))
 
 # Bind longitude and latitude and convert to SpatialPoints.
 coords <- cbind(LONGITUDE=lons,LATITUDE=lats)
-coordsPoints <- SpatialPoints(coords,proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+coordsPoints <- SpatialPoints(coords, proj4string=CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
 # Create a SpatialPointsDataFrame of the samples and clean up locations.
-points <- SpatialPointsDataFrame(coords,data.frame(NAME=names,MP_counts), 
-                                 proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
-locations <- points[!duplicated(coordinates(points)),]
+# points <- SpatialPointsDataFrame(coords,data.frame(NAME=names,MP_counts), 
+#                                  proj4string=CRS("+proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs"))
+# locations <- points[!duplicated(coordinates(points)),]
 
 
 ### Script for PRISM climate extraction adapted from R. Kyle Bocinsky, Johnathan Rush, Keith W. Kintigh, and Timothy A. Kohler, 2016. Exploration and Exploitation in the Macrohistory of the Prehispanic Pueblo Southwest. Science Advances.
@@ -188,10 +253,10 @@ locations <- points[!duplicated(coordinates(points)),]
 ## This script extracts data from the ~800 m monthly PRISM dataset for the modern pollen locations. It first defines the extent, chops that extent into 800 m (30 arc-second) PRISM cells, and subdivides the extent into 14,440 (120x120) cell chunks for computation. (the chunks are 1x1 degree). These chunks are saved for later computation.
 
 ## Set the working directory to the directory of this file!
-setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R")
+setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/vignettes")
 
 # Create an output directory
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA", showWarnings = F, recursive = T)
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data", showWarnings = F, recursive = T)
 
 # Load all the auxillary functions
 all.functions <- lapply(list.files("./src",full.names=T),source)
@@ -206,22 +271,22 @@ raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
 PRISM800.DIR <- "/Volumes/DATA/PRISM/LT81_800M/"
 
 # Specify a directory for extraction
-EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/"
+EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/"
 
 # The climate parameters to be extracted
 types <- c("ppt", "tmin","tmax")
 
 ##### BEGIN RAW DATA EXTRACTION #####
 # Create data output directory if it doesn't already exist
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/EXTRACTION", showWarnings = F, recursive = T)
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/extraction", showWarnings = F, recursive = T)
 
 # (Down)Load the states shapefile form the National Atlas
-if(!dir.exists("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA/statep010")){
-  dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA/", showWarnings = F, recursive = T)
-  download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz", destfile="/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA/statesp010g.shp_nt00938.tar.gz", mode='wb')
-  untar("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA/statesp010g.shp_nt00938.tar.gz", exdir="/Volumes/DATA/NATIONAL_ATLAS/statesp010g")
+if(!dir.exists("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statep010")){
+  dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/", showWarnings = F, recursive = T)
+  download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz", destfile="/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", mode='wb')
+  untar("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", exdir="/Volumes/DATA/NATIONAL_ATLAS/statesp010g")
 }
-states <- readOGR("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA/statep010", layer='statep010')
+states <- readOGR("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statep010", layer='statep010')
 
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
 states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
@@ -296,10 +361,10 @@ clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>%
 # Load WorldClim Climate data.
 
 ## Set the working directory to the directory of this file!
-setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R")
+setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/vignettes")
 
 # Create an output directory
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/DATA", showWarnings = F, recursive = T)
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data", showWarnings = F, recursive = T)
 
 # Load all the auxillary functions
 all.functions <- lapply(list.files("./src",full.names=T),source)
@@ -314,14 +379,14 @@ raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
 WC.DIR <- "/Volumes/DATA/WORLDCLIM_2.0/"
 
 # Specify a directory for extraction
-EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/"
+EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data"
 
 # The climate parameters to be extracted
 types <- c("ppt", "tmin","tmax")
 
 ##### BEGIN RAW DATA EXTRACTION #####
 # Create data output directory if it doesn't already exist
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/EXTRACTION", showWarnings = F, recursive = T)
+dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/extraction", showWarnings = F, recursive = T)
 
 # Get list of all file names in the prism directory.
 wc.files <- list.files(paste0(WC.DIR), recursive=T, full.names=T)
@@ -388,10 +453,10 @@ The MAT method is testing whether the modern calibration is able to detect signa
 
 #### WA - Monotone Deshrinking
 
-```{r WA_sigTesting_init, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r WA_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
 # This is a wrapper for the randomTF function.
-source('sig_test.R', local = TRUE)
+source('../R/sig_test.R')
 
 wa_sig <- run_tf(pollen = MP_counts_noNAs, 
                  climate = Clim_noNAs[,13:24], 
@@ -404,7 +469,7 @@ The columns are standard weighted average. One positive of using monotone shrink
 
 #### MAT - ten closest
 
-```{r MAT_sigTesting_init, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
 mat_sig <- run_tf(pollen = MP_counts_noNAs, 
@@ -458,7 +523,7 @@ datasets <- UUSS_sites %>% map_int(function(x) x$dataset.meta$dataset.id)
 
 ```
 
-This returns `r length(FourCorners)` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
+This returns `r length(UUSS_sites)` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
 
 ```{r, echo = TRUE, warning=TRUE, echo=FALSE}
 
@@ -499,12 +564,12 @@ map %>% addMarkers(lng = locations$long,
 
 ```
 
-Data record `12` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans  7,900 years, which provides some information for environmental change at the site.
+Data record `12` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans 7,900 years, which provides some information for environmental change at the site.
 
 ```{r echo = TRUE}
 
 # Another step from Neotoma, we need to download the data for the site.
-EldoraFen <- get_download(FourCorners[[12]])
+EldoraFen <- get_download(FourCorners[[9]])
 
 # Here we can also use Stratiplot to look at the pollen profile and change over time for 
 # the Eldora Fen site.
@@ -514,7 +579,7 @@ analogue::Stratiplot(EldoraFen$`790`$sample.meta$age ~
                        Salix + 
                        Quercus,
                    data = (as.data.frame(EldoraFen$`790`$counts)), 
-                   xlab = "Depth (cm)", 
+                   xlab = "Counts", 
                    ylab = "Age")
 
 ```
@@ -533,7 +598,7 @@ fossil_data <-  EldoraFen %>%
 
 # First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
 fossil_data <- fossil_data %>% 
-  bind_rows(as.data.frame(Pollen[1,]))
+  bind_rows(as.data.frame(MP_counts_noNAs[1,]))
 
 #Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
 fossil_data <- fossil_data[-nrow(fossil_data),]
@@ -542,7 +607,7 @@ fossil_data <- fossil_data[-nrow(fossil_data),]
 fossil_data[is.na(fossil_data)] <- 0
 
 #Last, re-order the column names to that of the North American Pollen Dataset.
-fossil_data <- fossil_data[,colnames(Pollen)]
+fossil_data <- fossil_data[,colnames(MP_counts_noNAs)]
 
 ```
 
@@ -551,7 +616,7 @@ fossil_data <- fossil_data[,colnames(Pollen)]
 ```{r WA_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is an altered wrapper for the randomTF function.
-source('sig_test2.R', local = TRUE)
+source('../R/sig_test2.R')
 
 wa_reconst <- run_tf2(pollen = MP_counts_noNAs, fossil = fossil_data, 
        climate = Clim_noNAs[,13:24],
@@ -587,8 +652,8 @@ Once we have validated the methods, we re-run the analyses using the two methods
 
 # This often takes a long time, so using a work around to make it a little quicker.
 
-if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT")) {
-  mat_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/mat_reconst.RDS')
+if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
+  mat_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/mat_reconst.RDS')
 } else {
   mat_reconst <- predict(rioja::MAT(y = MP_counts_noNAs, 
                                     x = Clim_noNAs[,1], 
@@ -597,7 +662,7 @@ if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OU
                                     lean = FALSE),
                          newdata = fossil_data, 
                          sse = TRUE)
-  saveRDS(mat_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/mat_reconst.RDS')
+  saveRDS(mat_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/mat_reconst.RDS')
 }
 
 
@@ -607,13 +672,13 @@ MP_counts_noNAs2 <- MP_counts_noNAs[,-(dd)]
 fossil_data2 <- fossil_data[,-(dd)]
 
 
-if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT")) {
-  wa_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/wa_reconst.RDS')
+if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
+  wa_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
 } else {
   wa_reconst <-  predict(rioja::WA(y = tran(MP_counts_noNAs2, method = 'proportion'), 
                                    x = Clim_noNAs[1,], lean = FALSE),
                          newdata = fossil_data2, sse = TRUE)
-  saveRDS(wa_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/wa_reconst.RDS')
+  saveRDS(wa_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
 }
 
 ```
@@ -653,12 +718,12 @@ write.csv(get_clim %>%
             dplyr::select(-one_of("err")) %>% 
             tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
             tidyr::spread(model_climate, reconst), 
-          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/clim_reconst.csv")
+          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/clim_reconst.csv")
 
 write.csv(get_clim %>% 
             dplyr::select(-one_of("reconst")) %>% 
             tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
             tidyr::spread(model_climate, err), 
-          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/R/OUTPUT/clim_err.csv")
+          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/clim_err.csv")
 
 ```
