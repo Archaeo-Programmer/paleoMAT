@@ -1,10 +1,4 @@
 base
-methods
-datasets
-utils
-grDevices
-graphics
-stats
 sp
 FedData
 purrr
@@ -19,7 +13,6 @@ purrrlyr
 reshape2
 foreach
 iterators
-parallel
 doParallel
 rgdal
 raster
