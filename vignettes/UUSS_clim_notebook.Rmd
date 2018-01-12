@@ -801,8 +801,8 @@ for (i in 1:length(fossil_sites)) {
 # mat_reconst[[1]]
 
 for (i in 1:length(fossil_sites)) {
-  nam <- paste("mat_reconst_", fossil_sites[[1]], sep = "")
-  dat <- run_tf2(pollen = MP_counts_noNAs, fossil = fossil_3060, 
+  nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
+  dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
        climate = Clim_noNAs[,13:24],
        func = mat, col = 2, k = 10)
   assign(nam, dat)
