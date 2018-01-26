@@ -15,6 +15,8 @@ output:
     toc: yes
     toc_depth: '3'
 always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE, results='hide'}
@@ -94,56 +96,77 @@ colnames(MP_metadata)[1] <- 'site.id'
 MP_pubDate <- MP_datasets %>% 
   get_publication()
 
-# Create an empty data frame to store the output into a dataframe, which will be built iteratively.
-Pub_Year <- data.frame(site.id=numeric(),
-                      pub_year=numeric())
-
-# Create another empty data frame that will temporarily store the data from each iteration, which will then be bound to th Pub_Year dataframe.
-tmpFrame <- data.frame(site.id=numeric(),
-                      pub_year=numeric())
+# # Create an empty data frame to store the output into a dataframe, which will be built iteratively.
+# Pub_Year <- data.frame(site.id = integer(),
+#                       pub_year = integer())
+# 
+# # Create another empty data frame that will temporarily store the data from each iteration, which will then be bound to th Pub_Year dataframe.
+# tmpFrame <- data.frame(site.id = integer(),
+#                       pub_year = integer())
 
 # A nested for loop that will loop through each pollen site, then 'dat' will store each publication record for a given site (might be zero or 7 or higher). The double brackets are used because the publications records for a site are in a list of a list. 'site.id' is used to store the name of the site, which is the name of the list for each site (hence only single brackets). The nested for loop will go through each publication record in a site before going back to the 'i' loop for another site. So, it goes through the length of publication records for a site (length of dat). The year is stored, which double brackets are required to get through another list and get to the data frames in the list. The id and year are stored in the tmpFrame, which is then bound to the Pub_Year through each iteration of the loop.
-for (i in 1:length(MP_pubDate)) {
-  dat <- MP_pubDate[[i]]
-  site.id <- names(MP_pubDate[i])
-  for (j in 1:length(dat)) {
-    pub_year <- dat[[j]]$meta$year
-    tmpFrame <- as.data.frame(cbind(site.id = site.id, pub_year = pub_year))
-    Pub_Year <- as.data.frame(rbind(Pub_Year, tmpFrame))
-  }
-}
+# for (i in 1:length(MP_pubDate)) {
+#   dat <- MP_pubDate[[i]]
+#   site.id <- names(MP_pubDate[i])
+#   for (j in 1:length(dat)) {
+#     pub_year <- dat[[j]]$meta$year
+#     tmpFrame <- as.data.frame(cbind(site.id = site.id, pub_year = pub_year))
+#     Pub_Year <- as.data.frame(rbind(Pub_Year, tmpFrame))
+#   }
+# }
+
+Pub_Year <- MP_pubDate %>%
+  purrr::map_dfr(.id = site.id,
+                 .f = function(x){
+                   tibble::tibble(pub_year = x %>%
+                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+                                    as.integer()) # coerce to integer
+                 })
 
 # Create an index of what the type (factor) is currently, so that it can be replaced by numeric.
-indx <- sapply(Pub_Year, is.factor)
+# indx <- sapply(Pub_Year, is.factor)
 
 # Replace the indx for Pub_Year. Use lapply to apply the function of changing the factor and character to a numeric. This will allow to use dplyr::slice below for taking the minimum publication year.
-Pub_Year[indx] <- as.data.frame(lapply(Pub_Year[indx], function(x) as.numeric(as.character(x))))
+# Pub_Year[indx] <- as.data.frame(lapply(Pub_Year[indx], function(x) as.numeric(as.character(x))))
 
 # Replace all NA values with 1990. This is so the climate can be calculated for 1961:1990 (the 30 years prior to the publication date).
-Pub_Year[is.na(Pub_Year)] <- 1990
+# Pub_Year[is.na(Pub_Year)] <- 1990
+Pub_Year %<>%
+  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+                                  1990,
+                                  pub_year),
+                site.id = as.integer(site.id))
 
-# Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
+# Group each id together (since sites can have multiple publication years), then only keep the minimum (earliest) publication year for each site (id).
 MP_pubDate <- Pub_Year %>% 
-    group_by(site.id) %>% 
-    slice(which.min(pub_year)) %>% 
-    as_tibble()
+    dplyr::group_by(site.id) %>% 
+    dplyr::slice(which.min(pub_year))# %>% 
+    # as_tibble()
 
 # Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
+# KB: added the site ids
 MP_counts <- MP_datasets %>%
   map("counts") %>%
   map(as_tibble) %>%
   bind_rows() %>% 
   compile_taxa(list.name = 'WhitmoreFull') %>% 
-  as_tibble()
+  as_tibble() %>%
+  dplyr::mutate(site.id = MP_datasets %>% # Add the site ids
+                  names() %>%
+                  as.integer())
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
 # First, merge the metadata with the publication year, using the site.id to match, just to double check.
-MP_metadata_pub <- merge(MP_metadata, MP_pubDate, by  = "site.id")
+MP_metadata_pub <- dplyr::left_join(MP_metadata,
+                                    MP_pubDate,
+                                    by  = "site.id")
 
 # Then, bind the metadata_pub to the modern pollen counts.
-MP_metadata_counts <- bind_cols(MP_metadata_pub,
-                                MP_counts)
+# KB: Changed to left_join, which is safer in case row order changes
+MP_metadata_counts <- dplyr::left_join(MP_metadata_pub,
+                                MP_counts,
+                                by  = "site.id")
 
 ```
 
