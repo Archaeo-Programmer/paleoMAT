@@ -132,7 +132,7 @@ MP_counts <- MP_datasets %>%
 
 # First, merge the metadata with the publication year, using the site.id to match, just to double check.
 MP_metadata_pub <- dplyr::left_join(MP_metadata,
-                                    MP_pubDate,
+                                    MP_pub_date,
                                     by  = "site.id")
 
 # Then, bind the metadata_pub to the modern pollen counts.
