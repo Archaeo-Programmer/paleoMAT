@@ -36,7 +36,7 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
               "rebus", "Hmisc", # For other useful functions
               "rgdal",
               "knitr" # For rmarkdown
-              )
+)
 
 purrr::walk(.x = packages,
             .f = FedData::pkg_test)
@@ -72,16 +72,29 @@ compile_MP <- function(x){
 # Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
 
 # Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs. 
-gpids <- get_table(table.name='GeoPoliticalUnits')
-  
+gpids <- neotoma::get_table(table.name='GeoPoliticalUnits')
+
 NAID <-  gpids %>%
   dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada'),
-              GeoPoliticalUnit == 'country') %$%
+                GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
 
-# Get the modern pollen datasets for North America, download the data, and compile the taxa list using Williams and Shuman (2008) (i.e., 'WS64'), then compile the downloads.
-MP_datasets <- get_dataset(datasettype='pollen surface sample', gpid = NAID) %>% 
-  get_download()
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/MP_datasets.Rds")){
+  neotoma::get_dataset(datasettype='pollen surface sample', gpid = NAID) %>% 
+    neotoma::get_download() %>%
+    readr::write_rds("./data/raw_data/MP_datasets.Rds")
+}
+MP_datasets <- readr::read_rds("./data/raw_data/MP_datasets.Rds")
+
+# Save this so that it doesn't run again!
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/MP_pubs.Rds")){
+  MP_datasets %>% 
+    get_publication() %>%
+    readr::write_rds("./data/raw_data/MP_pubs.Rds")
+}
+MP_pubs <- readr::read_rds("./data/raw_data/MP_pubs.Rds")
 
 # Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
 # Then, combine the rows from the datasets together so that they are now in one tibble.
@@ -90,59 +103,19 @@ MP_metadata <- MP_datasets %>%
   bind_rows() %>%
   dplyr::rename(site.id = dataset)
 
-# Rename first column name (dataset) to site.id.
-# colnames(MP_metadata)[1] <- 'site.id'
-
-# Get publication data (if available) of the modern pollen datasets. If a date is not available, then a date of 1990 will be assigned.
-MP_pubDate <- MP_datasets %>% 
-  get_publication()
-
-# # Create an empty data frame to store the output into a dataframe, which will be built iteratively.
-# Pub_Year <- data.frame(site.id = integer(),
-#                       pub_year = integer())
-# 
-# # Create another empty data frame that will temporarily store the data from each iteration, which will then be bound to th Pub_Year dataframe.
-# tmpFrame <- data.frame(site.id = integer(),
-#                       pub_year = integer())
-
-# A nested for loop that will loop through each pollen site, then 'dat' will store each publication record for a given site (might be zero or 7 or higher). The double brackets are used because the publications records for a site are in a list of a list. 'site.id' is used to store the name of the site, which is the name of the list for each site (hence only single brackets). The nested for loop will go through each publication record in a site before going back to the 'i' loop for another site. So, it goes through the length of publication records for a site (length of dat). The year is stored, which double brackets are required to get through another list and get to the data frames in the list. The id and year are stored in the tmpFrame, which is then bound to the Pub_Year through each iteration of the loop.
-# for (i in 1:length(MP_pubDate)) {
-#   dat <- MP_pubDate[[i]]
-#   site.id <- names(MP_pubDate[i])
-#   for (j in 1:length(dat)) {
-#     pub_year <- dat[[j]]$meta$year
-#     tmpFrame <- as.data.frame(cbind(site.id = site.id, pub_year = pub_year))
-#     Pub_Year <- as.data.frame(rbind(Pub_Year, tmpFrame))
-#   }
-# }
-
-Pub_Year <- MP_pubDate %>%
+MP_pub_date <- MP_pubs %>%
   purrr::map_dfr(.id = site.id,
                  .f = function(x){
                    tibble::tibble(pub_year = x %>%
                                     purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
                                     as.integer()) # coerce to integer
-                 })
-
-# Create an index of what the type (factor) is currently, so that it can be replaced by numeric.
-# indx <- sapply(Pub_Year, is.factor)
-
-# Replace the indx for Pub_Year. Use lapply to apply the function of changing the factor and character to a numeric. This will allow to use dplyr::slice below for taking the minimum publication year.
-# Pub_Year[indx] <- as.data.frame(lapply(Pub_Year[indx], function(x) as.numeric(as.character(x))))
-
-# Replace all NA values with 1990. This is so the climate can be calculated for 1961:1990 (the 30 years prior to the publication date).
-# Pub_Year[is.na(Pub_Year)] <- 1990
-Pub_Year %<>%
+                 }) %>%
   dplyr::mutate(pub_year = ifelse(is.na(pub_year),
                                   1990,
                                   pub_year),
-                site.id = as.integer(site.id))
-
-# Group each id together (since sites can have multiple publication years), then only keep the minimum (earliest) publication year for each site (id).
-MP_pubDate <- Pub_Year %>% 
-    dplyr::group_by(site.id) %>% 
-    dplyr::slice(which.min(pub_year))# %>% 
-    # as_tibble()
+                site.id = as.integer(site.id)) %>% 
+  dplyr::group_by(site.id) %>% 
+  dplyr::slice(which.min(pub_year))
 
 # Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
 # KB: added the site ids
@@ -150,8 +123,8 @@ MP_counts <- MP_datasets %>%
   purrr::map("counts") %>%
   purrr::map(as_tibble) %>%
   purrr::map(compile_taxa,
-      list.name = "WhitmoreFull") %>%
-    purrr::map(as_tibble) %>%
+             list.name = "WhitmoreFull") %>%
+  purrr::map(as_tibble) %>%
   bind_rows(.id = site.id) %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
@@ -165,8 +138,8 @@ MP_metadata_pub <- dplyr::left_join(MP_metadata,
 # Then, bind the metadata_pub to the modern pollen counts.
 # KB: Changed to left_join, which is safer in case row order changes
 MP_metadata_counts <- dplyr::left_join(MP_metadata_pub,
-                                MP_counts,
-                                by  = "site.id") %>%
+                                       MP_counts,
+                                       by  = "site.id") %>%
   dplyr::arrange(site.id)
 
 ```
@@ -209,10 +182,10 @@ NAfossil_chron <- readr::read_rds("./data/raw_data/NAfossil_chron.Rds")
 
 # KB: I think this line does almost everything you were trying to do
 coreTops <- NAfossil_chron %>% 
-   purrr::map_dfr(.id = site.id,
-                  "chron.control") %>%
+  purrr::map_dfr(.id = site.id,
+                 "chron.control") %>%
   tibble::as_tibble() %>%
-    dplyr::mutate(site.id = site.id %>%
+  dplyr::mutate(site.id = site.id %>%
                   as.integer()) %>%
   dplyr::filter(control.type == "Core top")
 
@@ -223,7 +196,7 @@ CT_metadata <- NAfossil_datasets %>%
                       unique() %>% 
                       as.character()) %>%
   map(compile_MP) %>%
-    purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
+  purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
   bind_rows() %>%
   dplyr::rename(site.id = dataset)
 
@@ -305,9 +278,9 @@ CTPub_Year %<>%
 
 # Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
 CT_pubDate <- CTPub_Year %>% 
-    group_by(site.id) %>% 
-    slice(which.min(pub_year))# %>% 
-    # as_tibble()
+  group_by(site.id) %>% 
+  slice(which.min(pub_year))# %>% 
+# as_tibble()
 
 # Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
 CT_counts <- NAfossil_datasets %>%
@@ -318,8 +291,8 @@ CT_counts <- NAfossil_datasets %>%
   purrr::map(as_tibble) %>%
   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT counts)
   purrr::map(compile_taxa,
-      list.name = "WhitmoreFull") %>%
-    purrr::map(as_tibble) %>%
+             list.name = "WhitmoreFull") %>%
+  purrr::map(as_tibble) %>%
   bind_rows(.id = site.id) %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
@@ -334,8 +307,8 @@ CT_metadata_pub <- dplyr::left_join(CT_metadata,
 # Then, bind the metadata_pub to the modern pollen counts.
 # KB: Changed to left_join, which is safer in case row order changes
 CT_metadata_counts <- dplyr::left_join(CT_metadata_pub,
-                                CT_counts,
-                                by  = "site.id") %>%
+                                       CT_counts,
+                                       by  = "site.id") %>%
   dplyr::arrange(site.id)
 
 
@@ -421,7 +394,7 @@ map %>% addMarkers(lng = NACT3$long, lat = NACT3$lat,
 
 map %>% addMarkers(lng = NAfossil_CT$long, lat = NAfossil_CT$lat, 
                    popup = paste0('<b>', as.character(NAfossil_CT$site.name), '</b><br>'))
-                                  
+
 
 # #Find locations that have missing climate data
 # missingLocations <- d[d$ID %in% missing2 ,]
@@ -532,8 +505,8 @@ climate.points <- raster::extract(x = type.list, y = coordsPoints, df = TRUE)
 
 # Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
 data_long <- melt(climate.points,
-        # ID variables - all the variables to keep but not split apart.
-    id.vars="ID") %>% 
+                  # ID variables - all the variables to keep but not split apart.
+                  id.vars="ID") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage")) %>% 
   separate(col = "yearmonth", into = c("year", "month"), sep = 4)
@@ -560,7 +533,7 @@ clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>%
   dcast(ID ~ variable + month, value.var="mean") %>% 
   dplyr::select(-one_of("ID")) %>% 
   set_colnames(c('pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
-  
+
 ```
 
 # Load WorldClim Climate Data
@@ -611,8 +584,8 @@ WCclimate.points <- raster::extract(x = wc.list, y = coordsPoints, df = TRUE)
 
 
 WCdata_long <- melt(WCclimate.points,
-        # ID variables - all the variables to keep but not split apart.
-    id.vars="ID") %>% 
+                    # ID variables - all the variables to keep but not split apart.
+                    id.vars="ID") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "garbage2", "variable", "month"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage"))
 
@@ -717,15 +690,15 @@ gpids <- get_table(table.name='GeoPoliticalUnits')
 # with the modern pollen data from Neotoma above.
 SWID <-  gpids %>%
   dplyr::filter(GeoPoliticalName %in% c('Colorado', 'Utah', 'Arizona', 'New Mexico'),
-              GeoPoliticalUnit == 'state') %$%
+                GeoPoliticalUnit == 'state') %$%
   GeoPoliticalID
 
 # We want to restrict to fossil pollen datasets for the Four Corners from the last 
 # 2000 years.
 UUSS_sites <- neotoma::get_dataset(ageold = 2000, 
-                                  ageyoung = -50, 
-                                  gpid = SWID,
-                                  datasettype = 'pollen')
+                                   ageyoung = -50, 
+                                   gpid = SWID,
+                                   datasettype = 'pollen')
 
 # Here, we map the dataset IDs to the FourCorners, so that we can use this for mapping 
 # below.
@@ -733,9 +706,9 @@ datasets <- UUSS_sites %>% map_int(function(x) x$dataset.meta$dataset.id)
 
 # Get all fossil pollen datasets for United States and Canada from the last 2000 years.
 NA_sites <- neotoma::get_dataset(ageold = 2000, 
-                                  ageyoung = -50, 
-                                  gpid = NAID,
-                                  datasettype = 'pollen')
+                                 ageyoung = -50, 
+                                 gpid = NAID,
+                                 datasettype = 'pollen')
 
 ```
 
@@ -762,12 +735,12 @@ locations <- UUSS_sites %>% get_site
 map %>% addMarkers(lng = locations$long, 
                    lat = locations$lat, 
                    popup = paste0('<b>', 
-                   as.character(locations$site.name), 
-                   '</b><br>',
-                   
-                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', 
-                   datasets, 
-                   '>Neotoma Database</a>'))
+                                  as.character(locations$site.name), 
+                                  '</b><br>',
+                                  
+                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', 
+                                  datasets, 
+                                  '>Neotoma Database</a>'))
 
 # For plotting all modern pollen locations.
 # Modernmap <- leaflet(width = 800, height = 800) %>%
@@ -808,9 +781,9 @@ analogue::Stratiplot(EldoraFen$`790`$sample.meta$age ~
                        `Pinus undiff.` + 
                        Salix + 
                        Quercus,
-                   data = (as.data.frame(EldoraFen$`790`$counts)), 
-                   xlab = "Counts", 
-                   ylab = "Age")
+                     data = (as.data.frame(EldoraFen$`790`$counts)), 
+                     xlab = "Counts", 
+                     ylab = "Age")
 
 ```
 
@@ -857,11 +830,11 @@ fossil_sites <- list()
 for (i in 1:length(UUSS_sites)) {
   nam <- paste("fossil_", site_names[[i]], sep = "")
   dat <- UUSS_sites[[i]] %>%
-          get_download() %>% 
-          compile_taxa(list.name = "WhitmoreFull") %>%
-          compile_downloads() %>% 
-          # First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
-          bind_rows(as.data.frame(MP_counts_noNAs[1,]))
+    get_download() %>% 
+    compile_taxa(list.name = "WhitmoreFull") %>%
+    compile_downloads() %>% 
+    # First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
+    bind_rows(as.data.frame(MP_counts_noNAs[1,]))
   # Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
   dat <- dat[-nrow(dat),]
   # Third, change any NA values to zero.
@@ -892,8 +865,8 @@ source('../R/sig_test2.R')
 for (i in 1:length(fossil_sites)) {
   nam <- paste("wa_reconst_", fossil_sites[[i]], sep = "")
   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-       climate = Clim_noNAs[,13:24],
-       func = WA, col = 1, mono = TRUE)
+                 climate = Clim_noNAs[,13:24],
+                 func = WA, col = 1, mono = TRUE)
   assign(nam, dat)
 }
 
@@ -916,8 +889,8 @@ source('../R/sig_test2.R')
 for (i in 1:length(fossil_sites)) {
   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-       climate = Clim_noNAs[,13:24],
-       func = mat, col = 2, k = 10)
+                 climate = Clim_noNAs[,13:24],
+                 func = mat, col = 2, k = 10)
   assign(nam, dat)
 }
 
@@ -972,10 +945,10 @@ if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleo
 # Here, the data is put into one data frame to allow for ease of plotting.
 get_clim <-  data.frame(age = EldoraFen$`790`$sample.meta$age,
                         reconst = mat_reconst$fit[,1],
-                         err     = mat_reconst$SEP[,1],
-                         model   = rep("MAT", 
-                                       each = nrow(fossil_data)),
-                         climate = 'tjul')
+                        err     = mat_reconst$SEP[,1],
+                        model   = rep("MAT", 
+                                      each = nrow(fossil_data)),
+                        climate = 'tjul')
 
 # Now, we use ggplot to plot the July temperature reconstruction.
 ggplot(get_clim, aes(x = age, y = reconst)) + 
@@ -985,11 +958,11 @@ ggplot(get_clim, aes(x = age, y = reconst)) +
                   group = model), 
               alpha = 0.2) +
   
-    facet_wrap(~climate, scales = 'free', ncol = 2) +
+  facet_wrap(~climate, scales = 'free', ncol = 2) +
   
-    xlab("Age - kyr BP") +
+  xlab("Age - kyr BP") +
   
-    ylab("Reconstructed Parameter")
+  ylab("Reconstructed Parameter")
 
 ```
 
