@@ -329,6 +329,7 @@ map %>% addMarkers(lng = Modernlocations$long, lat = Modernlocations$lat,
                    popup = paste0('<b>', as.character(Modernlocations$site.name), '</b><br>',
                                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MP_datasets, '>Neotoma Database</a>'))
 
+
 # Map Core top locations.
 map %>% addMarkers(lng = NACT3$long, lat = NACT3$lat, 
                    popup = paste0('<b>', as.character(NACT3$site.name), '</b><br>'))
@@ -393,8 +394,9 @@ raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
 # This MUST point at an original LT81 dataset available from the PRISM climate group (http://www.prism.oregonstate.edu).
 PRISM800.DIR <- "/Volumes/DATA/PRISM/LT81_800M/"
 
+
 # Specify a directory for extraction
-EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/"
+EXTRACTION.DIR <- list.files(paste0(PRISM800.DIR), recursive=TRUE, full.names=T)
 
 # The climate parameters to be extracted
 types <- c("ppt", "tmin","tmax")
@@ -754,7 +756,7 @@ fossil_data <- fossil_data[,colnames(MP_counts_noNAs)]
 
 ```
 
-#### Obtaining a fossil pollen record for all sites in UUSS dataset
+#### Obtaining fossil pollen records for all sites in UUSS dataset
 
 Using the complete North American dataset, we focus on a reconstruction of temperature for these records.  We also need to clean up the data sets too:
 
@@ -796,10 +798,10 @@ for (i in 1:length(UUSS_sites)) {
 source('../R/sig_test2.R')
 
 # These are for the one site reconstruction.
-# wa_reconst <- run_tf2(pollen = MP_counts_noNAs, fossil = fossil_data, 
+# wa_reconst <- run_tf2(pollen = MP_counts_noNAs, fossil = fossil_data,
 #        climate = Clim_noNAs[,13:24],
 #        func = WA, col = 1, mono = TRUE)
-# 
+#  
 # wa_reconst[[1]]
 
 for (i in 1:length(fossil_sites)) {
@@ -816,6 +818,9 @@ for (i in 1:length(fossil_sites)) {
 #### MAT - ten closest
 
 ```{r MAT_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# This is an altered wrapper for the randomTF function.
+source('../R/sig_test2.R')
 
 # mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
 #        climate = Clim_noNAs[,13:24], 
@@ -875,6 +880,7 @@ if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleo
 }
 
 ```
+
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
