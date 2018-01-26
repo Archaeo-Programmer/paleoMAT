@@ -87,10 +87,11 @@ MP_datasets <- get_dataset(datasettype='pollen surface sample', gpid = NAID) %>%
 # Then, combine the rows from the datasets together so that they are now in one tibble.
 MP_metadata <- MP_datasets %>%
   map(compile_MP) %>%
-  bind_rows()
+  bind_rows() %>%
+  dplyr::rename(site.id = dataset)
 
 # Rename first column name (dataset) to site.id.
-colnames(MP_metadata)[1] <- 'site.id'
+# colnames(MP_metadata)[1] <- 'site.id'
 
 # Get publication data (if available) of the modern pollen datasets. If a date is not available, then a date of 1990 will be assigned.
 MP_pubDate <- MP_datasets %>% 
@@ -146,14 +147,13 @@ MP_pubDate <- Pub_Year %>%
 # Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
 # KB: added the site ids
 MP_counts <- MP_datasets %>%
-  map("counts") %>%
-  map(as_tibble) %>%
-  bind_rows() %>% 
-  compile_taxa(list.name = 'WhitmoreFull') %>% 
-  as_tibble() %>%
-  dplyr::mutate(site.id = MP_datasets %>% # Add the site ids
-                  names() %>%
-                  as.integer())
+  purrr::map("counts") %>%
+  purrr::map(as_tibble) %>%
+  purrr::map(compile_taxa,
+      list.name = "WhitmoreFull") %>%
+    purrr::map(as_tibble) %>%
+  bind_rows(.id = site.id) %>% 
+  dplyr::mutate(site.id = as.integer(site.id))
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
@@ -166,7 +166,8 @@ MP_metadata_pub <- dplyr::left_join(MP_metadata,
 # KB: Changed to left_join, which is safer in case row order changes
 MP_metadata_counts <- dplyr::left_join(MP_metadata_pub,
                                 MP_counts,
-                                by  = "site.id")
+                                by  = "site.id") %>%
+  dplyr::arrange(site.id)
 
 ```
 
@@ -175,137 +176,221 @@ MP_metadata_counts <- dplyr::left_join(MP_metadata_pub,
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Get the fossil pollen datasets for the United States and Canada, then download the sites. Next, get the chronology data for each site, so that we can identify the core tops from each site (if available). Next, use lapply to limit to the first data frame in the list of lists (each site has multiple dataframes associated with it); so we limit to the chron.control dataframe. Next, we can strip away the upper most list, which is just the site ID, but we are still left with "siteID.chron.control", as the name of the dataframe.
-NAfossil_datasets <- neotoma::get_dataset(ageold = 41000, 
-                                  ageyoung = -50, 
-                                  gpid = NAID,
-                                  datasettype = 'pollen')
 
-NAfossil.chron <- NAfossil_datasets %>% 
-                  get_chroncontrol() %>% 
-                  lapply("[", 1) %>% 
-                  unlist(recursive=F)
-
-# Get a list of the site IDs that are identifying the chron.control dataframes. Here, we get the unique site ID and turn it into a list. 
-NAfd_chronList <- lapply(names(NAfossil.chron), function(x) x) %>%
-  unlist()
-
-# Next, we remove the string ".chron.control" that is part of each dataframe name, then turn it into a dataframe.
-NAfd_chronList <- sapply(strsplit(NAfd_chronList, split='.', fixed=TRUE), function(x) (x[1])) %>% 
-  as.data.frame() %>% 
-  set_colnames("site.ID")
-
-
-# Create a loop to go through the list of dataframes, and add a new column, which will hold the site ID. Then, bind all the dataframes together to create one large dataframe of the chron.control with all sites.
-
-# Set an initial empty dataframe and add new site ID column.
-coreTops <- NAfossil.chron[[1]] %>% cbind(site.ID="site.ID") %>% dplyr::slice(0)
-
-for(i in 1:length(NAfossil.chron))
-{
-  tmpFrame <- cbind(NAfossil.chron[[i]], site.ID=as.character(NAfd_chronList[i,1]))
-  coreTops <- rbind(coreTops, tmpFrame)
+# Save this so that it doesn't run again!
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/NAfossil_datasets.Rds")){
+  neotoma::get_dataset(ageold = 41000, 
+                       ageyoung = -50, 
+                       gpid = NAID,
+                       datasettype = 'pollen') %>% 
+    neotoma::get_download() %>%
+    readr::write_rds("./data/raw_data/NAfossil_datasets.Rds")
 }
+NAfossil_datasets <- readr::read_rds("./data/raw_data/NAfossil_datasets.Rds")
 
-# Get only rows that have "Core top" in the description, since these will be added to our modern pollen dataset.
-coreTops <- coreTops[grep("Core top", coreTops$control.type), ]
-
-# Create a list of site IDs in order to download only those fossil pollen sites.
-coreTopsites <- as.vector(coreTops$site.ID)
-
-# Download the sites that have core tops. 
-CT_pubDate <- get_download(as.numeric(coreTopsites)) %>% 
-  get_publication()
-
-# Create an empty data frame to store the output into a dataframe, which will be built iteratively.
-CTPub_Year <- data.frame(site.id=numeric(),
-                      pub_year=numeric())
-
-# Create another empty data frame that will temporarily store the data from each iteration, which will then be bound to th Pub_Year dataframe.
-CTtmpFrame <- data.frame(site.id=numeric(),
-                      pub_year=numeric())
-
-# A nested for loop that will loop through each pollen site, then 'dat' will store each publication record for a given site (might be zero or 7 or higher). The double brackets are used because the publications records for a site are in a list of a list. 'site.id' is used to store the name of the site, which is the name of the list for each site (hence only single brackets). The nested for loop will go through each publication record in a site before going back to the 'i' loop for another site. So, it goes through the length of publication records for a site (length of dat). The year is stored, which double brackets are required to get through another list and get to the data frames in the list. The id and year are stored in the tmpFrame, which is then bound to the CTPub_Year through each iteration of the loop.
-for (i in 1:length(CT_pubDate)) {
-  dat <- CT_pubDate[[i]]
-  site.id <- names(CT_pubDate[i])
-  for (j in 1:length(dat)) {
-    pub_year <- dat[[j]]$meta$year
-    CTtmpFrame <- as.data.frame(cbind(site.id = site.id, pub_year = pub_year))
-    CTPub_Year <- as.data.frame(rbind(CTPub_Year, CTtmpFrame))
-  }
+# Save this so that it doesn't run again!
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/NAfossil_pubs.Rds")){
+  NAfossil_datasets %>% 
+    get_publication() %>%
+    readr::write_rds("./data/raw_data/NAfossil_pubs.Rds")
 }
+NAfossil_pubs <- readr::read_rds("./data/raw_data/NAfossil_pubs.Rds")
 
-# Create an index of what the type (factor) is currently, so that it can be replaced by numeric.
-CTindx <- sapply(CTPub_Year, is.factor)
+# Save this so that it doesn't run again!
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/NAfossil_chron.Rds")){
+  NAfossil_datasets %>% 
+    get_chroncontrol() %>%
+    readr::write_rds("./data/raw_data/NAfossil_chron.Rds")
+}
+NAfossil_chron <- readr::read_rds("./data/raw_data/NAfossil_chron.Rds")
 
-# Replace the indx for Pub_Year. Use lapply to apply the function of changing the factor and character to a numeric. This will allow to use dplyr::slice below for taking the minimum publication year.
-CTPub_Year[CTindx] <- as.data.frame(lapply(CTPub_Year[CTindx], function(x) as.numeric(as.character(x))))
+# KB: I think this line does almost everything you were trying to do
+coreTops <- NAfossil_chron %>% 
+   purrr::map_dfr(.id = site.id,
+                  "chron.control") %>%
+  tibble::as_tibble() %>%
+    dplyr::mutate(site.id = site.id %>%
+                  as.integer()) %>%
+  dplyr::filter(control.type == "Core top")
+
+# Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
+# Then, combine the rows from the datasets together so that they are now in one tibble.
+CT_metadata <- NAfossil_datasets %>%
+  magrittr::extract(coreTops$site.id %>% 
+                      unique() %>% 
+                      as.character()) %>%
+  map(compile_MP) %>%
+    purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
+  bind_rows() %>%
+  dplyr::rename(site.id = dataset)
+
+# # Get a list of the site IDs that are identifying the chron.control dataframes. Here, we get the unique site ID and turn it into a list. 
+# NAfd_chronList <- lapply(names(NAfossil.chron), function(x) x) %>%
+#   unlist()
+# 
+# # Next, we remove the string ".chron.control" that is part of each dataframe name, then turn it into a dataframe.
+# NAfd_chronList <- sapply(strsplit(NAfd_chronList, split='.', fixed=TRUE), function(x) (x[1])) %>% 
+#   as.data.frame() %>% 
+#   set_colnames("site.ID")
+# 
+# 
+# # Create a loop to go through the list of dataframes, and add a new column, which will hold the site ID. Then, bind all the dataframes together to create one large dataframe of the chron.control with all sites.
+# 
+# # Set an initial empty dataframe and add new site ID column.
+# coreTops <- NAfossil.chron[[1]] %>% cbind(site.ID="site.ID") %>% dplyr::slice(0)
+# 
+# for(i in 1:length(NAfossil.chron))
+# {
+#   tmpFrame <- cbind(NAfossil.chron[[i]], site.ID=as.character(NAfd_chronList[i,1]))
+#   coreTops <- rbind(coreTops, tmpFrame)
+# }
+# 
+# # Get only rows that have "Core top" in the description, since these will be added to our modern pollen dataset.
+# coreTops <- coreTops[grep("Core top", coreTops$control.type), ]
+# 
+# # Create a list of site IDs in order to download only those fossil pollen sites.
+# coreTopsites <- as.vector(coreTops$site.ID)
+
+# Download the publications for sites that have core tops. 
+# CT_pubDate <- NAfossil_datasets %>% 
+#   get_publication()
+
+# # Create an empty data frame to store the output into a dataframe, which will be built iteratively.
+# CTPub_Year <- data.frame(site.id=numeric(),
+#                       pub_year=numeric())
+# 
+# # Create another empty data frame that will temporarily store the data from each iteration, which will then be bound to th Pub_Year dataframe.
+# CTtmpFrame <- data.frame(site.id=numeric(),
+#                       pub_year=numeric())
+# 
+# # A nested for loop that will loop through each pollen site, then 'dat' will store each publication record for a given site (might be zero or 7 or higher). The double brackets are used because the publications records for a site are in a list of a list. 'site.id' is used to store the name of the site, which is the name of the list for each site (hence only single brackets). The nested for loop will go through each publication record in a site before going back to the 'i' loop for another site. So, it goes through the length of publication records for a site (length of dat). The year is stored, which double brackets are required to get through another list and get to the data frames in the list. The id and year are stored in the tmpFrame, which is then bound to the CTPub_Year through each iteration of the loop.
+# for (i in 1:length(CT_pubDate)) {
+#   dat <- CT_pubDate[[i]]
+#   site.id <- names(CT_pubDate[i])
+#   for (j in 1:length(dat)) {
+#     pub_year <- dat[[j]]$meta$year
+#     CTtmpFrame <- as.data.frame(cbind(site.id = site.id, pub_year = pub_year))
+#     CTPub_Year <- as.data.frame(rbind(CTPub_Year, CTtmpFrame))
+#   }
+# }
+
+CTPub_Year <- NAfossil_pubs %>%
+  magrittr::extract(coreTops$site.id %>% 
+                      unique() %>% 
+                      as.character()) %>%
+  purrr::map_dfr(.id = site.id,
+                 .f = function(x){
+                   tibble::tibble(pub_year = x %>%
+                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+                                    as.integer()) # coerce to integer
+                 })
+
+# # Create an index of what the type (factor) is currently, so that it can be replaced by numeric.
+# CTindx <- sapply(CTPub_Year, is.factor)
+# 
+# # Replace the indx for Pub_Year. Use lapply to apply the function of changing the factor and character to a numeric. This will allow to use dplyr::slice below for taking the minimum publication year.
+# CTPub_Year[CTindx] <- as.data.frame(lapply(CTPub_Year[CTindx], function(x) as.numeric(as.character(x))))
 
 # Replace all NA values with 1990. This is so the climate can be calculated for 1961:1990 (the 30 years prior to the publication date).
-CTPub_Year[is.na(CTPub_Year)] <- 1990
+# CTPub_Year[is.na(CTPub_Year)] <- 1990
+
+CTPub_Year %<>%
+  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+                                  1990,
+                                  pub_year),
+                site.id = as.integer(site.id))
 
 # Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
 CT_pubDate <- CTPub_Year %>% 
     group_by(site.id) %>% 
-    slice(which.min(pub_year)) %>% 
-    as_tibble()
+    slice(which.min(pub_year))# %>% 
+    # as_tibble()
 
 # Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
-NAfossil_download <- NAfossil_datasets %>% 
-  get_download() %>%
-  compile_taxa(list.name = "WhitmoreFull") %>%
-  compile_downloads()
+CT_counts <- NAfossil_datasets %>%
+  magrittr::extract(coreTops$site.id %>% 
+                      unique() %>% 
+                      as.character()) %>%
+  purrr::map("counts") %>%
+  purrr::map(as_tibble) %>%
+  purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT counts)
+  purrr::map(compile_taxa,
+      list.name = "WhitmoreFull") %>%
+    purrr::map(as_tibble) %>%
+  bind_rows(.id = site.id) %>% 
+  dplyr::mutate(site.id = as.integer(site.id))
 
-# Use site IDs from coreTopsites to get only those fossil pollen sites from the downloaded and compiled fossil datasets (still in one dataframe), which is the variable, NAfossil_download (this was all of the fossil pollen locations in the United States and Canada).
-NAfossil_CT <- NAfossil_download[NAfossil_download$.id %in% coreTopsites,]
 
-# Next, need to identify the row at each site that has the core top. Then, extract that row of data for each site.
-NACT <- subset(coreTops, select = c("site.ID", "depth", "age"))
-colnames(NACT)[1] <- ".id"
-NACT2 <- merge(NAfossil_CT, NACT, by  = c(".id", "depth", "age"))
+# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
-colnames(CT_pubDate)[1] <- ".id"
+# First, merge the metadata with the publication year, using the site.id to match, just to double check.
+CT_metadata_pub <- dplyr::left_join(CT_metadata,
+                                    CT_pubDate,
+                                    by  = "site.id")
 
-# Add publication year to the core tops data.
-NACT2 <- merge(NACT2, CT_pubDate, by = ".id")
+# Then, bind the metadata_pub to the modern pollen counts.
+# KB: Changed to left_join, which is safer in case row order changes
+CT_metadata_counts <- dplyr::left_join(CT_metadata_pub,
+                                CT_counts,
+                                by  = "site.id") %>%
+  dplyr::arrange(site.id)
 
-# Drop columns that are not in the modern pollen data above.
-NACT2 <- subset(NACT2, select = - c(age, age.young, age.old, date.type, dataset))
 
-# Rename first column name (dataset) to site.id to match modern pollen data.
-colnames(NACT2)[1] <- "site.id"
 
-# Switch site name and depth columns. Then, rename those two headings.
-NACT2[ , c(2,3)] <- NACT2[ , c(3,2)]
-colnames(NACT2)[c(2, 3)] <- c("site.name", "depth")
 
-# Change dataset column data type from character to integer.
-NACT2$site.id <- as.integer(NACT2$site.id)
-
-# Additional pollen taxa from the modern surface samples should be added, since we need to have the same column headings before adding the core tops data to the rest of the modern pollen data.
-NACT3 <- NACT2 %>% 
-  bind_rows(as.data.frame(MP_metadata_counts[1,]))
-
-# The last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
-NACT3 <- NACT3[-nrow(NACT3),]
-
-# Change any NA values to zero.
-NACT3[is.na(NACT3)] <- 0
-
-# Additional pollen taxa from the fossil samples should be added to the modern dataset, since we need to have the same column headings before combining the core tops data to the the modern pollen data.
-MP_metadata_counts_Update <- MP_metadata_counts %>% 
-  bind_rows(as.data.frame(NACT3[1,]))
-
-# The last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
-MP_metadata_counts_Update <- MP_metadata_counts_Update[-nrow(MP_metadata_counts_Update),]
-
-# Change any NA values to zero.
-MP_metadata_counts_Update[is.na(MP_metadata_counts_Update)] <- 0
-
-# Re-order the column names to that of the modern pollen data.
-NACT4 <- NACT3[,colnames(MP_metadata_counts_Update)]
-
-MP_metadata_counts_CTs <- rbind(MP_metadata_counts_Update, NACT3)
+# # Use site IDs from coreTopsites to get only those fossil pollen sites from the downloaded and compiled fossil datasets (still in one dataframe), which is the variable, NAfossil_download (this was all of the fossil pollen locations in the United States and Canada).
+# NAfossil_CT <- NAfossil_download[NAfossil_download$.id %in% coreTopsites,]
+# 
+# # Next, need to identify the row at each site that has the core top. Then, extract that row of data for each site.
+# NACT <- subset(coreTops, select = c("site.ID", "depth", "age"))
+# colnames(NACT)[1] <- ".id"
+# NACT2 <- merge(NAfossil_CT, NACT, by  = c(".id", "depth", "age"))
+# 
+# colnames(CT_pubDate)[1] <- ".id"
+# 
+# # Add publication year to the core tops data.
+# NACT2 <- merge(NACT2, CT_pubDate, by = ".id")
+# 
+# # Drop columns that are not in the modern pollen data above.
+# NACT2 <- subset(NACT2, select = - c(age, age.young, age.old, date.type, dataset))
+# 
+# # Rename first column name (dataset) to site.id to match modern pollen data.
+# colnames(NACT2)[1] <- "site.id"
+# 
+# # Switch site name and depth columns. Then, rename those two headings.
+# NACT2[ , c(2,3)] <- NACT2[ , c(3,2)]
+# colnames(NACT2)[c(2, 3)] <- c("site.name", "depth")
+# 
+# # Change dataset column data type from character to integer.
+# NACT2$site.id <- as.integer(NACT2$site.id)
+# 
+# # Additional pollen taxa from the modern surface samples should be added, since we need to have the same column headings before adding the core tops data to the rest of the modern pollen data.
+# NACT3 <- NACT2 %>% 
+#   bind_rows(as.data.frame(MP_metadata_counts[1,]))
+# 
+# # The last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
+# NACT3 <- NACT3[-nrow(NACT3),]
+# 
+# # Change any NA values to zero.
+# NACT3[is.na(NACT3)] <- 0
+# 
+# # Additional pollen taxa from the fossil samples should be added to the modern dataset, since we need to have the same column headings before combining the core tops data to the the modern pollen data.
+# MP_metadata_counts_Update <- MP_metadata_counts %>% 
+#   bind_rows(as.data.frame(NACT3[1,]))
+# 
+# # The last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
+# MP_metadata_counts_Update <- MP_metadata_counts_Update[-nrow(MP_metadata_counts_Update),]
+# 
+# # Change any NA values to zero.
+# MP_metadata_counts_Update[is.na(MP_metadata_counts_Update)] <- 0
+# 
+# # Re-order the column names to that of the modern pollen data.
+# NACT4 <- NACT3[,colnames(MP_metadata_counts_Update)]
+# 
+# MP_metadata_counts_CTs <- rbind(MP_metadata_counts_Update, NACT3)
 
 ```
 
