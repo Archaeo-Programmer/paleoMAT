@@ -1,8 +1,9 @@
 # This is the same script as sig_test.R; however, the first line of keep_cols was simplified 
-# to just reflect the columns in the modern pollen data. This was done temporarily as the result of an error.
+# to reflect the column names that were already specified in pollen_pct_p.
 # In the Rmarkdown, if a column of pollen samples had a proportion of zero, then it was removed. Therefore, 
 # it would have less variables than the full modern pollen data frame. For keep_cols, it expects the logical vector to 
-# have the full amount of variables, thus, it throws an error. This is a temporary work around until it can be fixed.
+# have the full amount of variables, thus, it throws an error. It was unneccessary to repeat the colSums to be greater 
+# than zero, since they should all be greater than zero in pollen_pct_p.
 
 library(dplyr)
 
@@ -30,8 +31,8 @@ run_tf2 <- function(pollen, climate, fossil = NULL, func, ...) {
       dplyr::select(which(colSums(fossil) > 0)) %>% 
       analogue::tran(method = "proportion")
     
-    #This first line of keep_cols is the one that was changed.
-    keep_cols <- colnames(pollen)
+    #This first line of keep_cols is the one that was changed from the original sig_test.R file.
+    keep_cols <- colnames(pollen_pct_p)
     keep_cols <- keep_cols[keep_cols %in% colnames(foss_pct_p)]
     
     pollen_input <- pollen_pct_p[, keep_cols]
