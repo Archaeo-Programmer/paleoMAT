@@ -101,10 +101,11 @@ MP_pubs <- readr::read_rds("./data/raw_data/MP_pubs.Rds")
 MP_metadata <- MP_datasets %>%
   map(compile_MP) %>%
   bind_rows() %>%
-  dplyr::rename(site.id = dataset)
+  dplyr::rename(site.id = dataset) %>% 
+  dplyr::mutate(type = "surface sample")
 
 MP_pub_date <- MP_pubs %>%
-  purrr::map_dfr(.id = site.id,
+  purrr::map_dfr(.id = "site.id",
                  .f = function(x){
                    tibble::tibble(pub_year = x %>%
                                     purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
@@ -125,7 +126,7 @@ MP_counts <- MP_datasets %>%
   purrr::map(compile_taxa,
              list.name = "WhitmoreFull") %>%
   purrr::map(as_tibble) %>%
-  bind_rows(.id = site.id) %>% 
+  bind_rows(.id = "site.id") %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
@@ -178,7 +179,7 @@ NAfossil_chron <- readr::read_rds("./data/raw_data/NAfossil_chron.Rds")
 
 # KB: I think this line does almost everything you were trying to do
 coreTops <- NAfossil_chron %>% 
-  purrr::map_dfr(.id = site.id,
+  purrr::map_dfr(.id = "site.id",
                  "chron.control") %>%
   tibble::as_tibble() %>%
   dplyr::mutate(site.id = site.id %>%
@@ -194,14 +195,15 @@ CT_metadata <- NAfossil_datasets %>%
   map(compile_MP) %>%
   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
   bind_rows() %>%
-  dplyr::rename(site.id = dataset)
+  dplyr::rename(site.id = dataset) %>% 
+  dplyr::mutate(type = "core top")
 
 
 CTPub_Year <- NAfossil_pubs %>%
   magrittr::extract(coreTops$site.id %>% 
                       unique() %>% 
                       as.character()) %>%
-  purrr::map_dfr(.id = site.id,
+  purrr::map_dfr(.id = "site.id", 
                  .f = function(x){
                    tibble::tibble(pub_year = x %>%
                                     purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
@@ -231,7 +233,7 @@ CT_counts <- NAfossil_datasets %>%
   purrr::map(compile_taxa,
              list.name = "WhitmoreFull") %>%
   purrr::map(as_tibble) %>%
-  bind_rows(.id = site.id) %>% 
+  bind_rows(.id = "site.id") %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
 
@@ -248,6 +250,29 @@ CT_metadata_counts <- dplyr::left_join(CT_metadata,
 ```
 
 The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, representing `r ncol(MP_counts)` different pollen taxa.
+
+## Combine Core Top and Modern Pollen Data
+
+```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+# Create one list of site.ids for each core top and surface sample sites. 
+CT_noSites <- CT_metadata_counts$site.id
+MP_noSites <- MP_metadata_counts$site.id
+MPCT_noSites <- sort(c(CT_noSites, MP_noSites))
+
+length(((duplicated(MPCT_noSites)) == TRUE))
+
+if (!(length(unique(MPCT_noSites)) == length(MPCT_noSites))) {
+stop()
+} else {
+  MPCT_metadata_counts <- dplyr::left_join(CT_metadata_counts,
+                                       MP_metadata_counts,
+                                       by  = "site.id") %>%
+  dplyr::arrange(site.id)
+}
+
+```
+
 
 ## Map Modern Pollen Sample Locations
 
