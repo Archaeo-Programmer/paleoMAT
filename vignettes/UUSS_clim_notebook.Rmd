@@ -260,16 +260,26 @@ CT_noSites <- CT_metadata_counts$site.id
 MP_noSites <- MP_metadata_counts$site.id
 MPCT_noSites <- sort(c(CT_noSites, MP_noSites))
 
-length(((duplicated(MPCT_noSites)) == TRUE))
-
 if (!(length(unique(MPCT_noSites)) == length(MPCT_noSites))) {
-stop()
+  stop()
+  
 } else {
-  MPCT_metadata_counts <- dplyr::left_join(CT_metadata_counts,
-                                       MP_metadata_counts,
-                                       by  = "site.id") %>%
+  rbind.all.columns <- function(x, y) {
+    x.diff <- setdiff(colnames(x), colnames(y))
+    y.diff <- setdiff(colnames(y), colnames(x))
+    
+    x[, c(as.character(y.diff))] <- 0
+    y[, c(as.character(x.diff))] <- 0
+ 
+    return(rbind(x, y))
+  }
+
+MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
   dplyr::arrange(site.id)
 }
+
+# Change any NA values to zero.
+MPCT_metadata_counts[is.na(MPCT_metadata_counts)] <- 0
 
 ```
 
