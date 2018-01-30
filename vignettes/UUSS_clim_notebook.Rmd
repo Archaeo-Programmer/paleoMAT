@@ -285,30 +285,12 @@ To examine locations of the modern pollen data, we can use `leaflet` to plot the
 map <- leaflet(width = 800, height = 800) %>% 
   addTiles %>% 
   setView(lng = -101.05,
-          lat = 36.68,
-          zoom = 3)
+          lat = 11.68,
+          zoom = 2)
 
-Modernlocations <- MP_datasets %>% get_site
-
-map %>% addMarkers(lng = Modernlocations$long, lat = Modernlocations$lat, 
-                   popup = paste0('<b>', as.character(Modernlocations$site.name), '</b><br>',
-                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MP_datasets, '>Neotoma Database</a>'))
-
-
-# Map Core top locations.
-map %>% addMarkers(lng = NACT3$long, lat = NACT3$lat, 
-                   popup = paste0('<b>', as.character(NACT3$site.name), '</b><br>'))
-
-map %>% addMarkers(lng = NAfossil_CT$long, lat = NAfossil_CT$lat, 
-                   popup = paste0('<b>', as.character(NAfossil_CT$site.name), '</b><br>'))
-
-
-# #Find locations that have missing climate data
-# missingLocations <- d[d$ID %in% missing2 ,]
-# 
-# map %>% addMarkers(lng = missingLocations$long, lat = missingLocations$lat, 
-#                    popup = paste0('<b>', as.character(missingLocations$site.name), '</b><br>',
-#                                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MP_datasets, '>Neotoma Database</a>'))
+map %>% addMarkers(lng = MPCT_metadata_counts$long, lat = MPCT_metadata_counts$lat, 
+                   popup = paste0('<b>', as.character(MPCT_metadata_counts$site.name), '</b><br>',
+                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MPCT_metadata_counts$site.id, '>Neotoma Database</a>'))
 
 ```
 
