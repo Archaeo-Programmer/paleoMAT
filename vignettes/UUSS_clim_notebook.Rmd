@@ -255,31 +255,23 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-# Create one list of site.ids for each core top and surface sample sites. 
-CT_noSites <- CT_metadata_counts$site.id
-MP_noSites <- MP_metadata_counts$site.id
-MPCT_noSites <- sort(c(CT_noSites, MP_noSites))
-
-if (!(length(unique(MPCT_noSites)) == length(MPCT_noSites))) {
-  stop()
-  
-} else {
-  rbind.all.columns <- function(x, y) {
-    x.diff <- setdiff(colnames(x), colnames(y))
-    y.diff <- setdiff(colnames(y), colnames(x))
+# Function to combine the core top and surface sample data, since one dataset may have more columns than the other, which would happen if not all species were represented in one dataset. Therefore, here we make sure that all unique columns are represented in the combined dataframe.
+rbind.all.columns <- function(x, y) {
+  x.diff <- setdiff(colnames(x), colnames(y))
+  y.diff <- setdiff(colnames(y), colnames(x))
     
-    x[, c(as.character(y.diff))] <- 0
-    y[, c(as.character(x.diff))] <- 0
+  x[, c(as.character(y.diff))] <- 0
+  y[, c(as.character(x.diff))] <- 0
  
-    return(rbind(x, y))
-  }
-
-MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
-  dplyr::arrange(site.id)
+  return(rbind(x, y))
 }
 
-# Change any NA values to zero.
-MPCT_metadata_counts[is.na(MPCT_metadata_counts)] <- 0
+# Now the two dataframes can be combined using the function, then sort the rows by site.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
+MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
+  dplyr::arrange(site.id) %>% 
+  distinct(site.id, .keep_all = TRUE) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
 
 ```
 
