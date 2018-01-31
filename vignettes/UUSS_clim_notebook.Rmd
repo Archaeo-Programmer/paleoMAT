@@ -303,11 +303,11 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # Load Prism Climate data.
 
 # Get Modern Pollen locational data.
-names <- rownames(MP_counts)
+names <- MPCT_metadata_counts$site.id
 
 #Extract longitude and latitude data.
-lons <- unlist(lapply(all,FUN=function(x){MP_metadata_counts$long}))
-lats <- unlist(lapply(all,FUN=function(x){MP_metadata_counts$lat}))
+lons <- unlist(lapply(all,FUN=function(x){MPCT_metadata_counts$long}))
+lats <- unlist(lapply(all,FUN=function(x){MPCT_metadata_counts$lat}))
 
 # Bind longitude and latitude and convert to SpatialPoints.
 coords <- cbind(LONGITUDE=lons,LATITUDE=lats)
@@ -341,7 +341,6 @@ raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
 # This MUST point at an original LT81 dataset available from the PRISM climate group (http://www.prism.oregonstate.edu).
 PRISM800.DIR <- "/Volumes/DATA/PRISM/LT81_800M/"
 
-
 # Specify a directory for extraction
 EXTRACTION.DIR <- list.files(paste0(PRISM800.DIR), recursive=TRUE, full.names=T)
 
@@ -371,10 +370,10 @@ extent.states@xmax <- ceiling(extent.states@xmax)
 extent.states@ymax <- ceiling(extent.states@ymax)
 
 # Get list of all file names in the prism directory.
-monthly.files <- list.files(paste0(PRISM800.DIR), recursive=T, full.names=T)
+monthly.files <- EXTRACTION.DIR
 
 # Use the rebus package to generate a regular expression for a number range, which will allow for the extraction of specific years in the prism data (i.e., 1961-1990).
-rx <- number_range(1961, 1990)
+rx <- rebus.numbers::number_range(1961, 1990)
 
 # Now use the expression stored in rx, and trim list of files to to 1961:1990.
 monthly.files <- grep(rx, monthly.files, value = TRUE, perl = TRUE)
@@ -392,17 +391,23 @@ type.list <- raster::stack(monthly.files,native=F,quick=T)
 # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
 climate.points <- raster::extract(x = type.list, y = coordsPoints, df = TRUE)
 
+# Replace the first column of IDs with site.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
+climate.points$ID <- names
+
+# Rename first column to site.id.
+colnames(climate.points)[1] <- "site.id"
+
 # Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
 data_long <- melt(climate.points,
-                  # ID variables - all the variables to keep but not split apart.
-                  id.vars="ID") %>% 
+                  # site.id variables - all the variables to keep but not split apart.
+                  id.vars="site.id") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage")) %>% 
   separate(col = "yearmonth", into = c("year", "month"), sep = 4)
 
 # Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., and max temp.), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
 data_avgs <- data_long %>%
-  dplyr::group_by(ID, variable, month) %>% 
+  dplyr::group_by(site.id, variable, month) %>% 
   dplyr::summarize(mean = mean(value))
 
 # The precipitation averages are extracted into its own dataframe.
@@ -412,16 +417,16 @@ ppt_avgs <- data_avgs %>%
 #The temperature (min. and max) are extracted into its own dataframe, so that we can get the temp. average for each month. We also create a new column for the variable type (i.e., tmp). Finally, we select the data that we want to keep in the dataframe.
 tmp_avgs <- data_avgs %>% 
   dplyr::filter(variable == "tmin" | variable == "tmax") %>% 
-  dplyr::group_by(ID, month) %>% 
+  dplyr::group_by(site.id, month) %>% 
   dplyr::summarize(mean = mean(mean)) %>% 
   dplyr::mutate(variable = "tmp") %>% 
-  dplyr::select(ID, variable, month, mean)
+  dplyr::select(site.id, variable, month, mean)
 
 # Now, combine the precipitation and temperature data back into one dataframe, and convert from long back to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. The, rename all the column names. 
 clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>% 
-  dcast(ID ~ variable + month, value.var="mean") %>% 
-  dplyr::select(-one_of("ID")) %>% 
-  set_colnames(c('pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+  dcast(site.id ~ variable + month, value.var="mean") %>% 
+  #dplyr::select(-one_of("site.id")) %>% 
+  set_colnames(c('site.id', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
 
 ```
 
@@ -471,10 +476,15 @@ wc.list <- raster::stack(wc.files,native=F,quick=T)
 # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
 WCclimate.points <- raster::extract(x = wc.list, y = coordsPoints, df = TRUE)
 
+# Replace the first column of IDs with site.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
+WCclimate.points$ID <- names
+
+# Rename first column to site.id.
+colnames(WCclimate.points)[1] <- "site.id"
 
 WCdata_long <- melt(WCclimate.points,
                     # ID variables - all the variables to keep but not split apart.
-                    id.vars="ID") %>% 
+                    id.vars="site.id") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "garbage2", "variable", "month"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage"))
 
@@ -485,33 +495,33 @@ WCppt_avgs <- WCdata_long %>%
 #The temperature (min. and max) are extracted into its own dataframe, so that we can get the temp. average for each month. We also create a new column for the variable type (i.e., tmp). Finally, we select the data that we want to keep in the dataframe.
 WCtmp_avgs <- WCdata_long %>% 
   dplyr::filter(variable == "tmin" | variable == "tmax") %>% 
-  dplyr::group_by(ID, month) %>% 
+  dplyr::group_by(site.id, month) %>% 
   dplyr::summarize(value = mean(value)) %>% 
   dplyr::mutate(variable = "tmp") %>% 
-  dplyr::select(ID, variable, month, value)
+  dplyr::select(site.id, variable, month, value)
 
 # Now, combine the precipitation and temperature data back into one dataframe, and convert from long back to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. The, rename all the column names. 
 WCclim_wide <- bind_rows(WCppt_avgs, WCtmp_avgs) %>% 
-  dcast(ID ~ variable + month, value.var="value") %>% 
-  dplyr::select(-one_of("ID")) %>% 
-  set_colnames(c('pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+  dcast(site.id ~ variable + month, value.var="value") %>% 
+  #dplyr::select(-one_of("site.id")) %>% 
+  set_colnames(c('site.id', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
 
 ```
 
-## Clean up datasets to remove NAs
+## Clean up datasets to remove NAs for PRISM data
 
 Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
 
 ```{r echo=FALSE, warning=FALSE}
 
 # Get row number in first column that have NA values.
-NAindex <- which(is.na(clim_wide[,1]), arr.ind=FALSE)
+NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
 
 # Remove rows with NA values, using the index.
 Clim_noNAs <- clim_wide[-(NAindex),]
 
 # Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
-MP_counts_noNAs <- MP_counts[-(NAindex),]
+MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
 ```
 
