@@ -512,7 +512,7 @@ WCclim_wide <- bind_rows(WCppt_avgs, WCtmp_avgs) %>%
 
 Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
 
-```{r echo=FALSE, warning=FALSE}
+```{r removePrismNAs, echo=FALSE, warning=FALSE}
 
 # Get row number in first column that have NA values.
 NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
@@ -540,8 +540,11 @@ The MAT method is testing whether the modern calibration is able to detect signa
 # This is a wrapper for the randomTF function.
 source('../R/sig_test.R')
 
-wa_sig <- run_tf(pollen = MP_counts_noNAs, 
-                 climate = Clim_noNAs[,13:24], 
+# Remove metadata columns to run significance test.
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:7)]
+
+wa_sig <- run_tf(pollen = MPCT_counts_noNAs, 
+                 climate = Clim_noNAs[,14:25], 
                  func = WA, col = 1 , mono = TRUE)
 
 wa_sig[[1]]
@@ -553,9 +556,12 @@ The columns are standard weighted average. One positive of using monotone shrink
 
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
+# Remove metadata columns to run significance test.
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:7)]
+
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-mat_sig <- run_tf(pollen = MP_counts_noNAs, 
-                  climate = Clim_noNAs[,13:24],
+mat_sig <- run_tf(pollen = MPCT_counts_noNAs, 
+                  climate = Clim_noNAs[,14:25],
                   func = MAT, col = 1, k = 10)
 #col 1 is just the closest analogue.
 mat_sig[[1]]
