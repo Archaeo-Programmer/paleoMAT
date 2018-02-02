@@ -293,80 +293,6 @@ map %>% addMarkers(lng = MPCT_metadata_counts$long, lat = MPCT_metadata_counts$l
 
 ```
 
-## Process Fossil Pollen Data.
-
-```{r FossilPollen, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
-
-NAfossil_metadata <- NAfossil_datasets %>%
-  map(compile_MP) %>%
-  bind_rows() %>%
-  dplyr::rename(site.id = dataset) %>% 
-  dplyr::mutate(type = "fossil") %>% 
-  mutate(site.id = as.integer(site.id))
-
-NAfossil_pub_date <- NAfossil_pubs %>%
-  purrr::map_dfr(.id = "site.id",
-                 .f = function(x){
-                   tibble::tibble(pub_year = x %>%
-                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
-                                    as.integer()) # coerce to integer
-                 }) %>%
-  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
-                                  1990,
-                                  pub_year),
-                site.id = as.integer(site.id)) %>% 
-  dplyr::group_by(site.id) %>% 
-  dplyr::slice(which.min(pub_year))
-
-NAfossil_pub_date$site.id <- as.integer(NAfossil_pub_date$site.id)
-
-# Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
-# KB: added the site ids
-NAfossil_counts <- NAfossil_datasets %>%
-  purrr::map("counts") %>%
-  purrr::map(as_tibble) %>%
-  purrr::map(compile_taxa,
-             list.name = "WhitmoreFull") %>%
-  purrr::map(as_tibble) %>%
-  bind_rows(.id = "site.id") %>% 
-  select(-ends_with("site.id"))
-
-# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
-
-# First, merge the metadata with the publication year, using the site.id to match, just to double check.
-NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
-                                    NAfossil_pub_date,
-                                    by  = "site.id")
-
-NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts,
-                                       by  = "site.id") %>%
-  dplyr::arrange(site.id)
-
-# Get Fossil Pollen locational site.id numbers.
-NAfossilNames <- NAfossil_metadata_counts[,c("site.id","long","lat")] %>% 
-  distinct(site.id, .keep_all = TRUE)
-
-#Extract longitude and latitude data.
-lonsFossil <- unlist(lapply(all,FUN=function(x){NAfossilNames$long}))
-latsFossil <- unlist(lapply(all,FUN=function(x){NAfossilNames$lat}))
-
-# Bind longitude and latitude and convert to SpatialPoints.
-coordsFossil <- cbind(LONGITUDE=lonsFossil,LATITUDE=latsFossil)
-coordsPointsFossil <- SpatialPoints(coordsFossil, proj4string=CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
-
-studyArea <- polygon_from_extent(extent.FourCorners,"+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs")
-UUSS_sites2 <- raster::crop(coordsPointsFossil,rgeos::gUnaryUnion(spTransform(studyArea,CRS(projection(coordsPointsFossil))))) %>% 
-  as.data.frame() %>% 
-  set_colnames(c("long", "lat"))
-
-# Subset fossil dataset.
-UUSS_sites3 <- subset(NAfossil_metadata_counts, long > extent.FourCorners@xmin & long < extent.FourCorners@xmax)
-UUSS_sites3 <- subset(UUSS_sites3, lat >= extent.FourCorners@ymin & lat <= extent.FourCorners@ymax)
-
-
-```
-
-
 # Load Prism Climate Data
 
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
@@ -442,21 +368,6 @@ extent.states@xmin <- floor(extent.states@xmin)
 extent.states@ymin <- floor(extent.states@ymin)
 extent.states@xmax <- ceiling(extent.states@xmax)
 extent.states@ymax <- ceiling(extent.states@ymax)
-
-# Determine extents for the Four Corner states. Will want to make this a changeable parameter for web app.
-FourCorners <- states[states$NAME %in% c("Arizona", "Colorado", "New Mexico", "Utah"),]
-
-# Get the extent (i.e., the Four Corner states)
-extent.FourCorners <- raster::extent(FourCorners)
-
-# Floor the minimums, ceiling the maximums for the Four Corner States.
-extent.FourCorners@xmin <- floor(extent.FourCorners@xmin)
-extent.FourCorners@ymin <- floor(extent.FourCorners@ymin)
-extent.FourCorners@xmax <- ceiling(extent.FourCorners@xmax)
-extent.FourCorners@ymax <- ceiling(extent.FourCorners@ymax)
-
-# Transform
-UUSS_sites2 <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 
 # Get list of all file names in the prism directory.
 monthly.files <- EXTRACTION.DIR
@@ -664,6 +575,75 @@ The variance explained is very low for some variables, although the p value is v
 ## Reconstruction Significance
 
 Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
+
+### Process Fossil Pollen Data.
+
+```{r FossilPollen, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+NAfossil_metadata <- NAfossil_datasets %>%
+  map(compile_MP) %>%
+  bind_rows() %>%
+  dplyr::rename(site.id = dataset) %>% 
+  dplyr::mutate(type = "fossil") %>% 
+  mutate(site.id = as.integer(site.id))
+
+NAfossil_pub_date <- NAfossil_pubs %>%
+  purrr::map_dfr(.id = "site.id",
+                 .f = function(x){
+                   tibble::tibble(pub_year = x %>%
+                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+                                    as.integer()) # coerce to integer
+                 }) %>%
+  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+                                  1990,
+                                  pub_year),
+                site.id = as.integer(site.id)) %>% 
+  dplyr::group_by(site.id) %>% 
+  dplyr::slice(which.min(pub_year))
+
+NAfossil_pub_date$site.id <- as.integer(NAfossil_pub_date$site.id)
+
+# Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
+# KB: added the site ids
+NAfossil_counts <- NAfossil_datasets %>%
+  purrr::map("counts") %>%
+  purrr::map(as_tibble) %>%
+  purrr::map(compile_taxa,
+             list.name = "WhitmoreFull") %>%
+  purrr::map(as_tibble) %>%
+  bind_rows(.id = "site.id") %>% 
+  select(-ends_with("site.id"))
+
+# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
+
+# First, merge the metadata with the publication year, using the site.id to match, just to double check.
+NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
+                                    NAfossil_pub_date,
+                                    by  = "site.id")
+
+NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts,
+                                       by  = "site.id") %>%
+  dplyr::arrange(site.id)
+
+# Determine extents for the Four Corner states. Will want to make this a changeable parameter for web app.
+FourCorners <- states[states$NAME %in% c("Arizona", "Colorado", "New Mexico", "Utah"),]
+
+# Get the extent (i.e., the Four Corner states)
+extent.FourCorners <- raster::extent(FourCorners)
+
+# Floor the minimums, ceiling the maximums for the Four Corner States.
+extent.FourCorners@xmin <- floor(extent.FourCorners@xmin)
+extent.FourCorners@ymin <- floor(extent.FourCorners@ymin)
+extent.FourCorners@xmax <- ceiling(extent.FourCorners@xmax)
+extent.FourCorners@ymax <- ceiling(extent.FourCorners@ymax)
+
+# Subset fossil dataset.
+UUSS_sites <- subset(NAfossil_metadata_counts, long > extent.FourCorners@xmin & long < extent.FourCorners@xmax)
+UUSS_sites <- subset(UUSS_sites3, lat >= extent.FourCorners@ymin & lat <= extent.FourCorners@ymax)
+
+
+```
+
 
 ### Obtaining a fossil pollen record from Neotoma
 
