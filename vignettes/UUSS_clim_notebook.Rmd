@@ -129,6 +129,9 @@ MP_counts <- MP_datasets %>%
   bind_rows(.id = "site.id") %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
+# Sort the taxa to be in alphabetical order. 
+MP_counts <- MP_counts[,c(names(MP_counts)[1], sort(names(MP_counts)[2:ncol(MP_counts)]))]
+
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
 # First, merge the metadata with the publication year, using the site.id to match, just to double check.
@@ -236,6 +239,8 @@ CT_counts <- NAfossil_datasets %>%
   bind_rows(.id = "site.id") %>% 
   dplyr::mutate(site.id = as.integer(site.id))
 
+# Sort the taxa to be in alphabetical order. 
+CT_counts <- CT_counts[,c(names(CT_counts)[1], sort(names(CT_counts)[2:ncol(CT_counts)]))]
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
@@ -272,6 +277,8 @@ MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts
   distinct(site.id, .keep_all = TRUE) %>%
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
+# Sort the taxa to be in alphabetical order. 
+MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:7], sort(names(MPCT_metadata_counts)[8:ncol(MPCT_metadata_counts)]))]
 
 ```
 
@@ -576,17 +583,30 @@ The variance explained is very low for some variables, although the p value is v
 
 Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
 
-### Process Fossil Pollen Data.
+### Process North American Fossil Pollen Data.
 
 ```{r FossilPollen, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
+# Compile function for the fossil pollen data from Neotoma. This is similar to the compile function for modern pollen, except that the age is added in for a site at each depth.
+compile_FP <- function(x){
+  tibble(
+    dataset = x$dataset$dataset.meta$dataset.id,
+    site.name = x$dataset$site$site.name,
+    depth = x$sample.meta$depth,
+    lat = x$dataset$site$lat,
+    long = x$dataset$site$long, 
+    age = x$sample.meta$age)
+}
+
+# Get the fossil pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.Then, combine the rows from the datasets together so that they are now in one tibble.
 NAfossil_metadata <- NAfossil_datasets %>%
-  map(compile_MP) %>%
+  purrr::map(compile_FP) %>%
   bind_rows() %>%
   dplyr::rename(site.id = dataset) %>% 
   dplyr::mutate(type = "fossil") %>% 
   mutate(site.id = as.integer(site.id))
 
+# Get earlies publication dates for each fossil pollen site.
 NAfossil_pub_date <- NAfossil_pubs %>%
   purrr::map_dfr(.id = "site.id",
                  .f = function(x){
@@ -603,8 +623,7 @@ NAfossil_pub_date <- NAfossil_pubs %>%
 
 NAfossil_pub_date$site.id <- as.integer(NAfossil_pub_date$site.id)
 
-# Get the modern pollen datasets in North America and use map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble.
-# KB: added the site ids
+# Get the fossil datasets in North America and use purrr::map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble. We remove site.id because dplyr::left_join cannot process having multiple rows with the same site.id.
 NAfossil_counts <- NAfossil_datasets %>%
   purrr::map("counts") %>%
   purrr::map(as_tibble) %>%
@@ -612,18 +631,43 @@ NAfossil_counts <- NAfossil_datasets %>%
              list.name = "WhitmoreFull") %>%
   purrr::map(as_tibble) %>%
   bind_rows(.id = "site.id") %>% 
-  select(-ends_with("site.id"))
+  select(-ends_with("site.id")) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+NAfossil_counts <- NAfossil_counts[,sort(names(NAfossil_counts)[1:ncol(NAfossil_counts)])]
+
+# Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
+sameVariables <- function(x,y) {
+    for (i in names(x)) {
+        if (!(i %in% names(y))) {
+            print('Warning: Names are not the same!')
+            break
+        }  
+        else if(i==tail(names(y),n=1)) {
+            print('Names are identical.')
+        }
+    }
+}
+
+sameVariables(NAfossil_counts, MPCT_counts_noNAs)
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
-# First, merge the metadata with the publication year, using the site.id to match, just to double check.
+# First, merge (using a left_join) the metadata with the publication year, using the site.id to match, just to double check.
 NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
                                     NAfossil_pub_date,
                                     by  = "site.id")
 
+# The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same site.id.
 NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts,
                                        by  = "site.id") %>%
   dplyr::arrange(site.id)
+
+```
+
+### Process Four Corners Fossil Pollen Data.
+
+```{r FourCorners_FP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Determine extents for the Four Corner states. Will want to make this a changeable parameter for web app.
 FourCorners <- states[states$NAME %in% c("Arizona", "Colorado", "New Mexico", "Utah"),]
@@ -631,62 +675,14 @@ FourCorners <- states[states$NAME %in% c("Arizona", "Colorado", "New Mexico", "U
 # Get the extent (i.e., the Four Corner states)
 extent.FourCorners <- raster::extent(FourCorners)
 
-# Floor the minimums, ceiling the maximums for the Four Corner States.
-extent.FourCorners@xmin <- floor(extent.FourCorners@xmin)
-extent.FourCorners@ymin <- floor(extent.FourCorners@ymin)
-extent.FourCorners@xmax <- ceiling(extent.FourCorners@xmax)
-extent.FourCorners@ymax <- ceiling(extent.FourCorners@ymax)
-
-# Subset fossil dataset.
-UUSS_sites <- subset(NAfossil_metadata_counts, long > extent.FourCorners@xmin & long < extent.FourCorners@xmax)
-UUSS_sites <- subset(UUSS_sites3, lat >= extent.FourCorners@ymin & lat <= extent.FourCorners@ymax)
-
+# Subset fossil dataset. Temporarily put in 40.5 for ymax so that Wyoming and Nebraska fossil sites are not included for the Four Corner states. Here we limit the NA fossil dataset to the Four Corner states and just for the past 2000 years.
+UUSS_sites <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@xmin & long <= extent.FourCorners@xmax & lat >= extent.FourCorners@ymin & lat <= 40.5 & age <= 2000)
 
 ```
 
+This returns `r length(unique(UUSS_sites$site.id))` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
 
 ### Obtaining a fossil pollen record from Neotoma
-
-Now, we apply a reconstruction to a real dataset. The record has coverage across multiple timescales.  For this example, we will restrict the analysis to a record from Colorado.
-
-```{r, SW_sites, echo=TRUE, message=FALSE, warning=FALSE}
-
-# Use gpids to get the Four Corners area (or geopolitical unit) in North America.
-# Then get the datasets for the pollen data from each of the gpids.
-
-# Retrieve the GeoPolitical Units table, which has country, state, and county level names 
-# with associated IDs. 
-gpids <- get_table(table.name='GeoPoliticalUnits')
-
-# Currently using a work around to get data from specific sites by defining the states in 
-# the Neotoma GeoPolitical Units table (http://api.neotomadb.org/apdx/geopol.htm). It 
-# occasionally will not pull in the correct data. This is the same thing that was done 
-# with the modern pollen data from Neotoma above.
-SWID <-  gpids %>%
-  dplyr::filter(GeoPoliticalName %in% c('Colorado', 'Utah', 'Arizona', 'New Mexico'),
-                GeoPoliticalUnit == 'state') %$%
-  GeoPoliticalID
-
-# We want to restrict to fossil pollen datasets for the Four Corners from the last 
-# 2000 years.
-UUSS_sites <- neotoma::get_dataset(ageold = 2000, 
-                                   ageyoung = -50, 
-                                   gpid = SWID,
-                                   datasettype = 'pollen')
-
-# Here, we map the dataset IDs to the FourCorners, so that we can use this for mapping 
-# below.
-datasets <- UUSS_sites %>% map_int(function(x) x$dataset.meta$dataset.id)
-
-# Get all fossil pollen datasets for United States and Canada from the last 2000 years.
-NA_sites <- neotoma::get_dataset(ageold = 2000, 
-                                 ageyoung = -50, 
-                                 gpid = NAID,
-                                 datasettype = 'pollen')
-
-```
-
-This returns `r length(UUSS_sites)` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
 
 ```{r, echo = TRUE, warning=TRUE, echo=FALSE}
 
@@ -699,63 +695,38 @@ map <- leaflet(width = 800, height = 800) %>%
           lat = 31.68,
           zoom = 4)
 
-# Now, we need to get the site data for the Four Corners. This is another step from 
-# Neotoma.
-locations <- UUSS_sites %>% get_site
-
 # If you wanted a simple map, then you would just need lat and long. However, I have made 
-# the addition, so that you can click on each site and get the site name and can also be 
+# some additions, so that you can click on each site and get the site name and can also be 
 # redirected to Neotoma webpage to get more information about each site.
-map %>% addMarkers(lng = locations$long, 
-                   lat = locations$lat, 
+map %>% addMarkers(lng = UUSS_sites$long, 
+                   lat = UUSS_sites$lat, 
                    popup = paste0('<b>', 
-                                  as.character(locations$site.name), 
+                                  as.character(UUSS_sites$site.name), 
                                   '</b><br>',
-                                  
                                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', 
-                                  datasets, 
+                                  UUSS_sites$site.id, 
                                   '>Neotoma Database</a>'))
-
-# For plotting all modern pollen locations.
-# Modernmap <- leaflet(width = 800, height = 800) %>%
-#   addTiles %>%
-#   setView(lng = -109.05,
-#           lat = 34.28,
-#           zoom = 2)
-
-# Modernmap %>% addMarkers(lng = Location$Longitude, lat = Location$Latitude)
-
-# For plotting all fossil pollen sites in United States and Canada. 
-# NA_site_locations <- NA_sites %>% get_site
-# 
-# NAfossil_map <- leaflet(width = 800, height = 800) %>%
-#   addTiles %>%
-#   setView(lng = -109.05,
-#           lat = 34.28,
-#           zoom = 2)
-# 
-# NAfossil_map %>% addMarkers(lng = NA_site_locations$long, lat = NA_site_locations$lat)
-
 
 ```
 
+Now, we apply a reconstruction to a real dataset. The record has coverage across multiple timescales. For this example, we will restrict the analysis to a record from Colorado.
+
 #### Obtaining a fossil pollen record for one site in Neotoma
 
-Data record `12` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans 7,900 years, which provides some information for environmental change at the site.
+Site `790` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans 7,900 years, which provides some information for environmental change at the site.
 
-```{r echo = TRUE}
+```{r EldoraFen, echo = TRUE}
 
-# Another step from Neotoma, we need to download the data for the site.
-EldoraFen <- get_download(UUSS_sites[[9]])
+# Filter out the Eldora Fen site from the UUSS sites.
+EldoraFen <- dplyr::filter(UUSS_sites, site.name == "Eldora Fen")
 
 # Here we can also use Stratiplot to look at the pollen profile and change over time for 
 # the Eldora Fen site.
-analogue::Stratiplot(EldoraFen$`790`$sample.meta$age ~ 
-                       Juniperus + 
-                       `Pinus undiff.` + 
-                       Salix + 
-                       Quercus,
-                     data = (as.data.frame(EldoraFen$`790`$counts)), 
+analogue::Stratiplot(EldoraFen$age ~ 
+                       PICEAX + 
+                       PINUSX + 
+                       CYPERACE,
+                     data = EldoraFen, 
                      xlab = "Counts", 
                      ylab = "Age")
 
@@ -765,26 +736,20 @@ Using the complete North American dataset, we focus on a reconstruction of summe
 
 ```{r, warning=FALSE, echo=FALSE, results='hide'}
 
-# Another step in Neotoma is to compile the taxa according to the Whitmore compilation function. This allows to group the taxa in a particular way.
-fossil_data <-  EldoraFen %>%
-  compile_taxa(list.name = "WhitmoreFull") %>%
-  
-  compile_downloads()
-
 # Prediction requires the addition of all Pollen taxa:
 
-# First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
-fossil_data <- fossil_data %>% 
-  bind_rows(as.data.frame(MP_counts_noNAs[1,]))
+# First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added. This is to double-check; however, the taxa and number of taxa should already be the same between the two dataframes.
+EldoraFen <- EldoraFen %>% 
+  bind_rows(as.data.frame(MPCT_counts_noNAs[1,]))
 
 #Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
-fossil_data <- fossil_data[-nrow(fossil_data),]
+EldoraFen <- EldoraFen[-nrow(EldoraFen),]
 
 #Third, change any NA values to zero.
-fossil_data[is.na(fossil_data)] <- 0
+EldoraFen[is.na(EldoraFen)] <- 0
 
 #Last, re-order the column names to that of the North American Pollen Dataset.
-fossil_data <- fossil_data[,colnames(MP_counts_noNAs)]
+EldoraFen <- EldoraFen[,colnames(MPCT_counts_noNAs)]
 
 ```
 
@@ -793,7 +758,6 @@ fossil_data <- fossil_data[,colnames(MP_counts_noNAs)]
 Using the complete North American dataset, we focus on a reconstruction of temperature for these records.  We also need to clean up the data sets too:
 
 ```{r, warning=FALSE, echo=FALSE, results='hide'}
-
 
 # Ideally would like to loop through all of the UUSS sites then store those as separate variables; so that each site could go through reconstruction significance to see if it is possible to actually reconstruct that site. Then, we would like to do the reconstruction and figure for each individual site that can be reconstructed. Prediction also requires the addition of all Pollen taxa.
 site_names <- as.list(names(UUSS_sites))
@@ -885,7 +849,7 @@ Once we have validated the methods, we re-run the analyses using the two methods
 if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
   mat_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/mat_reconst.RDS')
 } else {
-  mat_reconst <- predict(rioja::MAT(y = MP_counts_noNAs, 
+  mat_reconst <- predict(rioja::MAT(y = MPCT_counts_noNAs, 
                                     x = Clim_noNAs[,1], 
                                     k = 10, 
                                     dist.method="sq.chord",
@@ -897,15 +861,15 @@ if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/pale
 
 
 # Currently the rioja::WA function cannot run when species data have zero abundances. Therefore, here we determine what columns in the modern pollen data have zero column sums, and get an index of those columns, then delete the columns. The same index is used to delete the columns from the fossil pollen data.
-dd <- unname(which((colSums(MP_counts_noNAs, na.rm=T) < 0.000001), arr.ind = TRUE))
-MP_counts_noNAs2 <- MP_counts_noNAs[,-(dd)]
+dd <- unname(which((colSums(MPCT_counts_noNAs, na.rm=T) < 0.000001), arr.ind = TRUE))
+MPCT_counts_noNAs2 <- MPCT_counts_noNAs[,-(dd)]
 fossil_data2 <- fossil_data[,-(dd)]
 
 
 if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
   wa_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
 } else {
-  wa_reconst <-  predict(rioja::WA(y = tran(MP_counts_noNAs2, method = 'proportion'), 
+  wa_reconst <-  predict(rioja::WA(y = tran(MPCT_counts_noNAs2, method = 'proportion'), 
                                    x = Clim_noNAs[1,], lean = FALSE),
                          newdata = fossil_data2, sse = TRUE)
   saveRDS(wa_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
