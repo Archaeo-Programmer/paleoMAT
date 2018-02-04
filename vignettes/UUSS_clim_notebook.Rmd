@@ -748,13 +748,13 @@ source('../R/sig_test2.R')
 # 
 # mat_reconst[[1]]
 
-for (i in 1:length(fossil_sites)) {
-  nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
-  dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-                 climate = Temperature,
-                 func = mat, col = 2, k = 10)
-  assign(nam, dat)
-}
+# for (i in 1:length(fossil_sites)) {
+#   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
+#   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
+#                  climate = Temperature,
+#                  func = mat, col = 2, k = 10)
+#   assign(nam, dat)
+# }
 
 ```
 
@@ -771,17 +771,27 @@ Once we have validated the methods, we re-run the analyses using the two methods
 # This is an altered wrapper for the randomTF function.
 source('../R/sig_test2.R')
 
+# Create a list of all the fossil pollen sites to be reconstructed for the UUSS. 
 fossil_sites <- unique(UUSS_sites$site.id)
+
+# Subset the climate data to just Temperature. 
 Temperature <- Clim_noNAs[,14:25]
+
+# Create a list that will be used to reorder the temperature reconstruction columns, so that months are in order.
 columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
 
-if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS", all.files=TRUE)) != 0) {
+# Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. Each site will have two output files, one will be the reconstructed temperatures and the other will have the associated error.
+
+# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. 
+if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", all.files=FALSE)) != 0) {
   
   stop("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory.")
   
 } else {
 
-  for (i in 1:length(unique(UUSS_sites$site.id))) {
+  for (i in 15:length(unique(UUSS_sites$site.id))) {
+    
+    # Filter to one site to do the reconstruction.
     site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
     # site <- site[,-(1:8)] %>% 
     #   mutate_all(funs(ifelse(is.na(.), 0, .)))
@@ -789,7 +799,10 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
     # site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
     # MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
     
+    # Create an empty dataframe, so that the 12 months of data can be in one dataframe for the site.
     get_clim <- data.frame(matrix(ncol = 9, nrow = 0))
+    
+    # Name the columns for the new empty dataframe.
     x <- c("site.id", "site.name", "lat", "long", "age", "reconst", "err", "model", "climate")
     colnames(get_clim) <- x
     
@@ -798,7 +811,10 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
     #              climate = Temperature[,1:12],
     #              func = mat, col = 2, k = 10)
     
+    # Need another loop to do the reconstruction for all 12 months for a site, which goes into one dataframe, get_clim.
     for (j in 1:ncol(Temperature)) {
+      
+      # Create the MAT reconstruction.
       mat_reconst <- predict(rioja::MAT(y = MPCT_counts_noNAs, 
                                       x = Temperature[,j], 
                                       k = 10, 
@@ -807,6 +823,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
                            newdata = site[,9:ncol(site)],
                            sse = TRUE)
       
+      # Put the reconstructed data into a dataframe.
       get_clim <-  rbind(get_clim, (data.frame(site.id = site$site.id,
                                                site.name = site$site.name,
                                                lat = site$lat,
@@ -819,10 +836,11 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
                                                climate = colnames(Temperature[j]))))
     }
     
-      write.csv(
-        file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
-      )
+      # write.csv(
+      #   file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
+      # )
     
+      # Output the reconstructed data into a csv file. 
       write.csv(get_clim %>% 
               dplyr::select(-one_of("err")) %>% 
               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
@@ -831,6 +849,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
               row.names = FALSE,
               file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
   
+      # Output the error of the reconstructed data into a csv file.
       write.csv(get_clim %>% 
               dplyr::select(-one_of("reconst")) %>% 
               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
