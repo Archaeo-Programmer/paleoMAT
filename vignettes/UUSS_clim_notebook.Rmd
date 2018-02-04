@@ -659,9 +659,9 @@ NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
                                     by  = "site.id")
 
 # The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same site.id.
-NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts,
-                                       by  = "site.id") %>%
-  dplyr::arrange(site.id)
+NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts) %>%
+  dplyr::arrange(site.id) %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
 
@@ -682,7 +682,7 @@ UUSS_sites <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@xmin &
 
 This returns `r length(unique(UUSS_sites$site.id))` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
 
-### Obtaining a fossil pollen record from Neotoma
+### Map the fossil pollen sites for the Four Corners.
 
 ```{r, echo = TRUE, warning=TRUE, echo=FALSE}
 
@@ -709,82 +709,7 @@ map %>% addMarkers(lng = UUSS_sites$long,
 
 ```
 
-Now, we apply a reconstruction to a real dataset. The record has coverage across multiple timescales. For this example, we will restrict the analysis to a record from Colorado.
-
-#### Obtaining a fossil pollen record for one site in Neotoma
-
-Site `790` within the Upper United States Southwest data represents Eldora Fen, Colorado, recorded by Louis J.Maher Jr. The record spans 7,900 years, which provides some information for environmental change at the site.
-
-```{r EldoraFen, echo = TRUE}
-
-# Filter out the Eldora Fen site from the UUSS sites.
-EldoraFen <- dplyr::filter(UUSS_sites, site.name == "Eldora Fen")
-
-# Here we can also use Stratiplot to look at the pollen profile and change over time for 
-# the Eldora Fen site.
-analogue::Stratiplot(EldoraFen$age ~ 
-                       PICEAX + 
-                       PINUSX + 
-                       CYPERACE,
-                     data = EldoraFen, 
-                     xlab = "Counts", 
-                     ylab = "Age")
-
-```
-
-Using the complete North American dataset, we focus on a reconstruction of summer temperature for this record (`tjul`).  We also need to clean up the data sets too:
-
-```{r, warning=FALSE, echo=FALSE, results='hide'}
-
-# Prediction requires the addition of all Pollen taxa:
-
-# First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added. This is to double-check; however, the taxa and number of taxa should already be the same between the two dataframes.
-EldoraFen <- EldoraFen %>% 
-  bind_rows(as.data.frame(MPCT_counts_noNAs[1,]))
-
-#Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
-EldoraFen <- EldoraFen[-nrow(EldoraFen),]
-
-#Third, change any NA values to zero.
-EldoraFen[is.na(EldoraFen)] <- 0
-
-#Last, re-order the column names to that of the North American Pollen Dataset.
-EldoraFen <- EldoraFen[,colnames(MPCT_counts_noNAs)]
-
-```
-
-#### Obtaining fossil pollen records for all sites in UUSS dataset
-
-Using the complete North American dataset, we focus on a reconstruction of temperature for these records.  We also need to clean up the data sets too:
-
-```{r, warning=FALSE, echo=FALSE, results='hide'}
-
-# Ideally would like to loop through all of the UUSS sites then store those as separate variables; so that each site could go through reconstruction significance to see if it is possible to actually reconstruct that site. Then, we would like to do the reconstruction and figure for each individual site that can be reconstructed. Prediction also requires the addition of all Pollen taxa.
-site_names <- as.list(names(UUSS_sites))
-
-# Create an empty list for all the fossil sites to hold the new variable names.
-fossil_sites <- list()
-
-for (i in 1:length(UUSS_sites)) {
-  nam <- paste("fossil_", site_names[[i]], sep = "")
-  dat <- UUSS_sites[[i]] %>%
-    get_download() %>% 
-    compile_taxa(list.name = "WhitmoreFull") %>%
-    compile_downloads() %>% 
-    # First, additional pollen taxa from the Pollen dataset of the North American Pollen Dataset should be added.
-    bind_rows(as.data.frame(MP_counts_noNAs[1,]))
-  # Second, the last row should be removed, which just had values from the modern pollen data. We only added the row, so that the additonal column headings could be added.
-  dat <- dat[-nrow(dat),]
-  # Third, change any NA values to zero.
-  dat[is.na(dat)] <- 0
-  # Last, re-order the column names to that of the North American Pollen Dataset.
-  dat <- dat[,colnames(MP_counts_noNAs)]
-  assign(nam, dat)
-  # Create a list of the fossil sites with the new names of the variables, which is "fossil_...".
-  fossil_sites[i] <- nam
-}
-
-```
+Now, we apply a reconstruction to a real dataset. 
 
 #### WA - Monotone Deshrinking
 
@@ -800,16 +725,15 @@ source('../R/sig_test2.R')
 #  
 # wa_reconst[[1]]
 
-for (i in 1:length(fossil_sites)) {
-  nam <- paste("wa_reconst_", fossil_sites[[i]], sep = "")
-  dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-                 climate = Clim_noNAs[,13:24],
-                 func = WA, col = 1, mono = TRUE)
-  assign(nam, dat)
-}
+# for (i in 1:length(fossil_sites)) {
+#   nam <- paste("wa_reconst_", fossil_sites[[i]], sep = "")
+#   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
+#                  climate = Clim_noNAs[,13:24],
+#                  func = WA, col = 1, mono = TRUE)
+#   assign(nam, dat)
+# }
 
 ```
-
 
 #### MAT - ten closest
 
@@ -827,7 +751,7 @@ source('../R/sig_test2.R')
 for (i in 1:length(fossil_sites)) {
   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-                 climate = Clim_noNAs[,13:24],
+                 climate = Temperature,
                  func = mat, col = 2, k = 10)
   assign(nam, dat)
 }
@@ -840,85 +764,122 @@ Again, no significance for the model. This indicates that we are just not able t
 
 Once we have validated the methods, we re-run the analyses using the two methods, MAT and WA.
 
-### Model Summary
+### Model Summary and saving values to file.
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# This often takes a long time, so using a work around to make it a little quicker.
+# This is an altered wrapper for the randomTF function.
+source('../R/sig_test2.R')
 
-if ("mat_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
-  mat_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/mat_reconst.RDS')
+fossil_sites <- unique(UUSS_sites$site.id)
+Temperature <- Clim_noNAs[,14:25]
+columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
+
+if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS", all.files=TRUE)) != 0) {
+  
+  stop("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory.")
+  
 } else {
-  mat_reconst <- predict(rioja::MAT(y = MPCT_counts_noNAs, 
-                                    x = Clim_noNAs[,1], 
-                                    k = 10, 
-                                    dist.method="sq.chord",
-                                    lean = FALSE),
-                         newdata = fossil_data, 
-                         sse = TRUE)
-  saveRDS(mat_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/mat_reconst.RDS')
+
+  for (i in 1:length(unique(UUSS_sites$site.id))) {
+    site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
+    # site <- site[,-(1:8)] %>% 
+    #   mutate_all(funs(ifelse(is.na(.), 0, .)))
+    # Changecols = c(1:ncol(site))
+    # site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+    # MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+    
+    get_clim <- data.frame(matrix(ncol = 9, nrow = 0))
+    x <- c("site.id", "site.name", "lat", "long", "age", "reconst", "err", "model", "climate")
+    colnames(get_clim) <- x
+    
+    # The significance test currently has an error. Data types are the same, and there are the same number of variables. It is the same as running one site before. Will have to spend more time on this.
+    # mat_reconst_sig <- run_tf2(pollen = MPCT_counts_noNAs, fossil = site[,9:ncol(site)], 
+    #              climate = Temperature[,1:12],
+    #              func = mat, col = 2, k = 10)
+    
+    for (j in 1:ncol(Temperature)) {
+      mat_reconst <- predict(rioja::MAT(y = MPCT_counts_noNAs, 
+                                      x = Temperature[,j], 
+                                      k = 10, 
+                                      dist.method="sq.chord",
+                                      lean = FALSE),
+                           newdata = site[,9:ncol(site)],
+                           sse = TRUE)
+      
+      get_clim <-  rbind(get_clim, (data.frame(site.id = site$site.id,
+                                               site.name = site$site.name,
+                                               lat = site$lat,
+                                               long = site$long,
+                                               age = site$age,
+                                               reconst = mat_reconst$fit[,1],
+                                               err = mat_reconst$SEP[,1],
+                                               model   = rep("MAT", 
+                                                             each = nrow(site)),
+                                               climate = colnames(Temperature[j]))))
+    }
+    
+      write.csv(
+        file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
+      )
+    
+      write.csv(get_clim %>% 
+              dplyr::select(-one_of("err")) %>% 
+              tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+              tidyr::spread(model_climate, reconst) %>% 
+              dplyr::select(columnOrder), 
+              row.names = FALSE,
+              file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+  
+      write.csv(get_clim %>% 
+              dplyr::select(-one_of("reconst")) %>% 
+              tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+              tidyr::spread(model_climate, err) %>% 
+              dplyr::select(columnOrder),
+              row.names = FALSE, 
+            file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+  
+  }
 }
 
 
+# -----------------------------------------------------------------------------------------------
+# Need to work on WA reconstruction
 # Currently the rioja::WA function cannot run when species data have zero abundances. Therefore, here we determine what columns in the modern pollen data have zero column sums, and get an index of those columns, then delete the columns. The same index is used to delete the columns from the fossil pollen data.
-dd <- unname(which((colSums(MPCT_counts_noNAs, na.rm=T) < 0.000001), arr.ind = TRUE))
-MPCT_counts_noNAs2 <- MPCT_counts_noNAs[,-(dd)]
-fossil_data2 <- fossil_data[,-(dd)]
-
-
-if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
-  wa_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
-} else {
-  wa_reconst <-  predict(rioja::WA(y = tran(MPCT_counts_noNAs2, method = 'proportion'), 
-                                   x = Clim_noNAs[1,], lean = FALSE),
-                         newdata = fossil_data2, sse = TRUE)
-  saveRDS(wa_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
-}
+# 
+# dd <- unname(which((colSums(MPCT_counts_noNAs, na.rm=T) < 0.000001), arr.ind = TRUE))
+# MPCT_counts_noNAs2 <- MPCT_counts_noNAs[,-(dd)]
+# fossil_data2 <- fossil_data[,-(dd)]
+# 
+# 
+# if ("wa_reconst.RDS" %in% list.files("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output")) {
+#   wa_reconst <- readRDS(file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
+# } else {
+#   wa_reconst <-  predict(rioja::WA(y = tran(MPCT_counts_noNAs2, method = 'proportion'), 
+#                                    x = Clim_noNAs[1,], lean = FALSE),
+#                          newdata = fossil_data2, sse = TRUE)
+#   saveRDS(wa_reconst, file = '/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/wa_reconst.RDS')
+# }
 
 ```
 
+### Plotting the results. 
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-# Here, the data is put into one data frame to allow for ease of plotting.
-get_clim <-  data.frame(age = EldoraFen$`790`$sample.meta$age,
-                        reconst = mat_reconst$fit[,1],
-                        err     = mat_reconst$SEP[,1],
-                        model   = rep("MAT", 
-                                      each = nrow(fossil_data)),
-                        climate = 'tjul')
-
+# This also currently needs to be reworked.
 # Now, we use ggplot to plot the July temperature reconstruction.
-ggplot(get_clim, aes(x = age, y = reconst)) + 
-  geom_line(aes(col = model)) +
-  geom_ribbon(aes(ymin = reconst - err, 
-                  ymax = reconst + err, 
-                  group = model), 
-              alpha = 0.2) +
-  
-  facet_wrap(~climate, scales = 'free', ncol = 2) +
-  
-  xlab("Age - kyr BP") +
-  
-  ylab("Reconstructed Parameter")
-
-```
-
-# Saving to file
-
-Save values to file.
-```{r save_reconstruction, echo=FALSE}
-
-write.csv(get_clim %>% 
-            dplyr::select(-one_of("err")) %>% 
-            tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-            tidyr::spread(model_climate, reconst), 
-          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/clim_reconst.csv")
-
-write.csv(get_clim %>% 
-            dplyr::select(-one_of("reconst")) %>% 
-            tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-            tidyr::spread(model_climate, err), 
-          "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/clim_err.csv")
+# ggplot(get_clim, aes(x = age, y = reconst)) + 
+#   geom_line(aes(col = model)) +
+#   geom_ribbon(aes(ymin = reconst - err, 
+#                   ymax = reconst + err, 
+#                   group = model), 
+#               alpha = 0.2) +
+#   
+#   facet_wrap(~climate, scales = 'free', ncol = 2) +
+#   
+#   xlab("Age - kyr BP") +
+#   
+#   ylab("Reconstructed Parameter")
 
 ```
