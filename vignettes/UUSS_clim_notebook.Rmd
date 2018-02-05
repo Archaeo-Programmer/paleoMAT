@@ -16,7 +16,7 @@ output:
     toc_depth: '3'
 always_allow_html: yes
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE, results='hide'}
@@ -690,24 +690,33 @@ This returns `r length(unique(UUSS_sites$site.id))` sites. The `neotoma` package
 
 library(leaflet)
 
+black.point <- makeIcon(iconUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/11/BlackDot.svg/2000px-BlackDot.svg.png", iconWidth = 10, iconHeight = 10)
+
 # Here, we set up how we want our map to look like.
 map <- leaflet(width = 800, height = 800) %>% 
   addTiles %>% 
   setView(lng = -109.05,
-          lat = 31.68,
-          zoom = 4)
+          lat = 29.68,
+          zoom = 5)
 
 # If you wanted a simple map, then you would just need lat and long. However, I have made 
 # some additions, so that you can click on each site and get the site name and can also be 
 # redirected to Neotoma webpage to get more information about each site.
 map %>% addMarkers(lng = UUSS_sites$long, 
                    lat = UUSS_sites$lat, 
+                   icon = black.point,
                    popup = paste0('<b>', 
                                   as.character(UUSS_sites$site.name), 
                                   '</b><br>',
                                   '<a href=http://apps.neotomadb.org/explorer/?datasetid=', 
                                   UUSS_sites$site.id, 
-                                  '>Neotoma Database</a>'))
+                                  '>Neotoma Database</a>')) %>% 
+  # This is to show the Bocinsky et al. 2016 study area.
+  addRectangles(-113, 32, -105, 38, 
+              fillColor = "transparent", 
+              color = "grey", 
+              weight = 3)
+
 
 ```
 
@@ -784,19 +793,21 @@ columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_
 
 # Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. Each site will have two output files, one will be the reconstructed temperatures and the other will have the associated error.
 
-# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. The dir is listed to find out how many .csv files are currently in the output folder (if any). Then, on the right side, we use the length of the fossil sites times two (since 2 files are created for each site, 1 reconstruction and 1 error). If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. 
-if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) != ((length(fossil_sites))*2)) {
-  
+# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. The dir is listed to find out how many .csv files are currently in the output folder (if any). Then, on the right side, we use the length of the fossil sites times two (since 2 files are created for each site, 1 reconstruction and 1 error). If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. ((length(fossil_sites))*2)
+if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) == ((length(fossil_sites))*2)) {
   
   # Check to see if all files from the reconstructed sites are in the UUSS output folder. 
-  UUSS.files <- list.files(path = "./output/UUSS/", pattern = "*.csv")
-  UUSS.files <- unique(as.numeric(sapply(strsplit(UUSS.files, "_"), "[[", 1)))
-  UUSS.files.missing <- setdiff(unique(UUSS_sites$site.id), UUSS.files)
+  # UUSS.files <- list.files(path = "./output/UUSS/", pattern = "*.csv")
+  # UUSS.files <- unique(as.numeric(sapply(strsplit(UUSS.files, "_"), "[[", 1)))
+  UUSS.files.missing <- setdiff(UUSS.files, unique(UUSS_sites$site.id))
   
-  stop("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory.")
+  print(paste0(UUSS.files.missing))
   
-  } else {
-
+  stop(print(paste0("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory. However, the following sites have not yet been reconstructed: ", UUSS.files.missing)))
+  
+} else {
+stop()
+  }
   for (i in 1:length(unique(UUSS_sites$site.id))) {
     
     # Filter to one site to do the reconstruction.
@@ -844,6 +855,7 @@ if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) != 
                                                climate = colnames(Temperature[j]))))
     }
     
+      # Output the significance test of the fossil pollen site and the calibrated dataset.
       # write.csv(
       #   file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
       # )
