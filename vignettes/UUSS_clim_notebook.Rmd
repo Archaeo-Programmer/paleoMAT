@@ -784,12 +784,12 @@ columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_
 
 # Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. Each site will have two output files, one will be the reconstructed temperatures and the other will have the associated error.
 
-# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. 
-if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", all.files=FALSE)) != 0) {
+# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. The dir is listed to find out how many .csv files are currently in the output folder (if any). Then, on the right side, we use the length of the fossil sites times two (since 2 files are created for each site, 1 reconstruction and 1 error). If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. 
+if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) != ((length(fossil_sites))*2)) {
   
   
   # Check to see if all files from the reconstructed sites are in the UUSS output folder. 
-  UUSS.files <- list.files(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/")
+  UUSS.files <- list.files(path = "./output/UUSS/", pattern = "*.csv")
   UUSS.files <- unique(as.numeric(sapply(strsplit(UUSS.files, "_"), "[[", 1)))
   UUSS.files.missing <- setdiff(unique(UUSS_sites$site.id), UUSS.files)
   
@@ -845,7 +845,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
     }
     
       # write.csv(
-      #   file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
+      #   file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
       # )
     
       # Output the reconstructed data into a csv file. 
@@ -855,7 +855,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
               tidyr::spread(model_climate, reconst) %>% 
               dplyr::select(columnOrder), 
               row.names = FALSE,
-              file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+              file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
   
       # Output the error of the reconstructed data into a csv file.
       write.csv(get_clim %>% 
@@ -864,7 +864,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
               tidyr::spread(model_climate, err) %>% 
               dplyr::select(columnOrder),
               row.names = FALSE, 
-            file = paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+            file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
   
   }
 }
@@ -901,8 +901,8 @@ monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT
 for (i in 1:length(fossil_sites)) {
   
   # Read in the reconstruction and error files for a given site.
-  FS_reconst <- read.csv(paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
-  FS_err <- read.csv(paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+  FS_reconst <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+  FS_err <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
   
   # Convert each of the two files into long format, and for the error file, we only need to keep the one column with the error data. This will be bound to the other reconstructed temperature dataframe.
   FS_reconst_long <- gather(FS_reconst, model_month, reconst, MAT_tjan:MAT_tdec, factor_key=TRUE)
@@ -927,12 +927,12 @@ for (i in 1:length(fossil_sites)) {
       scale_x_continuous(breaks=waiver())
     
     # Save the plot for one month.
-    ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/monthly_plots/")
+    ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "./output/UUSS/monthly_plots/")
 
     # Create html files that have the interactive plots from plotly.
     month_plot_ggplotly <- ggplotly(month_plot)
     htmlwidgets::saveWidget(month_plot_ggplotly,
-                            paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/plotly_htmls/",
+                            paste0("./output/UUSS/plotly_htmls/",
                                    fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
      
   }
