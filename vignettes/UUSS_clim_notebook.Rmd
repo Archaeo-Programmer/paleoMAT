@@ -660,8 +660,7 @@ NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
 
 # The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same site.id.
 NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts) %>%
-  dplyr::arrange(site.id) %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+  dplyr::arrange(site.id)
 
 ```
 
@@ -677,6 +676,9 @@ extent.FourCorners <- raster::extent(FourCorners)
 
 # Subset fossil dataset. Temporarily put in 40.5 for ymax so that Wyoming and Nebraska fossil sites are not included for the Four Corner states. Here we limit the NA fossil dataset to the Four Corner states and just for the past 2000 years.
 UUSS_sites <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@xmin & long <= extent.FourCorners@xmax & lat >= extent.FourCorners@ymin & lat <= 40.5 & age <= 2000)
+
+# Temporarily removing sites that only have one row of data, since the reconstruction won't run because it gets coerced to 1 dimension.
+UUSS_sites <- subset(UUSS_sites, !(UUSS_sites$site.id==1717 | UUSS_sites$site.id==3608 | UUSS_sites$site.id==3611 | UUSS_sites$site.id==15106 | UUSS_sites$site.id==15298 | UUSS_sites$site.id==15368))
 
 ```
 
@@ -785,11 +787,17 @@ columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_
 # First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. 
 if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", all.files=FALSE)) != 0) {
   
+  
+  # Check to see if all files from the reconstructed sites are in the UUSS output folder. 
+  UUSS.files <- list.files(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/")
+  UUSS.files <- unique(as.numeric(sapply(strsplit(UUSS.files, "_"), "[[", 1)))
+  UUSS.files.missing <- setdiff(unique(UUSS_sites$site.id), UUSS.files)
+  
   stop("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory.")
   
-} else {
+  } else {
 
-  for (i in 15:length(unique(UUSS_sites$site.id))) {
+  for (i in 1:length(unique(UUSS_sites$site.id))) {
     
     # Filter to one site to do the reconstruction.
     site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
@@ -820,7 +828,7 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
                                       k = 10, 
                                       dist.method="sq.chord",
                                       lean = FALSE),
-                           newdata = site[,9:ncol(site)],
+                           newdata = site[,9:ncol(site), drop=F],
                            sse = TRUE)
       
       # Put the reconstructed data into a dataframe.
@@ -886,19 +894,49 @@ if (length(dir(path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-# This also currently needs to be reworked.
-# Now, we use ggplot to plot the July temperature reconstruction.
-# ggplot(get_clim, aes(x = age, y = reconst)) + 
-#   geom_line(aes(col = model)) +
-#   geom_ribbon(aes(ymin = reconst - err, 
-#                   ymax = reconst + err, 
-#                   group = model), 
-#               alpha = 0.2) +
-#   
-#   facet_wrap(~climate, scales = 'free', ncol = 2) +
-#   
-#   xlab("Age - kyr BP") +
-#   
-#   ylab("Reconstructed Parameter")
+# Loop to produce plots of each month for a site.
+
+monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
+
+for (i in 1:length(fossil_sites)) {
+  
+  # Read in the reconstruction and error files for a given site.
+  FS_reconst <- read.csv(paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+  FS_err <- read.csv(paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+  
+  # Convert each of the two files into long format, and for the error file, we only need to keep the one column with the error data. This will be bound to the other reconstructed temperature dataframe.
+  FS_reconst_long <- gather(FS_reconst, model_month, reconst, MAT_tjan:MAT_tdec, factor_key=TRUE)
+  FS_err_long <- gather(FS_err, model_month, err, MAT_tjan:MAT_tdec, factor_key=TRUE) %>% 
+    .$err
+  
+  # Bind reconstructed temperature and error together into one dataframe. This will make it easier for plotting.
+  FS_long <- cbind(FS_reconst_long, err = FS_err_long)
+  
+  for (j in 1:12) {
+    month_plot <- ggplot(data=(dplyr::filter(FS_long, model_month==monthPlots[j])), aes(x=age, y=reconst, group=model_month, colour=model_month)) +
+      geom_ribbon(aes(ymin = reconst - err,
+                      ymax = reconst + err,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey") +
+      geom_line() +
+      geom_point() +
+      #facet_wrap(~model_month, ncol = 2) +
+      xlab("Age - kyr BP") +
+      ylab("Temperature (°C)") +
+      scale_x_continuous(breaks=waiver())
+    
+    # Save the plot for one month.
+    ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/monthly_plots/")
+
+    # Create html files that have the interactive plots from plotly.
+    month_plot_ggplotly <- ggplotly(month_plot)
+    htmlwidgets::saveWidget(month_plot_ggplotly,
+                            paste0("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/output/UUSS/plotly_htmls/",
+                                   fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
+     
+  }
+  
+}
 
 ```
