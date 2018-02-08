@@ -136,10 +136,10 @@ MP_counts <- MP_counts[,c(names(MP_counts)[1], sort(names(MP_counts)[2:ncol(MP_c
 
 # First, merge the metadata with the publication year, using the site.id to match, just to double check.
 MP_metadata_counts <- dplyr::left_join(MP_metadata,
-                                    MP_pub_date,
-                                    by  = "site.id") %>%
-  dplyr::left_join(MP_counts,
+                                       MP_pub_date,
                                        by  = "site.id") %>%
+  dplyr::left_join(MP_counts,
+                   by  = "site.id") %>%
   dplyr::arrange(site.id)
 
 ```
@@ -264,10 +264,10 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 rbind.all.columns <- function(x, y) {
   x.diff <- setdiff(colnames(x), colnames(y))
   y.diff <- setdiff(colnames(y), colnames(x))
-    
+  
   x[, c(as.character(y.diff))] <- 0
   y[, c(as.character(x.diff))] <- 0
- 
+  
   return(rbind(x, y))
 }
 
@@ -356,13 +356,24 @@ types <- c("ppt", "tmin","tmax")
 # Create data output directory if it doesn't already exist
 dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/extraction", showWarnings = F, recursive = T)
 
+# # (Down)Load the states shapefile form the National Atlas
+# if(!dir.exists("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statep010")){
+#   dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/", showWarnings = F, recursive = T)
+#   download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz", destfile="/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", mode='wb')
+#   untar("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", exdir="/Volumes/DATA/NATIONAL_ATLAS/statesp010g")
+# }
+
 # (Down)Load the states shapefile form the National Atlas
-if(!dir.exists("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statep010")){
-  dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/", showWarnings = F, recursive = T)
-  download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz", destfile="/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", mode='wb')
-  untar("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", exdir="/Volumes/DATA/NATIONAL_ATLAS/statesp010g")
+if(!file.exists("./data/raw_data/statesp010g.shp_nt00938.tar.gz")){
+  download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz",
+              destfile = "./data/raw_data/statesp010g.shp_nt00938.tar.gz",
+              mode='wb')
 }
-states <- readOGR("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938", layer='statesp010g')
+untar("./data/raw_data/statesp010g.shp_nt00938.tar.gz",
+      exdir="../data/raw_data/statesp010g")
+
+
+states <- readOGR("./data/raw_data/statesp010g.shp_nt00938", layer='statesp010g')
 
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
 states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
@@ -376,8 +387,8 @@ extent.states@ymin <- floor(extent.states@ymin)
 extent.states@xmax <- ceiling(extent.states@xmax)
 extent.states@ymax <- ceiling(extent.states@ymax)
 
-# Get list of all file names in the prism directory.
-monthly.files <- EXTRACTION.DIR
+# # Get list of all file names in the prism directory.
+# monthly.files <- EXTRACTION.DIR
 
 # Use the rebus package to generate a regular expression for a number range, which will allow for the extraction of specific years in the prism data (i.e., 1961-1990).
 rx <- rebus.numbers::number_range(1961, 1990)
@@ -444,11 +455,11 @@ clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>%
 ```{r load_WordClim, echo = FALSE, warning=FALSE}
 # Load WorldClim Climate data.
 
-## Set the working directory to the directory of this file!
-setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/vignettes")
-
-# Create an output directory
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data", showWarnings = F, recursive = T)
+# ## Set the working directory to the directory of this file!
+# setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/vignettes")
+# 
+# # Create an output directory
+# dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data", showWarnings = F, recursive = T)
 
 # Load all the auxillary functions
 all.functions <- lapply(list.files("./src",full.names=T),source)
@@ -459,18 +470,21 @@ options(scipen=999)
 # Force Raster to load large rasters into memory
 raster::rasterOptions(chunksize=2e+08,maxmemory=2e+09)
 
-# This MUST point at an original LT81 dataset available from the PRISM climate group (http://www.prism.oregonstate.edu).
 WC.DIR <- "/Volumes/DATA/WORLDCLIM_2.0/"
 
+if(!file.exists("../data/raw_data/wc2.0_30s_bio.zip"))
+  download.file("http://data.biogeo.ucdavis.edu/data/worldclim/v2.0/tif/base/wc2.0_30s_bio.zip",
+                destfile = "../data/raw_data/wc2.0_30s_bio.zip")
+
 # Specify a directory for extraction
-EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data"
+# EXTRACTION.DIR <- "/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data"
 
 # The climate parameters to be extracted
-types <- c("ppt", "tmin","tmax")
+types <- c("ppt", "tmin", "tmax")
 
 ##### BEGIN RAW DATA EXTRACTION #####
 # Create data output directory if it doesn't already exist
-dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/extraction", showWarnings = F, recursive = T)
+# dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/extraction", showWarnings = F, recursive = T)
 
 # Get list of all file names in the prism directory.
 wc.files <- list.files(paste0(WC.DIR), recursive=T, full.names=T)
@@ -630,36 +644,43 @@ NAfossil_counts <- NAfossil_datasets %>%
   purrr::map(compile_taxa,
              list.name = "WhitmoreFull") %>%
   purrr::map(as_tibble) %>%
-  bind_rows(.id = "site.id") %>% 
-  select(-ends_with("site.id")) %>%
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+  purrr::imap(.f = function(x,y){
+    cbind(NAfossil_datasets[[y]]$sample.meta %>%
+            dplyr::select(dataset.id,depth),
+          x)
+  }) %>%
+  bind_rows() %>% 
+  # select(-ends_with("site.id")) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
+  as_tibble()
 
-NAfossil_counts <- NAfossil_counts[,sort(names(NAfossil_counts)[1:ncol(NAfossil_counts)])]
+# NAfossil_counts <- NAfossil_counts[,sort(names(NAfossil_counts)[1:ncol(NAfossil_counts)])]
 
-# Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
-sameVariables <- function(x,y) {
-    for (i in names(x)) {
-        if (!(i %in% names(y))) {
-            print('Warning: Names are not the same!')
-            break
-        }  
-        else if(i==tail(names(y),n=1)) {
-            print('Names are identical.')
-        }
-    }
-}
-
-sameVariables(NAfossil_counts, MPCT_counts_noNAs)
+# # Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
+# sameVariables <- function(x,y) {
+#     for (i in names(x)) {
+#         if (!(i %in% names(y))) {
+#             print('Warning: Names are not the same!')
+#             break
+#         }  
+#         else if(i==tail(names(y),n=1)) {
+#             print('Names are identical.')
+#         }
+#     }
+# }
+# 
+# sameVariables(NAfossil_counts, MPCT_counts_noNAs)
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
 # First, merge (using a left_join) the metadata with the publication year, using the site.id to match, just to double check.
 NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
-                                    NAfossil_pub_date,
-                                    by  = "site.id")
+                                          NAfossil_pub_date,
+                                          by  = "site.id")
 
 # The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same site.id.
-NAfossil_metadata_counts <- cbind(NAfossil_metadata_pub, NAfossil_counts) %>%
+NAfossil_metadata_counts <- dplyr::left_join(NAfossil_metadata_pub, NAfossil_counts,
+                                             by = c("site.id" = "dataset.id","depth")) %>%
   dplyr::arrange(site.id)
 
 ```
@@ -713,9 +734,9 @@ map %>% addMarkers(lng = UUSS_sites$long,
                                   '>Neotoma Database</a>')) %>% 
   # This is to show the Bocinsky et al. 2016 study area.
   addRectangles(-113, 32, -105, 38, 
-              fillColor = "transparent", 
-              color = "grey", 
-              weight = 3)
+                fillColor = "transparent", 
+                color = "grey", 
+                weight = 3)
 
 
 ```
@@ -780,7 +801,7 @@ Once we have validated the methods, we re-run the analyses using the two methods
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is an altered wrapper for the randomTF function.
-source('../R/sig_test2.R')
+source('./R/sig_test2.R')
 
 # Create a list of all the fossil pollen sites to be reconstructed for the UUSS. 
 fossil_sites <- unique(UUSS_sites$site.id)
@@ -806,80 +827,111 @@ if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) == 
   stop(print(paste0("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory. However, the following sites have not yet been reconstructed: ", UUSS.files.missing)))
   
 } else {
-stop()
-  }
-  for (i in 1:length(unique(UUSS_sites$site.id))) {
-    
-    # Filter to one site to do the reconstruction.
-    site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
-    # site <- site[,-(1:8)] %>% 
-    #   mutate_all(funs(ifelse(is.na(.), 0, .)))
-    # Changecols = c(1:ncol(site))
-    # site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
-    # MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
-    
-    # Create an empty dataframe, so that the 12 months of data can be in one dataframe for the site.
-    get_clim <- data.frame(matrix(ncol = 9, nrow = 0))
-    
-    # Name the columns for the new empty dataframe.
-    x <- c("site.id", "site.name", "lat", "long", "age", "reconst", "err", "model", "climate")
-    colnames(get_clim) <- x
-    
-    # The significance test currently has an error. Data types are the same, and there are the same number of variables. It is the same as running one site before. Will have to spend more time on this.
-    # mat_reconst_sig <- run_tf2(pollen = MPCT_counts_noNAs, fossil = site[,9:ncol(site)], 
-    #              climate = Temperature[,1:12],
-    #              func = mat, col = 2, k = 10)
-    
-    # Need another loop to do the reconstruction for all 12 months for a site, which goes into one dataframe, get_clim.
-    for (j in 1:ncol(Temperature)) {
-      
-      # Create the MAT reconstruction.
-      mat_reconst <- predict(rioja::MAT(y = MPCT_counts_noNAs, 
-                                      x = Temperature[,j], 
-                                      k = 10, 
-                                      dist.method="sq.chord",
-                                      lean = FALSE),
-                           newdata = site[,9:ncol(site), drop=F],
-                           sse = TRUE)
-      
-      # Put the reconstructed data into a dataframe.
-      get_clim <-  rbind(get_clim, (data.frame(site.id = site$site.id,
-                                               site.name = site$site.name,
-                                               lat = site$lat,
-                                               long = site$long,
-                                               age = site$age,
-                                               reconst = mat_reconst$fit[,1],
-                                               err = mat_reconst$SEP[,1],
-                                               model   = rep("MAT", 
-                                                             each = nrow(site)),
-                                               climate = colnames(Temperature[j]))))
-    }
-    
-      # Output the significance test of the fossil pollen site and the calibrated dataset.
-      # write.csv(
-      #   file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
-      # )
-    
-      # Output the reconstructed data into a csv file. 
-      write.csv(get_clim %>% 
-              dplyr::select(-one_of("err")) %>% 
-              tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-              tidyr::spread(model_climate, reconst) %>% 
-              dplyr::select(columnOrder), 
-              row.names = FALSE,
-              file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
-  
-      # Output the error of the reconstructed data into a csv file.
-      write.csv(get_clim %>% 
-              dplyr::select(-one_of("reconst")) %>% 
-              tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-              tidyr::spread(model_climate, err) %>% 
-              dplyr::select(columnOrder),
-              row.names = FALSE, 
-            file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
-  
-  }
+  stop()
 }
+
+
+mat_models_temp <- purrr::map(1:12,
+                              .f = function(j){
+                                rioja::MAT(y = MPCT_counts_noNAs, 
+                                           x = Temperature[,j], 
+                                           k = 10, 
+                                           dist.method="sq.chord",
+                                           lean = FALSE)
+                              })
+
+
+mat_models_temp %>%
+  purrr::map_dfr(.id = "climate",
+                 .f = function(the.model){
+                   # Create the MAT reconstruction.
+                   mat_reconst <- predict(the.model,
+                                          newdata = UUSS_sites %>%
+                                            dplyr::select(-site.id:-pub_year),
+                                          sse = TRUE)
+                   
+                   # Put the reconstructed data into a dataframe.
+                   UUSS_sites %>%
+                     dplyr::select(site.id:pub_year) %>%
+                     dplyr::mutate(model = "MAT") %>%
+                     cbind(
+                       tibble(reconst = mat_reconst$fit[,1],
+                              err = mat_reconst$SEP[,1])
+                     )
+                 })
+
+
+# for (i in 1:length(unique(UUSS_sites$site.id))) {
+#   
+#   # Filter to one site to do the reconstruction.
+#   site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
+#   # site <- site[,-(1:8)] %>% 
+#   #   mutate_all(funs(ifelse(is.na(.), 0, .)))
+#   # Changecols = c(1:ncol(site))
+#   # site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+#   # MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+#   
+#   # Create an empty dataframe, so that the 12 months of data can be in one dataframe for the site.
+#   # get_clim <- data.frame(matrix(ncol = 9, nrow = 0))
+#   
+#   # Name the columns for the new empty dataframe.
+#   # x <- c("site.id", "site.name", "lat", "long", "age", "reconst", "err", "model", "climate")
+#   # colnames(get_clim) <- x
+#   
+#   # The significance test currently has an error. Data types are the same, and there are the same number of variables. It is the same as running one site before. Will have to spend more time on this.
+#   # mat_reconst_sig <- run_tf2(pollen = MPCT_counts_noNAs, fossil = site[,9:ncol(site)], 
+#   #              climate = Temperature[,1:12],
+#   #              func = mat, col = 2, k = 10)
+#   
+#   # Need another loop to do the reconstruction for all 12 months for a site, which goes into one dataframe, get_clim.
+#   
+#   
+#   mat_models_temp %>%
+#     purrr::map_dfr(.id = "climate",
+#                    .f = function(the.model){
+#                      # Create the MAT reconstruction.
+#                      mat_reconst <- predict(the.model,
+#                                             newdata = site[,9:ncol(site), drop=F],
+#                                             sse = TRUE)
+#                      
+#                      # Put the reconstructed data into a dataframe.
+#                      tibble(site.id = site$site.id,
+#                             site.name = site$site.name,
+#                             lat = site$lat,
+#                             long = site$long,
+#                             age = site$age,
+#                             reconst = mat_reconst$fit[,1],
+#                             err = mat_reconst$SEP[,1],
+#                             model = rep("MAT", 
+#                                         each = nrow(site)))
+#                    })
+#   
+#   
+#   # Output the significance test of the fossil pollen site and the calibrated dataset.
+#   # write.csv(
+#   #   file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
+#   # )
+#   
+#   # Output the reconstructed data into a csv file. 
+#   write.csv(get_clim %>% 
+#               dplyr::select(-one_of("err")) %>% 
+#               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+#               tidyr::spread(model_climate, reconst) %>% 
+#               dplyr::select(columnOrder), 
+#             row.names = FALSE,
+#             file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+#   
+#   # Output the error of the reconstructed data into a csv file.
+#   write.csv(get_clim %>% 
+#               dplyr::select(-one_of("reconst")) %>% 
+#               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
+#               tidyr::spread(model_climate, err) %>% 
+#               dplyr::select(columnOrder),
+#             row.names = FALSE, 
+#             file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+#   
+# }
+# }
 
 
 # -----------------------------------------------------------------------------------------------
@@ -940,13 +992,13 @@ for (i in 1:length(fossil_sites)) {
     
     # Save the plot for one month.
     ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "./output/UUSS/monthly_plots/")
-
+    
     # Create html files that have the interactive plots from plotly.
     month_plot_ggplotly <- ggplotly(month_plot)
     htmlwidgets::saveWidget(month_plot_ggplotly,
                             paste0("./output/UUSS/plotly_htmls/",
                                    fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
-     
+    
   }
   
 }
