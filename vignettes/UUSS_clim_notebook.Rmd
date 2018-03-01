@@ -180,77 +180,79 @@ if(!file.exists("./data/raw_data/NAfossil_chron.Rds")){
 }
 NAfossil_chron <- readr::read_rds("./data/raw_data/NAfossil_chron.Rds")
 
+## Temporarily, commenting this out. This is NOT the correct data. I will probably be able to recylce this code when I'm able to bring in the "modern" pollen data, which are the core tops data that are modern. The modern ran in the previous chunk are the "pollen surface sample"s, but I need the "modern" keyword data.
+
 # KB: I think this line does almost everything you were trying to do
-coreTops <- NAfossil_chron %>% 
-  purrr::map_dfr(.id = "site.id",
-                 "chron.control") %>%
-  tibble::as_tibble() %>%
-  dplyr::mutate(site.id = site.id %>%
-                  as.integer()) %>%
-  dplyr::filter(control.type == "Core top")
-
-# Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
-# Then, combine the rows from the datasets together so that they are now in one tibble.
-CT_metadata <- NAfossil_datasets %>%
-  magrittr::extract(coreTops$site.id %>% 
-                      unique() %>% 
-                      as.character()) %>%
-  map(compile_MP) %>%
-  purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
-  bind_rows() %>%
-  dplyr::rename(site.id = dataset) %>% 
-  dplyr::mutate(type = "core top")
-
-
-CTPub_Year <- NAfossil_pubs %>%
-  magrittr::extract(coreTops$site.id %>% 
-                      unique() %>% 
-                      as.character()) %>%
-  purrr::map_dfr(.id = "site.id", 
-                 .f = function(x){
-                   tibble::tibble(pub_year = x %>%
-                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
-                                    as.integer()) # coerce to integer
-                 })
-
-
-CTPub_Year %<>%
-  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
-                                  1990,
-                                  pub_year),
-                site.id = as.integer(site.id))
-
-# Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
-CT_pubDate <- CTPub_Year %>% 
-  group_by(site.id) %>% 
-  slice(which.min(pub_year))
-
-# Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
-CT_counts <- NAfossil_datasets %>%
-  magrittr::extract(coreTops$site.id %>% 
-                      unique() %>% 
-                      as.character()) %>%
-  purrr::map("counts") %>%
-  purrr::map(as_tibble) %>%
-  purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT counts)
-  purrr::map(compile_taxa,
-             list.name = "WhitmoreFull") %>%
-  purrr::map(as_tibble) %>%
-  bind_rows(.id = "site.id") %>% 
-  dplyr::mutate(site.id = as.integer(site.id))
-
-# Sort the taxa to be in alphabetical order. 
-CT_counts <- CT_counts[,c(names(CT_counts)[1], sort(names(CT_counts)[2:ncol(CT_counts)]))]
-
-# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
-
-# First, merge the metadata with the publication year, using the site.id to match, just to double check.
-CT_metadata_counts <- dplyr::left_join(CT_metadata,
-                                       CT_pubDate,
-                                       by  = "site.id") %>%
-  dplyr::left_join(CT_counts,
-                   by  = "site.id") %>%
-  dplyr::arrange(site.id)
+# coreTops <- NAfossil_chron %>%
+#   purrr::map_dfr(.id = "site.id",
+#                  "chron.control") %>%
+#   tibble::as_tibble() %>%
+#   dplyr::mutate(site.id = site.id %>%
+#                   as.integer()) %>%
+#   dplyr::filter(control.type == "Core top")
+# 
+# # Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
+# # Then, combine the rows from the datasets together so that they are now in one tibble.
+# CT_metadata <- NAfossil_datasets %>%
+#   magrittr::extract(coreTops$site.id %>%
+#                       unique() %>%
+#                       as.character()) %>%
+#   map(compile_MP) %>%
+#   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
+#   bind_rows() %>%
+#   dplyr::rename(site.id = dataset) %>%
+#   dplyr::mutate(type = "core top")
+# 
+# 
+# CTPub_Year <- NAfossil_pubs %>%
+#   magrittr::extract(coreTops$site.id %>%
+#                       unique() %>%
+#                       as.character()) %>%
+#   purrr::map_dfr(.id = "site.id",
+#                  .f = function(x){
+#                    tibble::tibble(pub_year = x %>%
+#                                     purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+#                                     as.integer()) # coerce to integer
+#                  })
+# 
+# 
+# CTPub_Year %<>%
+#   dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+#                                   1990,
+#                                   pub_year),
+#                 site.id = as.integer(site.id))
+# 
+# # Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
+# CT_pubDate <- CTPub_Year %>%
+#   group_by(site.id) %>%
+#   slice(which.min(pub_year))
+# 
+# # Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
+# CT_counts <- NAfossil_datasets %>%
+#   magrittr::extract(coreTops$site.id %>%
+#                       unique() %>%
+#                       as.character()) %>%
+#   purrr::map("counts") %>%
+#   purrr::map(as_tibble) %>%
+#   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT counts)
+#   purrr::map(compile_taxa,
+#              list.name = "WhitmoreFull") %>%
+#   purrr::map(as_tibble) %>%
+#   bind_rows(.id = "site.id") %>%
+#   dplyr::mutate(site.id = as.integer(site.id))
+# 
+# # Sort the taxa to be in alphabetical order.
+# CT_counts <- CT_counts[,c(names(CT_counts)[1], sort(names(CT_counts)[2:ncol(CT_counts)]))]
+# 
+# # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
+# 
+# # First, merge the metadata with the publication year, using the site.id to match, just to double check.
+# CT_metadata_counts <- dplyr::left_join(CT_metadata,
+#                                        CT_pubDate,
+#                                        by  = "site.id") %>%
+#   dplyr::left_join(CT_counts,
+#                    by  = "site.id") %>%
+#   dplyr::arrange(site.id)
 
 ```
 
@@ -260,25 +262,27 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
+# Also, temporarily commenting this section out, since I do not have the modern data to combine with the pollen surface samples.
+
 # Function to combine the core top and surface sample data, since one dataset may have more columns than the other, which would happen if not all species were represented in one dataset. Therefore, here we make sure that all unique columns are represented in the combined dataframe.
-rbind.all.columns <- function(x, y) {
-  x.diff <- setdiff(colnames(x), colnames(y))
-  y.diff <- setdiff(colnames(y), colnames(x))
-  
-  x[, c(as.character(y.diff))] <- 0
-  y[, c(as.character(x.diff))] <- 0
-  
-  return(rbind(x, y))
-}
-
-# Now the two dataframes can be combined using the function, then sort the rows by site.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
-MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
-  dplyr::arrange(site.id) %>% 
-  distinct(site.id, .keep_all = TRUE) %>%
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
-
-# Sort the taxa to be in alphabetical order. 
-MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:7], sort(names(MPCT_metadata_counts)[8:ncol(MPCT_metadata_counts)]))]
+# rbind.all.columns <- function(x, y) {
+#   x.diff <- setdiff(colnames(x), colnames(y))
+#   y.diff <- setdiff(colnames(y), colnames(x))
+#   
+#   x[, c(as.character(y.diff))] <- 0
+#   y[, c(as.character(x.diff))] <- 0
+#   
+#   return(rbind(x, y))
+# }
+# 
+# # Now the two dataframes can be combined using the function, then sort the rows by site.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
+# MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
+#   dplyr::arrange(site.id) %>% 
+#   distinct(site.id, .keep_all = TRUE) %>%
+#   mutate_all(funs(ifelse(is.na(.), 0, .)))
+# 
+# # Sort the taxa to be in alphabetical order. 
+# MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:7], sort(names(MPCT_metadata_counts)[8:ncol(MPCT_metadata_counts)]))]
 
 ```
 
@@ -701,6 +705,9 @@ UUSS_sites <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@xmin &
 # Temporarily removing sites that only have one row of data, since the reconstruction won't run because it gets coerced to 1 dimension.
 UUSS_sites <- subset(UUSS_sites, !(UUSS_sites$site.id==1717 | UUSS_sites$site.id==3608 | UUSS_sites$site.id==3611 | UUSS_sites$site.id==15106 | UUSS_sites$site.id==15298 | UUSS_sites$site.id==15368))
 
+# Alphabetize the taxa.
+UUSS_sites <- UUSS_sites[ , c(names(UUSS_sites)[1:8], sort(names(UUSS_sites)[9:ncol(UUSS_sites)]))]
+
 ```
 
 This returns `r length(unique(UUSS_sites$site.id))` sites. The `neotoma` package provides plotting capabilities, but `leaflet` allows for more interactive plotting.
@@ -801,7 +808,7 @@ Once we have validated the methods, we re-run the analyses using the two methods
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is an altered wrapper for the randomTF function.
-source('./R/sig_test2.R')
+source('../R/sig_test2.R')
 
 # Create a list of all the fossil pollen sites to be reconstructed for the UUSS. 
 fossil_sites <- unique(UUSS_sites$site.id)
@@ -809,29 +816,13 @@ fossil_sites <- unique(UUSS_sites$site.id)
 # Subset the climate data to just Temperature. 
 Temperature <- Clim_noNAs[,14:25]
 
-# Create a list that will be used to reorder the temperature reconstruction columns, so that months are in order.
-columnOrder <- c("site.id", "site.name", "lat", "long", "age", "MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
+# Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. The reconstructions are in one output file, which has the reconstructed temperatures and associated error.
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. Each site will have two output files, one will be the reconstructed temperatures and the other will have the associated error.
+# First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction csv and it will run. 
 
-# First, to save some time, check to see if the sites have already been reconstructed, if so then this chunk will not run. The dir is listed to find out how many .csv files are currently in the output folder (if any). Then, on the right side, we use the length of the fossil sites times two (since 2 files are created for each site, 1 reconstruction and 1 error). If you would like to re-run the reconstructions, then simply delete the contents of the UUSS directory, then it will run. ((length(fossil_sites))*2)
-if (length(dir(path = "./output/UUSS/", all.files=FALSE, pattern = "*.csv")) == ((length(fossil_sites))*2)) {
+if (!file.exists("../output/UUSS_reconst.csv")) {
   
-  # Check to see if all files from the reconstructed sites are in the UUSS output folder. 
-  # UUSS.files <- list.files(path = "./output/UUSS/", pattern = "*.csv")
-  # UUSS.files <- unique(as.numeric(sapply(strsplit(UUSS.files, "_"), "[[", 1)))
-  UUSS.files.missing <- setdiff(UUSS.files, unique(UUSS_sites$site.id))
-  
-  print(paste0(UUSS.files.missing))
-  
-  stop(print(paste0("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete all files from the UUSS directory. However, the following sites have not yet been reconstructed: ", UUSS.files.missing)))
-  
-} else {
-  stop()
-}
-
-
-mat_models_temp <- purrr::map(1:12,
+  mat_models_temp <- purrr::map(1:12,
                               .f = function(j){
                                 rioja::MAT(y = MPCT_counts_noNAs, 
                                            x = Temperature[,j], 
@@ -839,9 +830,8 @@ mat_models_temp <- purrr::map(1:12,
                                            dist.method="sq.chord",
                                            lean = FALSE)
                               })
-
-
-mat_models_temp %>%
+  
+  UUSS_reconst <- mat_models_temp %>%
   purrr::map_dfr(.id = "climate",
                  .f = function(the.model){
                    # Create the MAT reconstruction.
@@ -861,77 +851,32 @@ mat_models_temp %>%
                  })
 
 
-# for (i in 1:length(unique(UUSS_sites$site.id))) {
-#   
-#   # Filter to one site to do the reconstruction.
-#   site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[i])
-#   # site <- site[,-(1:8)] %>% 
-#   #   mutate_all(funs(ifelse(is.na(.), 0, .)))
-#   # Changecols = c(1:ncol(site))
-#   # site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
-#   # MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
-#   
-#   # Create an empty dataframe, so that the 12 months of data can be in one dataframe for the site.
-#   # get_clim <- data.frame(matrix(ncol = 9, nrow = 0))
-#   
-#   # Name the columns for the new empty dataframe.
-#   # x <- c("site.id", "site.name", "lat", "long", "age", "reconst", "err", "model", "climate")
-#   # colnames(get_clim) <- x
-#   
-#   # The significance test currently has an error. Data types are the same, and there are the same number of variables. It is the same as running one site before. Will have to spend more time on this.
-#   # mat_reconst_sig <- run_tf2(pollen = MPCT_counts_noNAs, fossil = site[,9:ncol(site)], 
-#   #              climate = Temperature[,1:12],
-#   #              func = mat, col = 2, k = 10)
-#   
-#   # Need another loop to do the reconstruction for all 12 months for a site, which goes into one dataframe, get_clim.
-#   
-#   
-#   mat_models_temp %>%
-#     purrr::map_dfr(.id = "climate",
-#                    .f = function(the.model){
-#                      # Create the MAT reconstruction.
-#                      mat_reconst <- predict(the.model,
-#                                             newdata = site[,9:ncol(site), drop=F],
-#                                             sse = TRUE)
-#                      
-#                      # Put the reconstructed data into a dataframe.
-#                      tibble(site.id = site$site.id,
-#                             site.name = site$site.name,
-#                             lat = site$lat,
-#                             long = site$long,
-#                             age = site$age,
-#                             reconst = mat_reconst$fit[,1],
-#                             err = mat_reconst$SEP[,1],
-#                             model = rep("MAT", 
-#                                         each = nrow(site)))
-#                    })
-#   
-#   
-#   # Output the significance test of the fossil pollen site and the calibrated dataset.
-#   # write.csv(
-#   #   file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_mat_reconst_sig.csv")
-#   # )
-#   
-#   # Output the reconstructed data into a csv file. 
-#   write.csv(get_clim %>% 
-#               dplyr::select(-one_of("err")) %>% 
-#               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-#               tidyr::spread(model_climate, reconst) %>% 
-#               dplyr::select(columnOrder), 
-#             row.names = FALSE,
-#             file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
-#   
-#   # Output the error of the reconstructed data into a csv file.
-#   write.csv(get_clim %>% 
-#               dplyr::select(-one_of("reconst")) %>% 
-#               tidyr::unite(col = "model_climate", c("model","climate"), sep = "_", remove = TRUE) %>% 
-#               tidyr::spread(model_climate, err) %>% 
-#               dplyr::select(columnOrder),
-#             row.names = FALSE, 
-#             file = paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
-#   
-# }
-# }
+ write.csv(UUSS_reconst, "../output/UUSS_reconst.csv", row.names = FALSE)
+  
+} else {
+  
+  stop("The UUSS Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the UUSS directory.")
+  
+}
+
+
+
+# # Filter to one site to do the reconstruction.
+#   site <- dplyr::filter(UUSS_sites, site.id == fossil_sites[1])
+#   site <- site[,-(1:8)] %>%
+#     mutate_all(funs(ifelse(is.na(.), 0, .)))
+#   Changecols = c(1:ncol(site))
+#   site[,Changecols] = apply(site[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+#   MPCT_counts_noNAs[,Changecols] = apply(MPCT_counts_noNAs[,Changecols], 2, function(x) as.numeric(as.integer(x)))
+# 
+# 
+# 
+# mat_reconst_sig <- purrr::map(1:length(UUSS_sites$site.id),
+#                               .f = function(k){
+#                               run_tf2(pollen = MPCT_counts_noNAs, fossil = site,
+#                climate = Temperature[,1:12],
+#                func = mat, col = 2, k = 10)
+# })
 
 
 # -----------------------------------------------------------------------------------------------
@@ -954,53 +899,179 @@ mat_models_temp %>%
 
 ```
 
+### Summary of the results. 
+
+```{r summary_reconst, fig.width=8, fig.height=9, echo=FALSE}
+
+# First lump all monthly reconstructions together. Approximately 500 year time bins. 
+
+UUSS_500yrAvgs <- UUSS_reconst %>% 
+     dplyr::group_by(gr=cut(age, breaks= 4)) %>% 
+     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(gr)) %>% 
+     select(-ends_with("err_n"))
+
+# Lump all monthly reconstructions together. But break up into Pueblo periods.
+UUSS_Puebloperiods <- UUSS_reconst %>% 
+     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     select(-ends_with("err_n"))
+
+UUSS_Puebloperiods$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+
+
+# Reconstruct temperature for the warmest month of the year.
+
+# Check to see what the warmest month is.
+monthlyAvgs <- UUSS_reconst %>% 
+     dplyr::group_by(climate) %>% 
+     dplyr::summarise(mean = mean(reconst))
+
+UUSS_Puebloperiods_July <- UUSS_reconst %>% 
+     dplyr::filter(climate == 7) %>% 
+     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     select(-ends_with("err_n"))
+
+UUSS_Puebloperiods_July$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+
+
+# Reconstruct temperature for the coldest month of the year.
+
+UUSS_Puebloperiods_January <- UUSS_reconst %>% 
+     dplyr::filter(climate == 1) %>% 
+     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     select(-ends_with("err_n"))
+
+UUSS_Puebloperiods_January$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+
+
+
+
+```
+
+
 ### Plotting the results. 
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-# Loop to produce plots of each month for a site.
-
-monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
-
-for (i in 1:length(fossil_sites)) {
-  
-  # Read in the reconstruction and error files for a given site.
-  FS_reconst <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
-  FS_err <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
-  
-  # Convert each of the two files into long format, and for the error file, we only need to keep the one column with the error data. This will be bound to the other reconstructed temperature dataframe.
-  FS_reconst_long <- gather(FS_reconst, model_month, reconst, MAT_tjan:MAT_tdec, factor_key=TRUE)
-  FS_err_long <- gather(FS_err, model_month, err, MAT_tjan:MAT_tdec, factor_key=TRUE) %>% 
-    .$err
-  
-  # Bind reconstructed temperature and error together into one dataframe. This will make it easier for plotting.
-  FS_long <- cbind(FS_reconst_long, err = FS_err_long)
-  
-  for (j in 1:12) {
-    month_plot <- ggplot(data=(dplyr::filter(FS_long, model_month==monthPlots[j])), aes(x=age, y=reconst, group=model_month, colour=model_month)) +
-      geom_ribbon(aes(ymin = reconst - err,
-                      ymax = reconst + err,
+# Plot the all monthly temperatures lumped together. 
+UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+      geom_line() +
+  geom_ribbon(aes(ymin = reconst_mean - err_mean,
+                      ymax = reconst_mean + err_mean,
                       alpha = 0.2),
                   fill = "grey",
                   colour="dark grey") +
-      geom_line() +
       geom_point() +
       #facet_wrap(~model_month, ncol = 2) +
-      xlab("Age - kyr BP") +
+      xlab("Period") +
       ylab("Temperature (°C)") +
       scale_x_continuous(breaks=waiver())
     
     # Save the plot for one month.
-    ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "./output/UUSS/monthly_plots/")
+    ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "../output/UUSS/")
     
     # Create html files that have the interactive plots from plotly.
-    month_plot_ggplotly <- ggplotly(month_plot)
-    htmlwidgets::saveWidget(month_plot_ggplotly,
-                            paste0("./output/UUSS/plotly_htmls/",
-                                   fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
+    UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
+    # htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly, paste0("./output/UUSS/",
+    #                               sep = "", "UUSS_Puebloperiods_plotly.html"))
+
+
+# Plot the warmest month, July.
+UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_July[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+      geom_line() +
+  geom_ribbon(aes(ymin = reconst_mean - err_mean,
+                      ymax = reconst_mean + err_mean,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey") +
+      geom_point() +
+      #facet_wrap(~model_month, ncol = 2) +
+      xlab("Period") +
+      ylab("Temperature (°C)") +
+      scale_x_continuous(breaks=waiver())
+      
     
-  }
-  
-}
+    # Save the plot for one month.
+    ggsave(UUSS_Puebloperiods_July_plot, file = "UUSS_Puebloperiods_July_plot.tiff", path = "../output/UUSS/")
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_Puebloperiods_July_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_July_plot)
+    
+    
+# Plot the coldest month, January.
+UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_January[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+      geom_line() +
+  geom_ribbon(aes(ymin = reconst_mean - err_mean,
+                      ymax = reconst_mean + err_mean,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey") +
+      geom_point() +
+      #facet_wrap(~model_month, ncol = 2) +
+      xlab("Period") +
+      ylab("Temperature (°C)") +
+      scale_x_continuous(breaks=waiver())
+      
+    
+    # Save the plot for one month.
+    ggsave(UUSS_Puebloperiods_January_plot, file = "UUSS_Puebloperiods_January_plot.tiff", path = "../output/UUSS/")
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_Puebloperiods_January_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_January_plot)
+
+
+# # Loop to produce plots of each month for a site.
+# 
+# monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
+# 
+# for (i in 1:length(fossil_sites)) {
+#   
+#   # Read in the reconstruction and error files for a given site.
+#   FS_reconst <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
+#   FS_err <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
+#   
+#   # Convert each of the two files into long format, and for the error file, we only need to keep the one column with the error data. This will be bound to the other reconstructed temperature dataframe.
+#   FS_reconst_long <- gather(FS_reconst, model_month, reconst, MAT_tjan:MAT_tdec, factor_key=TRUE)
+#   FS_err_long <- gather(FS_err, model_month, err, MAT_tjan:MAT_tdec, factor_key=TRUE) %>% 
+#     .$err
+#   
+#   # Bind reconstructed temperature and error together into one dataframe. This will make it easier for plotting.
+#   FS_long <- cbind(FS_reconst_long, err = FS_err_long)
+#   
+#   for (j in 1:12) {
+#     month_plot <- ggplot(data=(dplyr::filter(FS_long, model_month==monthPlots[j])), aes(x=age, y=reconst, group=model_month, colour=model_month)) +
+#       geom_ribbon(aes(ymin = reconst - err,
+#                       ymax = reconst + err,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_line() +
+#       geom_point() +
+#       #facet_wrap(~model_month, ncol = 2) +
+#       xlab("Age - kyr BP") +
+#       ylab("Temperature (°C)") +
+#       scale_x_continuous(breaks=waiver())
+#     
+#     # Save the plot for one month.
+#     ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "./output/UUSS/monthly_plots/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     month_plot_ggplotly <- ggplotly(month_plot)
+#     htmlwidgets::saveWidget(month_plot_ggplotly,
+#                             paste0("./output/UUSS/plotly_htmls/",
+#                                    fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
+#     
+#   }
+#   
+# }
 
 ```
