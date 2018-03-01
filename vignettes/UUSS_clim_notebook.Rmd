@@ -703,7 +703,7 @@ extent.FourCorners <- raster::extent(FourCorners)
 UUSS_sites <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@xmin & long <= extent.FourCorners@xmax & lat >= extent.FourCorners@ymin & lat <= 40.5 & age <= 2000)
 
 # Temporarily removing sites that only have one row of data, since the reconstruction won't run because it gets coerced to 1 dimension.
-UUSS_sites <- subset(UUSS_sites, !(UUSS_sites$site.id==1717 | UUSS_sites$site.id==3608 | UUSS_sites$site.id==3611 | UUSS_sites$site.id==15106 | UUSS_sites$site.id==15298 | UUSS_sites$site.id==15368))
+#UUSS_sites <- subset(UUSS_sites, !(UUSS_sites$site.id==1717 | UUSS_sites$site.id==3608 | UUSS_sites$site.id==3611 | UUSS_sites$site.id==15106 | UUSS_sites$site.id==15298 | UUSS_sites$site.id==15368))
 
 # Alphabetize the taxa.
 UUSS_sites <- UUSS_sites[ , c(names(UUSS_sites)[1:8], sort(names(UUSS_sites)[9:ncol(UUSS_sites)]))]
@@ -901,7 +901,16 @@ if (!file.exists("../output/UUSS_reconst.csv")) {
 
 ### Summary of the results. 
 
-```{r summary_reconst, fig.width=8, fig.height=9, echo=FALSE}
+```{r summary_reconst, echo=FALSE}
+
+# Row names to change in first column for time periods.
+periodNames <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+
+# Breaks in time for grouping by each time period.
+groupTime <- c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000)
+
+# Midpoints for each time period. This is used so that we can have continuous data.
+date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)
 
 # First lump all monthly reconstructions together. Approximately 500 year time bins. 
 
@@ -913,13 +922,13 @@ UUSS_500yrAvgs <- UUSS_reconst %>%
 
 # Lump all monthly reconstructions together. But break up into Pueblo periods.
 UUSS_Puebloperiods <- UUSS_reconst %>% 
-     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     mutate(date_midpoint = date_midpoint) %>% 
      select(-ends_with("err_n"))
 
-UUSS_Puebloperiods$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+UUSS_Puebloperiods$period <- periodNames
 
 
 # Reconstruct temperature for the warmest month of the year.
@@ -931,28 +940,26 @@ monthlyAvgs <- UUSS_reconst %>%
 
 UUSS_Puebloperiods_July <- UUSS_reconst %>% 
      dplyr::filter(climate == 7) %>% 
-     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     mutate(date_midpoint = date_midpoint) %>% 
      select(-ends_with("err_n"))
 
-UUSS_Puebloperiods_July$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+UUSS_Puebloperiods_July$period <- periodNames
 
 
 # Reconstruct temperature for the coldest month of the year.
 
 UUSS_Puebloperiods_January <- UUSS_reconst %>% 
      dplyr::filter(climate == 1) %>% 
-     dplyr::group_by(period=cut(age, breaks=c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000))) %>%
+     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)) %>% 
+     mutate(date_midpoint = date_midpoint) %>% 
      select(-ends_with("err_n"))
 
-UUSS_Puebloperiods_January$period <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
-
-
+UUSS_Puebloperiods_January$period <- periodNames
 
 
 ```
@@ -981,8 +988,8 @@ UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods[5:12,])
     
     # Create html files that have the interactive plots from plotly.
     UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
-    # htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly, paste0("./output/UUSS/",
-    #                               sep = "", "UUSS_Puebloperiods_plotly.html"))
+    f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_plotly.html"
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the warmest month, July.
@@ -1005,6 +1012,8 @@ UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_Ju
     
     # Create html files that have the interactive plots from plotly.
     UUSS_Puebloperiods_July_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_July_plot)
+    f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_July_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
     
     
 # Plot the coldest month, January.
@@ -1027,6 +1036,8 @@ UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods
     
     # Create html files that have the interactive plots from plotly.
     UUSS_Puebloperiods_January_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_January_plot)
+     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_January_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # # Loop to produce plots of each month for a site.
