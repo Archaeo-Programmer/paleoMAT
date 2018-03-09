@@ -916,7 +916,7 @@ if (!file.exists("../output/UUSS_reconst.csv")) {
 # First duplicate the column of GDD_noNAs because for some reason in the reconstruction it tries to treat it as a list.
 GDD_noNAs2 = cbind(GDD_noNAs,GDD2=rep(GDD_noNAs$GDD))
 
-if (!file.exists("../output/UUSS_reconst_GDD.csv")) {
+if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
   
   mat_models_gdd <- purrr::map(1,
                               .f = function(j){
@@ -928,7 +928,7 @@ if (!file.exists("../output/UUSS_reconst_GDD.csv")) {
                               })
   
   UUSS_reconst_GDD <- mat_models_gdd %>%
-  purrr::map_dfr(.id = "GDD",
+  purrr::map_dfr(.id = "climate",
                  .f = function(the.model){
                    # Create the MAT reconstruction.
                    mat_reconst <- predict(the.model,
@@ -947,13 +947,45 @@ if (!file.exists("../output/UUSS_reconst_GDD.csv")) {
                  })
 
 
- write.csv(UUSS_reconst_GDD, "../output/UUSS_reconst_GDD.csv", row.names = FALSE)
+ write.csv(UUSS_reconst_GDD, "./output/UUSS_reconst_GDD.csv", row.names = FALSE)
   
 } else {
   
   stop("The UUSS GDD Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the UUSS directory.")
   
 }
+
+UUSS_reconst$climate <- as.integer(UUSS_reconst$climate)
+UUSS_reconst_adj <- UUSS_reconst
+UUSS_reconst_adj$reconst <- UUSS_reconst_adj$reconst - 10
+UUSS_reconst_adj <- UUSS_reconst_adj %>% 
+  dplyr::filter(climate >= 5 & climate <= 9)
+SimpleGDDmetadata <- UUSS_reconst_adj %>% 
+  dplyr::filter(climate == 5)
+
+GDD_After <- UUSS_reconst_adj %>% 
+   dplyr::mutate(reconst = ifelse(climate == 5,
+                                  reconst * 31,
+                                  reconst)) %>% 
+   dplyr::mutate(reconst = ifelse(climate == 6,
+                                  reconst * 30,
+                                  reconst)) %>% 
+   dplyr::mutate(reconst = ifelse(climate == 7,
+                                  reconst * 31,
+                                  reconst)) %>% 
+   dplyr::mutate(reconst = ifelse(climate == 8,
+                                  reconst * 31,
+                                  reconst)) %>% 
+   dplyr::mutate(reconst = ifelse(climate == 9,
+                                  reconst * 30,
+                                  reconst)) %>%
+  dplyr::group_by(dataset.id, depth) %>% 
+  dplyr::summarise_at("reconst", sum)
+
+GDD_metadata <- SimpleGDDmetadata %>% 
+  dplyr::select(dataset.id:pub_year) %>%
+                     left_join(GDD_After, by = c("dataset.id", "depth"))
+
 
 
 
@@ -1022,13 +1054,12 @@ UUSS_500yrAvgs <- UUSS_reconst %>%
 # Lump all monthly reconstructions together. But break up into Pueblo periods.
 UUSS_Puebloperiods <- UUSS_reconst %>% 
      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
      mutate(date_midpoint = date_midpoint) %>% 
      select(-ends_with("err_n"))
 
 UUSS_Puebloperiods$period <- periodNames
-
 
 # Reconstruct temperature for the warmest month of the year.
 
@@ -1068,19 +1099,35 @@ UUSS_Puebloperiods_January$period <- periodNames
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
+library(plotly)
+
+UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
+
+
+gp1 <- UUSS_Puebloperiods %>% ggplot() +
+  #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") + 
+  geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") + 
+  geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") + 
+  geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) + 
+  geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) + 
+  scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
+
+  gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)"), limits = c(-1, 2))
+  
+  
+
 # Plot the all monthly temperatures lumped together. 
-UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
-  geom_ribbon(aes(ymin = reconst_mean - err_mean,
+UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods))) +
+      geom_line(aes(x=date_midpoint, y=reconst_mean, colour = "red")) +
+      geom_ribbon(aes(x=date_midpoint, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
                       alpha = 0.2),
                   fill = "grey",
                   colour="dark grey") +
-      geom_point() +
-      #facet_wrap(~model_month, ncol = 2) +
+      geom_point(aes(x=date_midpoint, y=reconst_mean))  +
       xlab("Period") +
       ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(1,2001,200))
+      scale_x_continuous(breaks=seq(1,2001,100))
     
     # Save the plot for one month.
     ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "./output/UUSS/")
@@ -1088,13 +1135,13 @@ UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(
     # Create html files that have the interactive plots from plotly.
     UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_plotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly,    file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the warmest month, July.
 UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_July[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
       geom_line() +
-  geom_ribbon(aes(ymin = reconst_mean - err_mean,
+      geom_ribbon(aes(ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
                       alpha = 0.2),
                   fill = "grey",
@@ -1139,7 +1186,29 @@ UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods
      htmlwidgets::saveWidget(UUSS_Puebloperiods_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
-# # Loop to produce plots of each month for a site.
+
+# Plot the all monthly temperature reconstruction site's elevation lumped together. 
+UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_elevation)), aes(x=date_midpoint, y=mean, color = mean)) +
+      geom_line() +
+      geom_point() +
+      #facet_wrap(~model_month, ncol = 2) +
+      xlab("Period") +
+      ylab("Elevation") +
+      scale_x_continuous(breaks=seq(1,2001,100)) +
+      scale_y_continuous(breaks=seq(2750,3000,25))
+    
+    # Save the plot for one month.
+    ggsave(UUSS_Puebloperiods_Elev_plot, file = "UUSS_Puebloperiods_Elev_plot.tiff", path = "./output/UUSS/")
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_Puebloperiods_Elev_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_Elev_plot)
+    f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_Elev_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_Elev_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     
+     
+     
+     
+     # # Loop to produce plots of each month for a site.
 # 
 # monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
 # 
