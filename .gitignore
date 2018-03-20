@@ -18,6 +18,7 @@
 
 # Session Data files
 .RData
+yoursession.RData
 
 # RStudio files
 .Rproj.user/
