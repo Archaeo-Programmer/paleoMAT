@@ -41,6 +41,8 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
 purrr::walk(.x = packages,
             .f = FedData::pkg_test)
 
+setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
+
 ```
 
 # Introduction
@@ -335,7 +337,7 @@ coordsPoints <- SpatialPoints(coords, proj4string=CRS("+proj=longlat +datum=NAD8
 ## This script extracts data from the ~800 m monthly PRISM dataset for the modern pollen locations. It first defines the extent, chops that extent into 800 m (30 arc-second) PRISM cells, and subdivides the extent into 14,440 (120x120) cell chunks for computation. (the chunks are 1x1 degree). These chunks are saved for later computation.
 
 ## Set the working directory to the directory of this file!
-setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/vignettes")
+#setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
 
 # Create an output directory
 dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data", showWarnings = F, recursive = T)
@@ -376,10 +378,10 @@ if(!file.exists("./data/raw_data/statesp010g.shp_nt00938.tar.gz")){
               mode='wb')
 }
 untar("./data/raw_data/statesp010g.shp_nt00938.tar.gz",
-      exdir="../data/raw_data/statesp010g")
+      exdir="./data/raw_data/statesp010g")
 
 
-states <- readOGR("./data/raw_data/statesp010g.shp_nt00938", layer='statesp010g')
+states <- readOGR("./data/raw_data/statesp010g/statesp010g.shp", layer='statesp010g')
 
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
 states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
@@ -395,12 +397,6 @@ extent.states@ymax <- ceiling(extent.states@ymax)
 
 # Get list of all file names in the prism directory.
 monthly.files <- EXTRACTION.DIR
-
-# Use the rebus package to generate a regular expression for a number range, which will allow for the extraction of specific years in the prism data (i.e., 1961-1990).
-# rx <- rebus.numbers::number_range(1961, 1990)
-
-# Now use the expression stored in rx, and trim list of files to to 1961:1990.
-# monthly.files <- grep(rx, monthly.files, value = TRUE, perl = TRUE)
 
 # Trim to only file names that are rasters.
 monthly.files <- grep("*\\.bil$", monthly.files, value=TRUE)
@@ -418,8 +414,8 @@ climate.points <- raster::extract(x = type.list, y = coordsPoints, df = TRUE)
 # Replace the first column of IDs with dataset.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
 climate.points$ID <- names
 
-# Rename first column to dataset.id.
-colnames(climate.points)[1] <- "dataset.id"
+# Rename the ID column to dataset.id.
+climate.points <- rename(climate.points, dataset.id = ID)
 
 # Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
 data_long <- melt(climate.points,
@@ -429,6 +425,68 @@ data_long <- melt(climate.points,
   dplyr::select(-starts_with("garbage")) %>% 
   separate(col = "yearmonth", into = c("year", "month"), sep = 4)
 
+
+# Now use the long format data to create an additional variable, called Growing Degree Days (GDD). A function has been created here to convert the tmin and tmax data into GDD, using the data_long dataframe.
+
+# Calculate GDD monthly. This is an adapted function from Bocinsky et al. 2016 (calc_gdd_monthly).
+
+calc_gdd_monthly <- function(temp, t.base, t.cap=NULL, multiplier=1, to_fahrenheit=T, to_round=F){
+  if(nrow(dplyr::filter(temp, variable == "tmin"))!=nrow(dplyr::filter(temp, variable == "tmax"))){
+    stop("tmin and tmax must have same number of observations!")
+  }
+  
+  tmin <- dplyr::filter(temp, variable == "tmin")
+  tmax <- dplyr::filter(temp, variable == "tmax")
+  
+  t.base <- t.base*multiplier
+  if(!is.null(t.cap)){
+    t.cap <- t.cap*multiplier
+  }
+  
+    # Floor tmax and tmin at Tbase
+    tmin["value"] <- lapply(tmin["value"], function(x) { x[x<t.base] <- t.base; return(x) })
+    tmax["value"] <- lapply(tmax["value"], function(x) { x[x<t.base] <- t.base; return(x) })
+    
+    # Cap tmax and tmin at Tut
+    if(!is.null(t.cap)){
+      tmin["value"] <- lapply(tmin["value"], function(x) { x[x>t.cap] <- t.cap; return(x) })
+      tmax["value"] <- lapply(tmax["value"], function(x) { x[x>t.cap] <- t.cap; return(x) })
+    }
+    
+    temp_long <- left_join(tmin, tmax, by = c("dataset.id", "year", "month")) %>% 
+      dplyr::select(-starts_with("variable.")) %>% 
+      plyr::rename(c("value.x" = "tmin", "value.y" = "tmax"))
+    
+    temp_long$GDD <- (((temp_long$tmin + temp_long$tmax) / 2) - t.base)
+    temp_long <- temp_long %>% dplyr::select(-starts_with("tm"))
+    
+    temp_long2 <- temp_long
+    
+    # Combine month and year column.
+    temp_long$Date <- zoo::as.yearmon(paste(temp_long$year, temp_long$month), "%Y %m")
+    
+    # Multiply by days per month, and convert to Fahrenheit GDD
+    temp_long$GDD <- temp_long$GDD * Hmisc::monthDays(temp_long$Date) / multiplier
+    
+    if(to_fahrenheit){
+      temp_long$GDD <- temp_long$GDD * 1.8
+    }
+    
+    if(to_round){
+    temp_long$GDD <- round(temp_long$GDD)
+    }
+    
+    temp_long <- temp_long %>% 
+      dplyr::select(-starts_with("Date")) %>% 
+      dplyr::mutate(variable = "GDD") %>% 
+      dplyr::rename(value = GDD) %>% 
+      dplyr::select(dataset.id, variable, year, month, value)
+  
+  return(temp_long)
+}
+
+# Now rbind the GDD data to the other 3 climate variables (tmin, tmax, and ppt) to create one dataframe with all of the climate variables.
+data_long <- rbind(data_long, temp_long)
 
 
 # Need to filter to 30 years prior from the publication date of each pollen surface sample site.
@@ -440,8 +498,12 @@ data_long <- melt(climate.points,
 #   
 # }
 
-# Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., and max temp.), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
-data_avgs <- data_long %>%
+# Eventually, this will be replaced to represent the 30 years prior to publication or collection date, but for now we use 1961 to 1990.
+data_30yr <- data_long %>% 
+  dplyr::filter(year >= 1961 & year <= 1990)
+
+# Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., max temp., and GDD), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
+data_avgs <- data_30yr %>%
   dplyr::group_by(dataset.id, variable, month) %>% 
   dplyr::summarize(mean = mean(value))
 
@@ -457,41 +519,18 @@ tmp_avgs <- data_avgs %>%
   dplyr::mutate(variable = "tmp") %>% 
   dplyr::select(dataset.id, variable, month, mean)
 
-# Now, combine the precipitation and temperature data back into one dataframe, and convert from long back to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. The, rename all the column names. 
-clim_wide <- bind_rows(ppt_avgs, tmp_avgs) %>% 
+# The GDD averages are extracted into its own dataframe.
+gdd_avgs <- data_avgs %>% 
+  dplyr::filter(variable == "GDD")
+
+# Now, combine the precipitation, temperature, and GDD data back into one dataframe, and convert from long to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. Then, rename all the column names. 
+clim_wide <- rbind(gdd_avgs, ppt_avgs, tmp_avgs) %>% 
   dcast(dataset.id ~ variable + month, value.var="mean") %>% 
   #dplyr::select(-one_of("dataset.id")) %>% 
-  set_colnames(c('dataset.id', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+  set_colnames(c('dataset.id', 'gjan', 'gfeb', 'gmar', 'gapr', 'gmay', 'gjun', 'gjul', 'gaug', 'gsep', 'goct', 'gnov', 'gdec', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+
 
 ```
-
-# Calculate Growing Degree Days from PRISM data.
-```{r calc_GDD, echo = FALSE, warning=FALSE}
-
-# Calculate Growing Degree Days for the maize growing season (May through September).
-
-# Days in growing season month. 
-monthDays <- c(31, 30, 31, 31, 30)
-
-# Trim temperature data down to the growing season.
-GS_Temp <- clim_wide[,18:22]
-
-# Per GDD formula, subtract 10 degrees Celsius from the temperature average.
-GDD_Temp <- GS_Temp - 10
-
-# Loop through each observation and multiply each variable by the number of days in each respective month.
-# Create an empty data frame.
-GDD_TotalDays <- data.frame()
-
-for (i in 1:length(GDD_Temp$tmay)) {
-  tmpFrame <- GDD_Temp[i, ] * monthDays
-  tmpFrame <- sum(tmpFrame)
-  GDD_TotalDays <- as.data.frame(rbind(GDD_TotalDays, tmpFrame))
-}
-colnames(GDD_TotalDays) <- "GDD"
-
-```
-
 
 # Load WorldClim Climate Data
 
@@ -1104,15 +1143,15 @@ library(plotly)
 UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
 
 
-gp1 <- UUSS_Puebloperiods %>% ggplot() +
-  #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") +
-  geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-  geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-  geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-  geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-  scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
-
-  gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)", scale_y_continuous("Elevatioin")), limits = c(-1, 2))
+# gp1 <- UUSS_Puebloperiods %>% ggplot() +
+#   #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") +
+#   geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
+#   geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
+#   geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) +
+#   geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) +
+#   scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
+# 
+#   gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)", scale_y_continuous("Elevatioin")), limits = c(-1, 2))
 
 # Plot the all monthly temperatures lumped together. 
 UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
@@ -1125,7 +1164,9 @@ UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(
       geom_point(aes(x=date_midpoint, y=reconst_mean))  +
       xlab("Period") +
       ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(1,2001,100))
+      scale_x_continuous(breaks=seq(1,2001,100)) +
+      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
     
     # Save the plot for one month.
     ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "./output/UUSS/")
@@ -1192,7 +1233,9 @@ UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_el
       xlab("Period") +
       ylab("Elevation") +
       scale_x_continuous(breaks=seq(1,2001,100)) +
-      scale_y_continuous(breaks=seq(2750,3000,25))
+      scale_y_continuous(breaks=seq(2750,3000,25)) +
+      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
 
 
 # Combine two plots into one window. Plot all temperature and Elevation.
