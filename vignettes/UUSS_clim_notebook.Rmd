@@ -622,19 +622,19 @@ Need to further clean up the datasets to remove any rows with NA values. Althoug
 # Get row number in first column that have NA values.
 NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
 
-# Remove rows with NA values for the precipitation and temperature, using the index.
+# Remove rows with NA values for the precipitation, temperature, and GDD using the index.
 Clim_noNAs <- clim_wide[-(NAindex),]
-
-# Remove rows with NA values for the GDD, using the index.
-GDD_noNAs <- as.data.frame(GDD_TotalDays[-(NAindex),])
-colnames(GDD_noNAs) <- "GDD"
 
 # Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
 MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
+# Remove metadata columns to run significance test.
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
 ```
 
-Modern Pollen data contains `r nrow(MP_counts_noNAs)` samples, representing `r ncol(MP_counts_noNAs)` different pollen taxa. 
+Modern Pollen data contains `r nrow(MPCT_counts_noNAs)` samples, representing `r ncol(MPCT_counts_noNAs)` different pollen taxa. 
 
 ### Checking the calibration data set
 
@@ -648,9 +648,6 @@ The MAT method is testing whether the modern calibration is able to detect signa
 
 # This is a wrapper for the randomTF function.
 source('../R/sig_test.R')
-
-# Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:7)]
 
 wa_sig <- run_tf(pollen = MPCT_counts_noNAs, 
                  climate = Clim_noNAs[,14:25], 
@@ -712,7 +709,7 @@ NAfossil_metadata <- NAfossil_datasets %>%
 
 NAfossil_metadata$site.id <- as.integer(NAfossil_metadata$site.id)
 
-# Get earlies publication dates for each fossil pollen site.
+# Get earliest publication dates for each fossil pollen site.
 NAfossil_pub_date <- NAfossil_pubs %>%
   purrr::map_dfr(.id = "dataset.id",
                  .f = function(x){
@@ -901,13 +898,13 @@ source('../R/sig_test2.R')
 fossil_sites <- unique(UUSS_sites$dataset.id)
 
 # Subset the climate data to just Temperature. 
-Temperature <- Clim_noNAs[,14:25]
+Temperature <- Clim_noNAs[,26:37]
 
 # Now, we carry out the reconstruction for all fossil pollen sites in the UUSS. The reconstructions are in one output file, which has the reconstructed temperatures and associated error.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction csv and it will run. 
 
-if (!file.exists("../output/UUSS_reconst.csv")) {
+if (!file.exists("./output/UUSS_reconst.csv")) {
   
   mat_models_temp <- purrr::map(1:12,
                               .f = function(j){
@@ -952,12 +949,12 @@ if (!file.exists("../output/UUSS_reconst.csv")) {
 
 # Do reconstruction for Growing Degree Days. 
 
-# First duplicate the column of GDD_noNAs because for some reason in the reconstruction it tries to treat it as a list.
-GDD_noNAs2 = cbind(GDD_noNAs,GDD2=rep(GDD_noNAs$GDD))
+# Subset the climate data to just GDD 
+GDD_noNAs <- Clim_noNAs[,2:13]
 
 if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
   
-  mat_models_gdd <- purrr::map(1,
+  mat_models_gdd <- purrr::map(1:12,
                               .f = function(j){
                                 rioja::MAT(y = MPCT_counts_noNAs, 
                                            x = GDD_noNAs[,j], 
@@ -994,36 +991,21 @@ if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
   
 }
 
-UUSS_reconst$climate <- as.integer(UUSS_reconst$climate)
-UUSS_reconst_adj <- UUSS_reconst
-UUSS_reconst_adj$reconst <- UUSS_reconst_adj$reconst - 10
-UUSS_reconst_adj <- UUSS_reconst_adj %>% 
-  dplyr::filter(climate >= 5 & climate <= 9)
-SimpleGDDmetadata <- UUSS_reconst_adj %>% 
-  dplyr::filter(climate == 5)
 
-GDD_After <- UUSS_reconst_adj %>% 
-   dplyr::mutate(reconst = ifelse(climate == 5,
-                                  reconst * 31,
-                                  reconst)) %>% 
-   dplyr::mutate(reconst = ifelse(climate == 6,
-                                  reconst * 30,
-                                  reconst)) %>% 
-   dplyr::mutate(reconst = ifelse(climate == 7,
-                                  reconst * 31,
-                                  reconst)) %>% 
-   dplyr::mutate(reconst = ifelse(climate == 8,
-                                  reconst * 31,
-                                  reconst)) %>% 
-   dplyr::mutate(reconst = ifelse(climate == 9,
-                                  reconst * 30,
-                                  reconst)) %>%
+# Now, we extract out the maize growing season months.
+
+UUSS_reconst_GDD_total <- UUSS_reconst_GDD %>% 
+  dplyr::filter(climate >= 5 & climate <= 9) %>% 
   dplyr::group_by(dataset.id, depth) %>% 
-  dplyr::summarise_at("reconst", sum)
+  dplyr::summarise_at(c("reconst", "err"), funs(sum, mean)) %>% 
+  dplyr::select(dataset.id, depth, reconst_sum, err_mean)
 
-GDD_metadata <- SimpleGDDmetadata %>% 
-  dplyr::select(dataset.id:pub_year) %>%
-                     left_join(GDD_After, by = c("dataset.id", "depth"))
+UUSS_reconst_GDD_meta <- UUSS_reconst_GDD %>% 
+  dplyr::filter(climate == 5) %>%
+  dplyr::select(-c(reconst, err, climate))
+
+UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dataset.id", "depth"))
+
 
 
 
@@ -1088,15 +1070,15 @@ UUSS_500yrAvgs <- UUSS_reconst %>%
      dplyr::group_by(gr=cut(age, breaks= 4)) %>% 
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(gr)) %>% 
-     select(-ends_with("err_n"))
+     dplyr::select(-ends_with("err_n"))
 
 # Lump all monthly reconstructions together. But break up into Pueblo periods.
 UUSS_Puebloperiods <- UUSS_reconst %>% 
      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = date_midpoint) %>% 
-     select(-ends_with("err_n"))
+     dplyr::mutate(date_midpoint = date_midpoint) %>% 
+     dplyr::select(-ends_with("err_n"))
 
 UUSS_Puebloperiods$period <- periodNames
 
@@ -1112,8 +1094,8 @@ UUSS_Puebloperiods_July <- UUSS_reconst %>%
      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = date_midpoint) %>% 
-     select(-ends_with("err_n"))
+     dplyr::mutate(date_midpoint = date_midpoint) %>% 
+     dplyr::select(-ends_with("err_n"))
 
 UUSS_Puebloperiods_July$period <- periodNames
 
@@ -1125,10 +1107,22 @@ UUSS_Puebloperiods_January <- UUSS_reconst %>%
      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     mutate(date_midpoint = date_midpoint) %>% 
-     select(-ends_with("err_n"))
+     dplyr::mutate(date_midpoint = date_midpoint) %>% 
+     dplyr::select(-ends_with("err_n"))
 
 UUSS_Puebloperiods_January$period <- periodNames
+
+# GDD
+
+# Lump all monthly reconstructions together. But break up into Pueblo periods.
+UUSS_Puebloperiods_GDD <- UUSS_GDD %>% 
+     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
+     dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::mutate(date_midpoint = date_midpoint) %>% 
+     dplyr::select(-c(err_mean_n, elev_n))
+
+UUSS_Puebloperiods_GDD$period <- periodNames
 
 
 ```
@@ -1139,6 +1133,8 @@ UUSS_Puebloperiods_January$period <- periodNames
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
 library(plotly)
+
+UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
 
 UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
 
@@ -1244,6 +1240,35 @@ UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_el
 
 library(grid)
 grid.draw(rbind(ggplotGrob(UUSS_Puebloperiods_plot), ggplotGrob(UUSS_Puebloperiods_Elev_plot), size = "last"))
+
+
+
+# Plot GDD
+UUSS_Puebloperiods_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_GDD)), aes(x=date_midpoint, y=reconst_sum_mean, color = reconst_sum_mean)) +
+      geom_line() +
+  geom_ribbon(aes(ymin = reconst_sum_mean - err_mean_mean,
+                      ymax = reconst_sum_mean + err_mean_mean,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey") +
+      geom_point() +
+      #facet_wrap(~model_month, ncol = 2) +
+      xlab("Period") +
+      ylab("Growing Degree Days") +
+      scale_x_continuous(breaks = seq(0,2000,100))
+      
+    
+    # Save the plot for one month.
+    ggsave(UUSS_Puebloperiods_GDD_plot, file = "UUSS_Puebloperiods_GDD_plot.tiff", path = "./output/UUSS/")
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_Puebloperiods_GDD_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_GDD_plot)
+     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_GDD_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+
+
+
+
 
      # # Loop to produce plots of each month for a site.
 # 
