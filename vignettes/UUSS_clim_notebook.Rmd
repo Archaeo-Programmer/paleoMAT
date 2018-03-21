@@ -37,7 +37,8 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
               "rgdal",
               "knitr", # For rmarkdown
               "zoo", "Hmisc",
-              "plotly", "rcarbon"
+              "plotly", "rcarbon", 
+              "visreg"
 )
 
 purrr::walk(.x = packages,
@@ -1140,21 +1141,30 @@ UUSS_GDD <- UUSS_GDD %>%
 # Do 100 year averages across all months.
 UUSS_100yrAvgs <- UUSS_reconst %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-ends_with("err_n")) %>% 
+     dplyr::select(-c(err_n, elev_n)) %>% 
+     dplyr::mutate(midP = seq(-50, 2050, 100))
+
+# Do 100 year averages across growing season months.
+UUSS_100yrAvgs_GS <- UUSS_reconst %>%
+     dplyr::filter(climate >= 5 & climate <= 9) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_n, elev_n)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 
 UUSS_100yrAvgs_July <- UUSS_reconst %>% 
      dplyr::filter(climate == 7) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
      dplyr::arrange(as.numeric(period)) %>%
-     dplyr::select(-ends_with("err_n")) %>% 
+     dplyr::select(-c(err_n, elev_n)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
-# Lump all monthly reconstructions together. But break up into Pueblo periods.
+# Lump all monthly reconstructions together.
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
@@ -1427,3 +1437,38 @@ UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(
 # }
 
 ```
+
+
+# Regressions 
+
+```{r regressions, echo=FALSE}
+
+UUSS_100yrAvgs_GS
+
+GDD_fit <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD)
+visreg(GDD_fit, xlab = "Elevation (m)", ylab = "Growing Degree Days")
+summary(GDD_fit)
+
+
+tempAll_fit <- lm(reconst_mean ~ elev_mean, data = UUSS_100yrAvgs_GS)
+visreg(tempAll_fit, xlab = "Elevation (m)", ylab = "Temperature (°C)")
+summary(tempAll_fit)
+
+tempJuly_fit <- lm(reconst_mean ~ elev_mean, data = UUSS_100yrAvgs_July)
+visreg(tempJuly_fit, xlab = "Elevation (m)", ylab = "Temperature (°C)")
+summary(tempJuly_fit)
+
+
+UUSS_temp_GDD <- UUSS_100yrAvgs_GS %>% 
+  dplyr::mutate(GDD = UUSS_100yrAvgs_GDD$reconst_sum_mean)
+
+temp_GDD <- lm(GDD ~ reconst_mean, data = UUSS_temp_GDD)
+visreg(temp_GDD, ylab = "Growing Degree Days", xlab = "Temperature (°C)")
+summary(temp_GDD)
+
+
+```
+
+
+
+
