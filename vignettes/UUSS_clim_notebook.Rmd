@@ -32,13 +32,13 @@ packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
               "rgdal", "sp", "raster", "leaflet", # For spatial data
               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
-              "ggplot2", # For plotting
+              "ggplot2", "RColorBrewer", "plotly", # For plotting
               "rebus", "Hmisc", # For other useful functions
               "rgdal",
               "knitr", # For rmarkdown
-              "zoo", "Hmisc",
-              "plotly", "rcarbon", 
-              "visreg"
+              "zoo", "Hmisc", # Date conversions
+              "rcarbon", # Converting BP to BC/AD 
+              "visreg" # For regressions
 )
 
 purrr::walk(.x = packages,
@@ -85,6 +85,13 @@ NAID <-  gpids %>%
   dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada'),
                 GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
+
+# This is only used to count the number of records in the contiguous US, which ignores Alaksa and Hawaii. However, the data needs to be retained, as it can be used for WorldClim Data, but not PRISM.
+# NAID <-  gpids %>%
+#   dplyr::filter(HigherGeoPoliticalID %in% "6129",
+#                 Rank == "2") %>% 
+#   dplyr::filter(GeoPoliticalName != 'Alaska' & GeoPoliticalName != 'Hawaii') %$%
+#   GeoPoliticalID
 
 # You can make it run again by deleting the file.
 if(!file.exists("./data/raw_data/MP_datasets.Rds")){
@@ -302,9 +309,11 @@ map <- leaflet(width = 800, height = 800) %>%
           lat = 11.68,
           zoom = 2)
 
-map %>% addMarkers(lng = MPCT_metadata_counts$long, lat = MPCT_metadata_counts$lat, 
-                   popup = paste0('<b>', as.character(MPCT_metadata_counts$site.name), '</b><br>',
-                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MPCT_metadata_counts$dataset.id, '>Neotoma Database</a>'))
+map %>% addMarkers(lng = MPCT_metadata_counts_noNAs$long, lat = MPCT_metadata_counts_noNAs$lat, 
+                   popup = paste0('<b>', as.character(MPCT_metadata_counts_noNAs$site.name), '</b><br>',
+                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MPCT_metadata_counts_noNAs$dataset.id, '>Neotoma Database</a>'))
+
+
 
 ```
 
@@ -462,8 +471,6 @@ calc_gdd_monthly <- function(temp, t.base, t.cap=NULL, multiplier=1, to_fahrenhe
     
     temp_long$GDD <- (((temp_long$tmin + temp_long$tmax) / 2) - t.base)
     temp_long <- temp_long %>% dplyr::select(-starts_with("tm"))
-    
-    temp_long2 <- temp_long
     
     # Combine month and year column.
     temp_long$Date <- zoo::as.yearmon(paste(temp_long$year, temp_long$month), "%Y %m")
@@ -997,6 +1004,8 @@ if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
 
 # Now, we extract out the maize growing season months.
 
+
+
 UUSS_reconst_GDD_total <- UUSS_reconst_GDD %>% 
   dplyr::filter(climate >= 5 & climate <= 9) %>% 
   dplyr::group_by(dataset.id, depth) %>% 
@@ -1140,36 +1149,53 @@ UUSS_GDD <- UUSS_GDD %>%
 
 # Do 100 year averages across all months.
 UUSS_100yrAvgs <- UUSS_reconst %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
-     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(err_n, elev_n)) %>% 
+     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
-
+     
 # Do 100 year averages across growing season months.
 UUSS_100yrAvgs_GS <- UUSS_reconst %>%
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
-     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(err_n, elev_n)) %>% 
+     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 
 UUSS_100yrAvgs_July <- UUSS_reconst %>% 
      dplyr::filter(climate == 7) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
-     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>%
-     dplyr::select(-c(err_n, elev_n)) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
+     dplyr::mutate(midP = seq(-50, 2050, 100))
+
+UUSS_100yrAvgs_January <- UUSS_reconst %>% 
+     dplyr::filter(climate == 1) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 # Lump all monthly reconstructions together.
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
-     dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>%
-     dplyr::select(-c(err_mean_n, elev_n)) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_mean_n, elev_n, err_mean_unique_sites, elev_unique_sites)) %>% 
+     dplyr::mutate(midP = seq(-50, 2050, 100))
+
+# Take out Beef Pasture.
+UUSS_100yrAvgs_July_sansBP <- UUSS_reconst %>% 
+     dplyr::filter(climate == 7 & dataset.id != 250) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 ```
@@ -1182,6 +1208,7 @@ UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
 library(plotly)
 
 UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
+
 
 UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
 
@@ -1342,29 +1369,61 @@ UUSS_100yrAvgs_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs)), aes(x=midP, 
 
 
 # Plot the warmest month, July.
-UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
+UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean)) +
+      #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
                       alpha = 0.2),
                   fill = "grey",
-                  colour="dark grey") +
-      geom_point(aes(x=midP, y=reconst_mean)) +
+                  colour="dark grey", 
+                  show.legend = F ) +
+      geom_line(colour="red", size = 3.5) +
       xlab("Year (BC/AD)") +
       ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(-100,2100,100)) +
-      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+      scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+      scale_y_continuous(breaks=seq(-17,17,4), limits = c(-17, 17)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+      labs(col = "Temperature (°C)")
       
-    
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_July_plot, file = "UUSS_100yrAvgs_July_plot.tiff", path = "./output/UUSS/")
+    ggsave(UUSS_100yrAvgs_July_plot, file = "UUSS_100yrAvgs_July_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
     UUSS_100yrAvgs_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_July_plot)
     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_July_plot_ggplotly.html"
      htmlwidgets::saveWidget(UUSS_100yrAvgs_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))   
 
+
+# Plot the coldest month, January.
+UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y=reconst_mean)) +
+      #scale_color_gradient(low="blue", high="red") +
+      geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
+                      ymax = reconst_mean + err_mean,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey", 
+                  show.legend = F) +
+      geom_line(colour="blue", size = 3.5) +
+      xlab("Year (BC/AD)") +
+      ylab("Temperature (°C)") +
+      scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+      scale_y_continuous(breaks=seq(-17,17,4), limits = c(-17, 17)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+      labs(col = "Temperature (°C)")
+      
+    # Save the plot for one month.
+    ggsave(UUSS_100yrAvgs_January_plot, file = "UUSS_100yrAvgs_January_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_100yrAvgs_January_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_January_plot)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_January_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))     
+     
+     
 # Plot GDD
 UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=reconst_sum_mean, color = reconst_sum_mean)) +
       geom_line() +
@@ -1388,6 +1447,22 @@ UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(
     UUSS_100yrAvgs_GDD_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_plot)
      f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_plot_ggplotly.html"
      htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     
+
+# Plot the all monthly temperature reconstruction site's elevation lumped together. 
+UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_January)), aes(x=midP, y=elev_mean)) +
+      geom_line(size = 0.8) +
+      xlab("Year (BC/AD)") +
+      ylab("Elevation (m)") +
+      scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+      scale_y_continuous(breaks=seq(2700,3000,25)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 20, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 20, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"))
+      
+    # Save the plot for one month.
+    ggsave(UUSS_100yrAvgs_Elevation_plot, file = "UUSS_100yrAvgs_Elevation_plot.tiff", path = "./output/UUSS/", units="in", width=19, height=12, dpi=600, compression = 'lzw')
+
 
 
 # ----------------------------------------------------------
@@ -1443,13 +1518,40 @@ UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(
 
 ```{r regressions, echo=FALSE}
 
-UUSS_100yrAvgs_GS
 
 GDD_fit <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD)
-visreg(GDD_fit, xlab = "Elevation (m)", ylab = "Growing Degree Days")
+tiff(file = "./Figures/GDD_elev_regression.tiff", height = 12, width = 15, units = 'in', 
+     compression = "lzw", res = 600)
+visreg(GDD_fit, xlab = "Elevation (m)", ylab = "Growing Degree Days", points=list(cex=.8))
+
+dev.off()
+
 summary(GDD_fit)
 
+# Graph the residuals through time.
+UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD %>% 
+  dplyr::mutate(residuals = GDD_fit$residuals)
 
+# Plot GDD
+UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=residuals)) +
+      geom_rect(aes(xmin=-55,xmax=2056,ymin=-125,ymax=0,fill="blue"),alpha=0.009) +
+      geom_rect(aes(xmin=-55,xmax=2056,ymin=0,ymax=135,fill="red"),alpha=0.009) +
+      scale_fill_identity() +
+      geom_line(size = 3.5, color = "black") +
+      xlab("Year (BC/AD)") +
+      ylab("Growing Degree Days Anomaly (controlling for Elevation)") +
+      scale_x_continuous(breaks = seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+      scale_y_continuous(breaks = seq(-150,150, 25)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"))
+      
+    # Save the plot for one month.
+    ggsave(UUSS_100yrAvgs_GDD_Residuals_plot, file = "UUSS_100yrAvgs_GDD_Residuals_plot.tiff", path = "./output/UUSS/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
+
+
+
+# Do regression for temperature.
 tempAll_fit <- lm(reconst_mean ~ elev_mean, data = UUSS_100yrAvgs_GS)
 visreg(tempAll_fit, xlab = "Elevation (m)", ylab = "Temperature (°C)")
 summary(tempAll_fit)
@@ -1467,8 +1569,317 @@ visreg(temp_GDD, ylab = "Growing Degree Days", xlab = "Temperature (°C)")
 summary(temp_GDD)
 
 
+
+
+
+
 ```
 
 
+```{r UUSS_map}
+
+##updated 6/12/17 with new naming system of NHD classes (no longer NHD$NHD, now NHD$_)
+##distill function does not work, but still seems to produce pdf with "dev.off"
+#devtools::install_github("bocinsky/FedData")
+library(FedData)
+pkg_test("maptools")
+pkg_test("maps")
+pkg_test("RColorBrewer")
+pkg_test("parallel")
+pkg_test("entropy")
+pkg_test("gtools")
+pkg_test("UScensus2010")
+pkg_test("xtable")
+pkg_test("png")
+pkg_test("TeachingDemos")
+pkg_test("gdata")
+pkg_test("matrixStats")
+pkg_test("PBSmapping")
+pkg_test("berryFunctions")
+pkg_test("rgdal")
+
+#setwd("/Volumes/VILLAGE/LAURA_FAUNA/Gini_Figures/")
+#setwd("~/Desktop")
+library(raster)
+# Load some mapping functions Bocinsky wrote
+junk <- lapply(list.files("./src", full.names=T),source)
+
+fig.height <- 5.5 # inches
+fig.width <- 4.5 # inches
+buffer <- 0.2 # degrees
+fig.asp <- fig.width/fig.height
+
+master.proj <- CRS("+proj=longlat +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +no_defs")
 
 
+studyArea <- polygon_from_extent(extent(-114.8163 ,-102.0416,31.3319,42.00156),
+                                 "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0")
+east <- -114.8163
+west <- -102.0416
+north <- 42.00156
+south <- 31.3319
+
+# extent.states
+# extent.FourCorners
+# coordsPoints
+
+#NED <- get_ned(template=studyArea, label="UUSS",raw.dir="/Volumes/DATA/NED", extraction.dir="/Volumes/DATA/NED/EXTRACTIONS/")
+
+# Rivers, creeks, and washes
+#NHD <- get_nhd(template=studyArea, label="UUSS",raw.dir="/Volumes/DATA/NHD/", extraction.dir="/Volumes/DATA/NHD/EXTRACTIONS/UUSS/")
+NHD2 <- NHD
+NHD$'_Flowline' <- NHD$'_Flowline'[NHD$'_Flowline'$GNIS_Nm %in% c("Colorado River",
+                                                                  "Rio Grande",
+                                                                  "Gila River", 
+                                                                  "Salt River"),]
+
+NHD$'_Flowline' <- rgeos::gLineMerge(NHD$'_Flowline')
+
+
+# get 2500-m contour
+# NED.2500 <- rasterToContour(NED,levels=2500)
+# NED.2500 <- as(PolySet2SpatialPolygons(SpatialLines2PolySet(NED.2500)),"SpatialPolygons")
+# NED.2500 <- unlist(lapply( NED.2500@polygons , slot , "Polygons" ))
+# NED.2500 <- NED.2500[sapply(NED.2500,function(x){x@area >= .001})]
+# 
+# nCoords <- nrow(NED.2500[["3"]]@coords)
+# NED.2500[["3"]]@coords <- rbind(NED.2500[["3"]]@coords[1:(nCoords-1),],c(west,north),NED.2500[["3"]]@coords[nCoords,])
+# nCoords <- nrow(NED.2500[["27"]]@coords)
+# NED.2500[["27"]]@coords <- rbind(NED.2500[["27"]]@coords[1:(nCoords-1),],c(east,north),NED.2500[["27"]]@coords[nCoords,])
+# nCoords <- nrow(NED.2500[["41"]]@coords)
+# NED.2500[["41"]]@coords <- rbind(NED.2500[["41"]]@coords[1:(nCoords-1),],c(east,north),NED.2500[["41"]]@coords[nCoords,])
+# 
+# NED.2500[["41"]]@hole <- TRUE
+# NED.2500[["41"]]@ringDir <- as.integer(-1)
+# NED.2500[["41"]]@coords <- NED.2500[["41"]]@coords[nrow(NED.2500[["41"]]@coords):1,]
+# 
+# NED.2500 <- SpatialPolygons(list(Polygons(NED.2500,"polys")),proj4string=CRS(projection(NED)))
+# NED.2500 <- rgeos::gUnaryUnion(NED.2500)
+
+
+# States
+# states <- readOGR("/Volumes/DATA/NATIONAL_ATLAS/statep010/", layer='statep010')
+# states <- states[states$STATE %in% c("Utah","New Mexico"),]
+# states <- raster::crop(states,rgeos::gUnaryUnion(spTransform(studyArea,CRS(projection(states)))))
+
+# FourCorners
+
+# utah.state.ycoord <- ymin(extent(rgeos::gIntersection(spTransform(studyArea,CRS(projection(FourCorners))),FourCorners[FourCorners$NAME=="Utah",])))
+# 
+# NM.state.ycoord <- ymax(extent(rgeos::gIntersection(spTransform(studyArea,CRS(projection(FourCorners))),FourCorners[FourCorners$NAME=="New Mexico",])))
+# 
+# colorado.state.ycoord <- ymin(extent(rgeos::gIntersection(spTransform(studyArea,CRS(projection(FourCorners))),FourCorners[FourCorners$NAME=="Colorado",])))
+# 
+# arizona.state.ycoord <- ymax(extent(rgeos::gIntersection(spTransform(studyArea,CRS(projection(FourCorners))),FourCorners[FourCorners$NAME=="Arizona",])))
+
+
+
+# Towns
+towns <- readOGR("/Volumes/DATA/NATIONAL_ATLAS/citiesx020/", layer='citiesx020')
+projection(towns) <- CRS(projection(FourCorners))
+towns <- raster::crop(towns,rgeos::gUnaryUnion(spTransform(studyArea,CRS(projection(towns)))))
+towns <- towns[towns$NAME %in% c("Denver", "Santa Fe", "Salt Lake City", "Phoenix"),]
+
+pointsize <- 8
+
+pdf(file='Scale.pdf', width=fig.width, height=fig.height, bg="white", pointsize=pointsize)
+# quartz(width=fig.width, height=fig.height, bg="white", pointsize=pointsize)
+
+# VEPIIN prcp
+par(mai=c(0,0,0,0),
+    oma=c(0,0,0,0),
+    lend=2,
+    ljoin=0,
+    xpd=F)
+plot.extent <- extent(studyArea)
+plot(1, type='n', xlab="", ylab="", xlim=c(-114.8163,xmax(plot.extent)),ylim=c(ymin(plot.extent),ymax(plot.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
+
+
+colors <- paste0(colorRampPalette(brewer.pal(9,"Greens"))(40),c("00","0D","1A","26","33","40","4D","59","66","73","80")[11])
+plot(NED, col=colors, axes=F)
+
+plot(studyArea, border='white', add=T)
+#plot(NHD$Flowline, add=T)
+
+
+# plot(sites, pch=19, add=T)
+plot(states, lty=2, add=T)
+
+
+plot(coordsPoints, pch=1, lwd=1, col = "black", add=T)
+
+
+inch.x <- (xmax(plot.extent)-xmin(plot.extent))/(fig.width-par('mai')[2]-par('mai')[4])
+inch.y <- (ymax(plot.extent)-ymin(plot.extent))/(fig.height-par('mai')[1]-par('mai')[3])
+
+
+text(-109.4 +(0.05 * inch.x),37.0+(0.05 * inch.y),labels="Utah", adj=c(0,0), col="black", font=1, cex=1.25)
+text(-109.4 +(0.05 * inch.x),37.0-(0.03 * inch.y),labels="Arizona", adj=c(0,1), col="black", font=1, cex=1.25)
+text(-108.7+(0.05 * inch.x),37.0+(0.05 * inch.y),labels="Colorado", adj=c(1,0), col="black", font=1, cex=1.25)
+text(-108.52-(0.05 * inch.x),37.0-(0.03 * inch.y),labels="New Mexico", adj=c(1,1), col="black", font=1, cex=1.25)
+
+
+
+text(x=-109.3, y=37.18, labels="Colorado R.", font=1, cex=1, srt=-23)
+text(x=-108.68, y=37.59, labels="Rio Grande", font=1, cex=1, srt=-23)
+text(x=-106.1, y=35.55, labels="Salt R.", font=2, cex=1.25, srt=0)
+text(x=-106.1, y=35.55, labels="Gila R.", font=2, cex=1.25, srt=0)
+
+plot(towns, pch=22, bg='white', add=T)
+text(towns,labels=towns$NAME, pos=c(4,2,1,3,4,4,1,4,4,4), font=2, cex=7/8)
+
+
+scalebar(d=20, cex=0.075/(pointsize/100), font=2, xy = c(-107.5, 35.6), label="20 km", lwd=2, lend=1)
+north.width <- 0.1
+north.height <- 0.25
+inch.xy <- c(0.1,0.15)
+n.ratio <- 5/4
+arrows(x0=xmax(plot.extent)-1.8*inch.xy[1]*inch.x,y0=ymin(plot.extent)+0.9*inch.xy[2]*inch.y,x1=xmax(plot.extent)-1.8*inch.xy[1]*inch.x,y1=ymin(plot.extent)+0.9*(inch.xy[2]+north.height)*inch.y, length=(north.width/2)/sin(pi/4), angle=45, lwd=n.ratio*north.width/(pointsize/100), lend=1)
+
+text(labels="N",x=xmax(plot.extent)-0.18*inch.x,y=ymin(plot.extent)+0.12*inch.y,adj=c(0.5,0),cex=n.ratio*north.width/(pointsize/100), font=2)
+
+dev.off()
+
+
+# -------------------
+
+```
+
+```{r UUSS_map}
+
+##### FIG_1.pdf #####
+# This increases the number of vertices of the polygon for appropriate transformation
+SWUS.extent <- extent.FourCorners
+SWUS.poly <- polygon_from_extent(SWUS.extent,proj4string="+proj=longlat +datum=WGS84")
+# SWUS.poly.lam <- SpatialPolygons(list(Polygons(list(Polygon(coordinates(suppressWarnings(spsample(as(SWUS.poly,"SpatialLines"),n=1000000,type="regular"))))),ID="1")),proj4string=CRS(projection(SWUS.poly)))
+# SWUS.poly.lam <- spTransform(SWUS.poly.lam,CRS("+proj=lcc +lat_1=37 +lon_0=-109.045225"))
+
+#Extract longitude and latitude data.
+lons_FC <- unlist(lapply(all,FUN=function(x){UUSS_sites$long}))
+lats_FC <- unlist(lapply(all,FUN=function(x){UUSS_sites$lat}))
+
+# Bind longitude and latitude and convert to SpatialPoints.
+coords_FC <- cbind(LONGITUDE=lons,LATITUDE=lats)
+coordsPoints_FC <- SpatialPoints(coords_FC, proj4string=CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+
+# (Down)Load the states shapefile form the National Atlas
+# if(!dir.exists("../DATA/NATIONAL_ATLAS/statesp010g")){
+#   dir.create("../DATA/NATIONAL_ATLAS/", showWarnings = F, recursive = T)
+#   download.file("http://dds.cr.usgs.gov/pub/data/nationalatlas/statesp010g.shp_nt00938.tar.gz", destfile="../DATA/NATIONAL_ATLAS/statesp010g.shp_nt00938.tar.gz", mode='wb')
+#   untar("../DATA/NATIONAL_ATLAS/statesp010g.shp_nt00938.tar.gz", exdir="../DATA/NATIONAL_ATLAS/statesp010g")
+# }
+# states <- readOGR("../DATA/NATIONAL_ATLAS/statesp010g", layer='statesp010g')
+states <- states[states$NAME %in% c("Colorado","Utah","New Mexico","Arizona"),]
+FOUR.extent <- extent(states)
+states <- spTransform(states,"+proj=lcc +lat_1=37 +lon_0=-109.045225")
+
+# Define the plot area as a polygon around the states
+sim.poly <- polygon_from_extent(rgeos::gBuffer(states, width=20000, quadsegs=1000))
+sim.extent <- extent(sim.poly)
+
+# Define the aspect ratio of the plot, and its dimensions
+plot.ratio <- (ymax(sim.extent)-ymin(sim.extent))/(xmax(sim.extent)-xmin(sim.extent))
+fig.width <- 4.6
+legend.height <- 0.0
+plot.width <- fig.width
+plot.height <- plot.width/plot.ratio
+fig.height <- plot.height + legend.height
+
+# define some colors for the niche percentage
+colors <- paste0(colorRampPalette(brewer.pal(9,"Greens"))(11),c("00","0D","1A","26","33","40","4D","59","66","73","80")[11])
+color.breaks <- seq(from=0,to=1,by=0.1)
+
+# Create a png of the niche percentage
+# if(!file.exists("./Figures/UUSS_elev.png")){
+#   NICHE.PERCENT <- raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif")
+#   NICHE.PERCENT <- projectRaster(NICHE.PERCENT,crs=CRS("+proj=lcc +lat_1=37 +lon_0=-109.045225"))
+#   NICHE.PERCENT <- mask(NICHE.PERCENT,states)
+#   
+#   quartz(file='./Figures/UUSS_elev.png', width=6*plot.ratio, height=6, antialias=FALSE, bg="transparent", type='png', family="Gulim", pointsize=8, dpi=300)
+#   par(mai=c(0,0,0,0))
+#   plot(1, type='n', xlab="", ylab="", xlim=c(xmin(sim.extent),xmax(sim.extent)), ylim=c(ymin(sim.extent),ymax(sim.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
+#   plot(NICHE.PERCENT, zlim=c(0,1), maxpixels=ncell(NICHE.PERCENT), breaks=color.breaks, col=colors, useRaster=T, legend=FALSE,  xlab="", ylab="", axes=FALSE, main='', add=T)
+#   dev.off()
+# }
+# NICHE.PERCENT.PNG <- readPNG('./Figures/UUSS_elev.png')
+
+# Create a png for the elevation background
+#The GTOPO30 data are available from
+# if(!file.exists("./Figures/FOUR_Background2.png")){
+# 
+#   FOUR.GTOPO <- lapply(c("w100n40","w100n90","w140n40","w140n90"),function(f){
+#     if(!file.exists(paste0("../DATA/GTOPO30/",f,".zip"))){
+#       download.file(paste0("http://www.webgis.com/GTOPO30/",f,".zip"),destfile=paste0("../DATA/GTOPO30/",f,".zip"))
+#       unzip(paste0("../DATA/GTOPO30/",f,".zip"), exdir="../DATA/GTOPO30/")
+#     }
+#     return(raster(paste0("../DATA/GTOPO30/",toupper(f),".DEM")))
+#   })
+# 
+#   FOUR.GTOPO <- raster::crop(do.call(raster::merge,FOUR.GTOPO),FOUR.extent, snap='out')*2
+#   # slope <- raster::terrain(FOUR.GTOPO, opt='slope')
+#   # aspect <- raster::terrain(FOUR.GTOPO, opt='aspect')
+#   # FOUR.GTOPO.hill <- raster::hillShade(slope, aspect, 40, 230)
+# 
+#   FOUR.GTOPO.hill <- projectRaster(FOUR.GTOPO,crs=CRS("+proj=lcc +lat_1=37 +lon_0=-109.045225"))
+#   FOUR.GTOPO.hill <- raster::mask(FOUR.GTOPO.hill,states)
+# 
+#   quartz(file='./Figures/FOUR_Background2.png', width=6*plot.ratio, height=6, antialias=FALSE, bg="white", type='png', family="Gulim", pointsize=8, dpi=300)
+#   par(mai=c(0,0,0,0))
+#   plot(1, type='n', xlab="", ylab="", xlim=c(xmin(sim.extent),xmax(sim.extent)), ylim=c(ymin(sim.extent),ymax(sim.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
+#   plot(FOUR.GTOPO.hill, maxpixels=ncell(FOUR.GTOPO.hill), col=colors, useRaster=T, legend=FALSE,  xlab="", ylab="", axes=FALSE, main='', add=T)
+#   dev.off()
+#   #rm(FOUR.GTOPO.hill); gc(); gc()
+# }
+FOUR.background <- readPNG('./Figures/FOUR_Background2.png')
+
+#sites.sp.slim <- sites.sp[sites.sp$Outer_Date_AD %in% 500:1400 & !duplicated(sites.sp@coords),]
+
+
+pdf(file='./Figures/UUSS_Map_Fossil_Locations3.pdf', width=fig.width, height=fig.height, bg="white", pointsize=8, version="1.7")
+par(bg='white',fg='black',col.lab='black', col.main='black', col.axis='black', font=2, lend='round',ljoin='round')
+
+par(mai=c(0,0,0,0), lend='round', ljoin='round', xpd=T)
+plot(1, type='n', xlab="", ylab="",xaxs='i',yaxs='i', xlim=c(0,1), ylim=c(0,1), axes=FALSE, main='')
+
+par(mai=c(legend.height,0,0,0), xpd=F, new=T)
+plot(1, type='n', xlab="", ylab="",xlim=c(xmin(sim.extent),xmax(sim.extent)), ylim=c(ymin(sim.extent),ymax(sim.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
+rasterImage(FOUR.background, xleft=xmin(sim.extent), xright=xmax(sim.extent), ybottom=ymin(sim.extent), ytop=ymax(sim.extent), interpolate=F)
+
+
+points(spTransform(coordsPoints_FC,CRS("+proj=lcc +lat_1=37 +lon_0=-109.045225")), pch=19, cex=0.8)
+
+plot(states, add=T)
+#plot(SWUS.poly.lam, add=T, lty=3)
+
+label.coords <- coordinates(states)
+#text(label.coords, labels=states$NAME , cex=1)
+
+#plot(NHD$Flowline, add=T)
+
+# Towns
+# towns <- readOGR("/Volumes/DATA/NATIONAL_ATLAS/citiesx020/", layer='citiesx020')
+# projection(towns) <- CRS(projection(states))
+# towns <- raster::crop(towns,rgeos::gUnaryUnion(spTransform(extent.FourCorners, towns)))
+# towns <- towns[towns$NAME %in% c("Denver", "Santa Fe", "Salt Lake City", "Phoenix"),]
+# towns <- towns[towns$FIPS %in% c("19017", "29137", "49035", "36075"),]
+# plot(towns@coords, pch=17, bg='white', col = 'red')
+
+#points(spTransform(towns@coords,CRS("+proj=lcc +lat_1=37 +lon_0=-109.045225")), pch=17, cex=0.8)
+#text(towns,labels=towns$NAME, pos=c(4,2,1,3,4,4,1,4,4,4), font=2, cex=7/8)
+
+inch.x <- (sim.extent@xmax-sim.extent@xmin)/(fig.width-par('mai')[2]-par('mai')[4])
+inch.y <- (sim.extent@ymax-sim.extent@ymin)/(fig.height-par('mai')[1]-par('mai')[3])
+scalebar.new(d=100000, lonlat=F, cex=1, font=2, side='right',lab.side='right', height=0.05*inch.y, label="100 km", line.offset=c(0.05*inch.x,0.05*inch.y), xy=c(xmin(sim.extent),ymin(sim.extent)), lwd=4, lend=1)
+
+dev.off()
+# distill('./Figures/UUSS_Map_Fossil_Locations.pdf')
+# distill('../FIGURES/FIG_1_EDITED.pdf') ## Manually edited the map that appears in publication.
+
+
+```
+
+``` {r compare_reconstructions}
+
+Moberg <- read.delim("../DATA/nhtemp-moberg2005.txt", header = TRUE, sep = "\t\t\t", dec = ".")
+
+```
