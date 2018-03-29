@@ -7,6 +7,8 @@
 /data/*
 /Figures
 /Figures/*
+/raw_data
+/raw_data/*
 
 # Mac trash files
 .DS_Store
