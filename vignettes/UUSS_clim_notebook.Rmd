@@ -184,6 +184,7 @@ NAfossil_pubs <- readr::read_rds("./data/raw_data/NAfossil_pubs.Rds")
 
 # Save this so that it doesn't run again!
 # You can make it run again by deleting the file.
+# For some reason, some of the sites are missing chronologies, which is causing this to fail.
 if(!file.exists("./data/raw_data/NAfossil_chron.Rds")){
   NAfossil_datasets %>% 
     get_chroncontrol() %>%
@@ -421,7 +422,12 @@ type.list <- raster::stack(monthly.files,native=F,quick=T)
 #END Bocinsky et al. 2016 adapted script.
 
 # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
-climate.points <- raster::extract(x = type.list, y = coordsPoints, df = TRUE)
+# You can make it run again by deleting the file.
+if(!file.exists("./data/raw_data/climate.points.Rds")){
+  raster::extract(x = type.list, y = coordsPoints, df = TRUE) %>%
+    readr::write_rds("./data/raw_data/climate.points.Rds")
+}
+climate.points <- readr::read_rds("./data/raw_data/climate.points.Rds")
 
 # Replace the first column of IDs with dataset.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
 climate.points$ID <- names
@@ -494,6 +500,8 @@ calc_gdd_monthly <- function(temp, t.base, t.cap=NULL, multiplier=1, to_fahrenhe
   
   return(temp_long)
 }
+
+temp_long <- calc_gdd_monthly(data_long, t.base = 10, t.cap=30, multiplier=1, to_fahrenheit=F, to_round=F)
 
 # Now rbind the GDD data to the other 3 climate variables (tmin, tmax, and ppt) to create one dataframe with all of the climate variables.
 data_long <- rbind(data_long, temp_long)
@@ -945,7 +953,7 @@ if (!file.exists("./output/UUSS_reconst.csv")) {
                  })
 
 
- write.csv(UUSS_reconst, "../output/UUSS_reconst.csv", row.names = FALSE)
+ write.csv(UUSS_reconst, "./output/UUSS_reconst.csv", row.names = FALSE)
   
 } else {
   
@@ -1068,73 +1076,73 @@ UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dat
 ```{r summary_reconst, echo=FALSE}
 
 # Row names to change in first column for time periods.
-periodNames <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
-
-# Breaks in time for grouping by each time period.
-groupTime <- c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000)
-
-# Midpoints for each time period. This is used so that we can have continuous data.
-date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)
-
-# First lump all monthly reconstructions together. Approximately 500 year time bins. 
-
-UUSS_500yrAvgs <- UUSS_reconst %>% 
-     dplyr::group_by(gr=cut(age, breaks= 4)) %>% 
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(gr)) %>% 
-     dplyr::select(-ends_with("err_n"))
-
-# Lump all monthly reconstructions together. But break up into Pueblo periods.
-UUSS_Puebloperiods <- UUSS_reconst %>% 
-     dplyr::group_by(period=cut(age, breaks=18)) %>%
-     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::mutate(date_midpoint = date_midpoint) %>% 
-     dplyr::select(-ends_with("err_n"))
-
-UUSS_Puebloperiods$period <- periodNames
-
-# Reconstruct temperature for the warmest month of the year.
-
-# Check to see what the warmest month is.
-monthlyAvgs <- UUSS_reconst %>% 
-     dplyr::group_by(climate) %>% 
-     dplyr::summarise(mean = mean(reconst))
-
-UUSS_Puebloperiods_July <- UUSS_reconst %>% 
-     dplyr::filter(climate == 7) %>% 
-     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::mutate(date_midpoint = date_midpoint) %>% 
-     dplyr::select(-ends_with("err_n"))
-
-UUSS_Puebloperiods_July$period <- periodNames
-
-
-# Reconstruct temperature for the coldest month of the year.
-
-UUSS_Puebloperiods_January <- UUSS_reconst %>% 
-     dplyr::filter(climate == 1) %>% 
-     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-     dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::mutate(date_midpoint = date_midpoint) %>% 
-     dplyr::select(-ends_with("err_n"))
-
-UUSS_Puebloperiods_January$period <- periodNames
-
-# GDD
-
-# Lump all monthly reconstructions together. But break up into Pueblo periods.
-UUSS_Puebloperiods_GDD <- UUSS_GDD %>% 
-     dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-     dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::mutate(date_midpoint = date_midpoint) %>% 
-     dplyr::select(-c(err_mean_n, elev_n))
-
-UUSS_Puebloperiods_GDD$period <- periodNames
+# periodNames <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
+# 
+# # Breaks in time for grouping by each time period.
+# groupTime <- c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000)
+# 
+# # Midpoints for each time period. This is used so that we can have continuous data.
+# date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)
+# 
+# # First lump all monthly reconstructions together. Approximately 500 year time bins. 
+# 
+# UUSS_500yrAvgs <- UUSS_reconst %>% 
+#      dplyr::group_by(gr=cut(age, breaks= 4)) %>% 
+#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+#      dplyr::arrange(as.numeric(gr)) %>% 
+#      dplyr::select(-ends_with("err_n"))
+# 
+# # Lump all monthly reconstructions together. But break up into Pueblo periods.
+# UUSS_Puebloperiods <- UUSS_reconst %>% 
+#      dplyr::group_by(period=cut(age, breaks=18)) %>%
+#      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
+#      dplyr::arrange(as.numeric(period)) %>% 
+#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
+#      dplyr::select(-ends_with("err_n"))
+# 
+# UUSS_Puebloperiods$period <- periodNames
+# 
+# # Reconstruct temperature for the warmest month of the year.
+# 
+# # Check to see what the warmest month is.
+# monthlyAvgs <- UUSS_reconst %>% 
+#      dplyr::group_by(climate) %>% 
+#      dplyr::summarise(mean = mean(reconst))
+# 
+# UUSS_Puebloperiods_July <- UUSS_reconst %>% 
+#      dplyr::filter(climate == 7) %>% 
+#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
+#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+#      dplyr::arrange(as.numeric(period)) %>% 
+#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
+#      dplyr::select(-ends_with("err_n"))
+# 
+# UUSS_Puebloperiods_July$period <- periodNames
+# 
+# 
+# # Reconstruct temperature for the coldest month of the year.
+# 
+# UUSS_Puebloperiods_January <- UUSS_reconst %>% 
+#      dplyr::filter(climate == 1) %>% 
+#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
+#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
+#      dplyr::arrange(as.numeric(period)) %>% 
+#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
+#      dplyr::select(-ends_with("err_n"))
+# 
+# UUSS_Puebloperiods_January$period <- periodNames
+# 
+# # GDD
+# 
+# # Lump all monthly reconstructions together. But break up into Pueblo periods.
+# UUSS_Puebloperiods_GDD <- UUSS_GDD %>% 
+#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
+#      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
+#      dplyr::arrange(as.numeric(period)) %>% 
+#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
+#      dplyr::select(-c(err_mean_n, elev_n))
+# 
+# UUSS_Puebloperiods_GDD$period <- periodNames
 
 
 
@@ -1181,21 +1189,12 @@ UUSS_100yrAvgs_January <- UUSS_reconst %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
-# Lump all monthly reconstructions together.
+# Calculate GDD for the growing season.
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
      dplyr::select(-c(err_mean_n, elev_n, err_mean_unique_sites, elev_unique_sites)) %>% 
-     dplyr::mutate(midP = seq(-50, 2050, 100))
-
-# Take out Beef Pasture.
-UUSS_100yrAvgs_July_sansBP <- UUSS_reconst %>% 
-     dplyr::filter(climate == 7 & dataset.id != 250) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
-     dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 ```
@@ -1207,169 +1206,169 @@ UUSS_100yrAvgs_July_sansBP <- UUSS_reconst %>%
 
 library(plotly)
 
-UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
+#UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
 
 
-UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
-
-
-# gp1 <- UUSS_Puebloperiods %>% ggplot() +
-#   #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") +
-#   geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-#   geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-#   geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-#   geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-#   scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
+# UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
 # 
-#   gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)", scale_y_continuous("Elevatioin")), limits = c(-1, 2))
-
-# Plot the all monthly temperatures lumped together. 
-UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
-      geom_ribbon(aes(x=date_midpoint, ymin = reconst_mean - err_mean,
-                      ymax = reconst_mean + err_mean,
-                      alpha = 0.2),
-                  fill = "grey",
-                  colour="dark grey") +
-      geom_point(aes(x=date_midpoint, y=reconst_mean))  +
-      xlab("Period") +
-      ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(1,2001,100)) +
-      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-    
-    # Save the plot for one month.
-    ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "./output/UUSS/")
-    
-    # Create html files that have the interactive plots from plotly.
-    UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
-    f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_plotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly,    file.path(normalizePath(dirname(f)),basename(f)))
-
-
-# Plot the warmest month, July.
-UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_July[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
-      geom_ribbon(aes(ymin = reconst_mean - err_mean,
-                      ymax = reconst_mean + err_mean,
-                      alpha = 0.2),
-                  fill = "grey",
-                  colour="dark grey") +
-      geom_point() +
-      #facet_wrap(~model_month, ncol = 2) +
-      xlab("Period") +
-      ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(550,1250,100))
-      
-    
-    # Save the plot for one month.
-    ggsave(UUSS_Puebloperiods_July_plot, file = "UUSS_Puebloperiods_July_plot.tiff", path = "./output/UUSS/")
-    
-    # Create html files that have the interactive plots from plotly.
-    UUSS_Puebloperiods_July_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_July_plot)
-    f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_July_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
-    
-    
-# Plot the coldest month, January.
-UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_January[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
-  geom_ribbon(aes(ymin = reconst_mean - err_mean,
-                      ymax = reconst_mean + err_mean,
-                      alpha = 0.2),
-                  fill = "grey",
-                  colour="dark grey") +
-      geom_point() +
-      #facet_wrap(~model_month, ncol = 2) +
-      xlab("Period") +
-      ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=waiver())
-      
-    
-    # Save the plot for one month.
-    ggsave(UUSS_Puebloperiods_January_plot, file = "UUSS_Puebloperiods_January_plot.tiff", path = "./output/UUSS/")
-    
-    # Create html files that have the interactive plots from plotly.
-    UUSS_Puebloperiods_January_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_January_plot)
-     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_January_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
-
-
-
-# Plot the all monthly temperature reconstruction site's elevation lumped together. 
-UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_elevation)), aes(x=date_midpoint, y=mean, color = mean)) +
-      geom_line() +
-      geom_point() +
-      xlab("Period") +
-      ylab("Elevation") +
-      scale_x_continuous(breaks=seq(1,2001,100)) +
-      scale_y_continuous(breaks=seq(2750,3000,25)) +
-      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+# 
+# # gp1 <- UUSS_Puebloperiods %>% ggplot() +
+# #   #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") +
+# #   geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
+# #   geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
+# #   geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) +
+# #   geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) +
+# #   scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
+# # 
+# #   gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)", scale_y_continuous("Elevatioin")), limits = c(-1, 2))
+# 
+# # Plot the all monthly temperatures lumped together. 
+# UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+#       geom_line() +
+#       geom_ribbon(aes(x=date_midpoint, ymin = reconst_mean - err_mean,
+#                       ymax = reconst_mean + err_mean,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_point(aes(x=date_midpoint, y=reconst_mean))  +
+#       xlab("Period") +
+#       ylab("Temperature (°C)") +
+#       scale_x_continuous(breaks=seq(1,2001,100)) +
+#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+#     
+#     # Save the plot for one month.
+#     ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "./output/UUSS/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
+#     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_plotly.html"
+#      htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly,    file.path(normalizePath(dirname(f)),basename(f)))
+# 
+# 
+# # Plot the warmest month, July.
+# UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_July[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+#       geom_line() +
+#       geom_ribbon(aes(ymin = reconst_mean - err_mean,
+#                       ymax = reconst_mean + err_mean,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_point() +
+#       #facet_wrap(~model_month, ncol = 2) +
+#       xlab("Period") +
+#       ylab("Temperature (°C)") +
+#       scale_x_continuous(breaks=seq(550,1250,100))
+#       
+#     
+#     # Save the plot for one month.
+#     ggsave(UUSS_Puebloperiods_July_plot, file = "UUSS_Puebloperiods_July_plot.tiff", path = "./output/UUSS/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     UUSS_Puebloperiods_July_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_July_plot)
+#     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_July_plot_ggplotly.html"
+#      htmlwidgets::saveWidget(UUSS_Puebloperiods_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+#     
+#     
+# # Plot the coldest month, January.
+# UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_January[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
+#       geom_line() +
+#   geom_ribbon(aes(ymin = reconst_mean - err_mean,
+#                       ymax = reconst_mean + err_mean,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_point() +
+#       #facet_wrap(~model_month, ncol = 2) +
+#       xlab("Period") +
+#       ylab("Temperature (°C)") +
+#       scale_x_continuous(breaks=waiver())
+#       
+#     
+#     # Save the plot for one month.
+#     ggsave(UUSS_Puebloperiods_January_plot, file = "UUSS_Puebloperiods_January_plot.tiff", path = "./output/UUSS/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     UUSS_Puebloperiods_January_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_January_plot)
+#      f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_January_plot_ggplotly.html"
+#      htmlwidgets::saveWidget(UUSS_Puebloperiods_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+# 
+# 
+# 
+# # Plot the all monthly temperature reconstruction site's elevation lumped together. 
+# UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_elevation)), aes(x=date_midpoint, y=mean, color = mean)) +
+#       geom_line() +
+#       geom_point() +
+#       xlab("Period") +
+#       ylab("Elevation") +
+#       scale_x_continuous(breaks=seq(1,2001,100)) +
+#       scale_y_continuous(breaks=seq(2750,3000,25)) +
+#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
 
 
 # Combine two plots into one window. Plot all temperature and Elevation.
 # library(gridExtra)
 # grid.arrange(UUSS_Puebloperiods_plot, UUSS_Puebloperiods_Elev_plot, ncol=1)
 
-library(grid)
-grid.draw(rbind(ggplotGrob(UUSS_Puebloperiods_plot), ggplotGrob(UUSS_Puebloperiods_Elev_plot), size = "last"))
-
-
-
-# Plot GDD
-UUSS_Puebloperiods_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_GDD)), aes(x=date_midpoint, y=reconst_sum_mean, color = reconst_sum_mean)) +
-      geom_line() +
-  geom_ribbon(aes(ymin = reconst_sum_mean - err_mean_mean,
-                      ymax = reconst_sum_mean + err_mean_mean,
-                      alpha = 0.2),
-                  fill = "grey",
-                  colour="dark grey") +
-      geom_point() +
-      #facet_wrap(~model_month, ncol = 2) +
-      xlab("Period") +
-      ylab("Growing Degree Days") +
-      scale_x_continuous(breaks = seq(0,2000,100))
-      
-    
-    # Save the plot for one month.
-    ggsave(UUSS_Puebloperiods_GDD_plot, file = "UUSS_Puebloperiods_GDD_plot.tiff", path = "./output/UUSS/")
-    
-    # Create html files that have the interactive plots from plotly.
-    UUSS_Puebloperiods_GDD_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_GDD_plot)
-     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_GDD_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+# library(grid)
+# grid.draw(rbind(ggplotGrob(UUSS_Puebloperiods_plot), ggplotGrob(UUSS_Puebloperiods_Elev_plot), size = "last"))
+# 
+# 
+# 
+# # Plot GDD
+# UUSS_Puebloperiods_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_GDD)), aes(x=date_midpoint, y=reconst_sum_mean, color = reconst_sum_mean)) +
+#       geom_line() +
+#   geom_ribbon(aes(ymin = reconst_sum_mean - err_mean_mean,
+#                       ymax = reconst_sum_mean + err_mean_mean,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_point() +
+#       #facet_wrap(~model_month, ncol = 2) +
+#       xlab("Period") +
+#       ylab("Growing Degree Days") +
+#       scale_x_continuous(breaks = seq(0,2000,100))
+#       
+#     
+#     # Save the plot for one month.
+#     ggsave(UUSS_Puebloperiods_GDD_plot, file = "UUSS_Puebloperiods_GDD_plot.tiff", path = "./output/UUSS/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     UUSS_Puebloperiods_GDD_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_GDD_plot)
+#      f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_GDD_plot_ggplotly.html"
+#      htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 # ----------------------------------------------------------
      
      
 # With converted dates.
 
 # Plot the all monthly temperatures lumped together. 
-UUSS_100yrAvgs_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs)), aes(x=midP, y=reconst_mean, color = reconst_mean)) +
-      geom_line() +
-      geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
-                      ymax = reconst_mean + err_mean,
-                      alpha = 0.2),
-                  fill = "grey",
-                  colour="dark grey") +
-      geom_point(aes(x=midP, y=reconst_mean))  +
-      xlab("Year (BC/AD)") +
-      ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(-100,2100,100)) +
-      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-    
-    # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_plot, file = "UUSS_100yrAvgs_plot.tiff", path = "./output/UUSS/")
-    
-    # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_plot)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_plotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+# UUSS_100yrAvgs_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs)), aes(x=midP, y=reconst_mean, color = reconst_mean)) +
+#       geom_line() +
+#       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
+#                       ymax = reconst_mean + err_mean,
+#                       alpha = 0.2),
+#                   fill = "grey",
+#                   colour="dark grey") +
+#       geom_point(aes(x=midP, y=reconst_mean))  +
+#       xlab("Year (BC/AD)") +
+#       ylab("Temperature (°C)") +
+#       scale_x_continuous(breaks=seq(-100,2100,100)) +
+#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
+#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+#     
+#     # Save the plot for one month.
+#     ggsave(UUSS_100yrAvgs_plot, file = "UUSS_100yrAvgs_plot.tiff", path = "./output/UUSS/")
+#     
+#     # Create html files that have the interactive plots from plotly.
+#     UUSS_100yrAvgs_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_plot)
+#     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_plotly.html"
+#      htmlwidgets::saveWidget(UUSS_100yrAvgs_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the warmest month, July.
-UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean)) +
+UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1381,23 +1380,23 @@ UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), ae
       xlab("Year (BC/AD)") +
       ylab("Temperature (°C)") +
       scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks=seq(-17,17,4), limits = c(-17, 17)) +
+      scale_y_continuous(breaks=seq(-17,30,4), limits = c(-17, 30)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
       labs(col = "Temperature (°C)")
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_July_plot, file = "UUSS_100yrAvgs_July_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_July_plot, file = "UUSS_100yrAvgs_July_plot.tiff", path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_July_plot)
+    UUSS_100yrAvgs_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_July_plot, originalData = TRUE)
     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_July_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))   
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the coldest month, January.
-UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y=reconst_mean)) +
+UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1405,53 +1404,55 @@ UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y
                   fill = "grey",
                   colour="dark grey", 
                   show.legend = F) +
-      geom_line(colour="blue", size = 3.5) +
+      geom_line(colour="red", size = 3.5) +
       xlab("Year (BC/AD)") +
       ylab("Temperature (°C)") +
       scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks=seq(-17,17,4), limits = c(-17, 17)) +
+      scale_y_continuous(breaks=seq(-17,30,5), limits = c(-17, 30)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
       labs(col = "Temperature (°C)")
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_January_plot, file = "UUSS_100yrAvgs_January_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_January_plot, file = "UUSS_100yrAvgs_January_plot.tiff", path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
     UUSS_100yrAvgs_January_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_January_plot)
     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_January_plot_ggplotly.html"
      htmlwidgets::saveWidget(UUSS_100yrAvgs_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))     
      
-     
+UUSS_100yrAvgs_GDD_edited <- UUSS_100yrAvgs_GDD
+  
 # Plot GDD
-UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=reconst_sum_mean, color = reconst_sum_mean)) +
-      geom_line() +
+UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=reconst_sum_mean, color = reconst_sum_mean, label = reconst_sum_n, label2 = reconst_sum_unique_sites)) +
   geom_ribbon(aes(x=midP, ymin = reconst_sum_mean - err_mean_mean,
                       ymax = reconst_sum_mean + err_mean_mean,
                       alpha = 0.2),
                   fill = "grey",
-                  colour="dark grey") +
-      geom_point(aes(x=midP, y=reconst_sum_mean)) +
+                  colour="dark grey", 
+                  show.legend = F) +
+      geom_line(colour="black", size = 3.5) +
       xlab("Year (BC/AD)") +
       ylab("Growing Degree Days") +
-      scale_x_continuous(breaks = seq(-100,2100,100)) +
-      theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-      
+      scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+      scale_y_continuous(breaks = seq(900,1400,50)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica"))
     
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_GDD_plot, file = "UUSS_100yrAvgs_GDD_plot.tiff", path = "./output/UUSS/")
+    ggsave(UUSS_100yrAvgs_GDD_plot, file = "UUSS_100yrAvgs_GDD_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
     UUSS_100yrAvgs_GDD_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_plot)
      f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
      
 
 # Plot the all monthly temperature reconstruction site's elevation lumped together. 
 UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_January)), aes(x=midP, y=elev_mean)) +
-      geom_line(size = 0.8) +
+      geom_line(size = 3.5) +
       xlab("Year (BC/AD)") +
       ylab("Elevation (m)") +
       scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
