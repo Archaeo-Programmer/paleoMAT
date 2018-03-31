@@ -28,7 +28,7 @@ knitr::opts_chunk$set(echo = TRUE)
 if(!require("FedData")) install.packages("FedData")
 if(!require("purrr")) install.packages("purrr")
 
-packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", # For tidy data
+packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
               "rgdal", "sp", "raster", "leaflet", # For spatial data
               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
@@ -65,10 +65,11 @@ This program allows you to reconstruct the climate for multiple locations across
 # Load and compile modern pollen data from the Neotoma Paleoecological database.
 
 # Compile function for the modern pollen data from Neotoma.
-compile_MP <- function(x){
+compile_pollen <- function(x){
   tibble(
     dataset.id = x$dataset$dataset.meta$dataset.id,
     site.id = x$dataset$site.data$site.id,
+    sample.id = x$sample.meta$sample.id,
     site.name = x$dataset$site$site.name,
     depth = x$sample.meta$depth,
     lat = x$dataset$site$lat,
@@ -113,7 +114,7 @@ MP_pubs <- readr::read_rds("./data/raw_data/MP_pubs.Rds")
 # Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
 # Then, combine the rows from the datasets together so that they are now in one tibble.
 MP_metadata <- MP_datasets %>%
-  map(compile_MP) %>%
+  map(compile_pollen) %>%
   bind_rows() %>%
   dplyr::mutate(type = "surface sample")
 
@@ -157,9 +158,9 @@ MP_metadata_counts <- dplyr::left_join(MP_metadata,
 
 ```
 
-## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
+## Process North American Fossil Pollen Data.
 
-```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r FossilPollen, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Get the fossil pollen datasets for the United States and Canada, then download the sites. Next, get the chronology data for each site, so that we can identify the core tops from each site (if available). Next, use lapply to limit to the first data frame in the list of lists (each site has multiple dataframes associated with it); so we limit to the chron.control dataframe. Next, we can strip away the upper most list, which is just the site ID, but we are still left with "siteID.chron.control", as the name of the dataframe.
 
@@ -192,79 +193,172 @@ if(!file.exists("./data/raw_data/NAfossil_chron.Rds")){
 }
 NAfossil_chron <- readr::read_rds("./data/raw_data/NAfossil_chron.Rds")
 
-## Temporarily, commenting this out. This is NOT the correct data. I will probably be able to recylce this code when I'm able to bring in the "modern" pollen data, which are the core tops data that are modern. The modern ran in the previous chunk are the "pollen surface sample"s, but I need the "modern" keyword data.
+# Get the fossil pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.Then, combine the rows from the datasets together so that they are now in one tibble.
+NAfossil_metadata <- NAfossil_datasets %>%
+  purrr::map(compile_pollen) %>%
+  bind_rows() %>%
+  dplyr::mutate(type = "fossil") %>% 
+  mutate(dataset.id = as.integer(dataset.id))
 
-# KB: I think this line does almost everything you were trying to do
-# coreTops <- NAfossil_chron %>%
-#   purrr::map_dfr(.id = "dataset.id",
-#                  "chron.control") %>%
-#   tibble::as_tibble() %>%
-#   dplyr::mutate(dataset.id = dataset.id %>%
-#                   as.integer()) %>%
-#   dplyr::filter(control.type == "Core top")
+NAfossil_metadata$site.id <- as.integer(NAfossil_metadata$site.id)
+
+# Get earliest publication dates for each fossil pollen site.
+NAfossil_pub_date <- NAfossil_pubs %>%
+  purrr::map_dfr(.id = "dataset.id",
+                 .f = function(x){
+                   tibble::tibble(pub_year = x %>%
+                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+                                    as.integer()) # coerce to integer
+                 }) %>%
+  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+                                  1990,
+                                  pub_year),
+                dataset.id = as.integer(dataset.id)) %>% 
+  dplyr::group_by(dataset.id) %>% 
+  dplyr::slice(which.min(pub_year))
+
+NAfossil_pub_date$dataset.id <- as.integer(NAfossil_pub_date$dataset.id)
+
+# Get the fossil datasets in North America and use purrr::map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble. We remove dataset.id because dplyr::left_join cannot process having multiple rows with the same dataset.id.
+NAfossil_counts <- NAfossil_datasets %>%
+  purrr::map("counts") %>%
+  purrr::map(as_tibble) %>%
+  purrr::map(compile_taxa,
+             list.name = "WhitmoreFull") %>%
+  purrr::map(as_tibble) %>%
+  purrr::imap(.f = function(x,y){
+    cbind(NAfossil_datasets[[y]]$sample.meta %>%
+            dplyr::select(dataset.id,depth),
+          x)
+  }) %>%
+  bind_rows() %>% 
+  # select(-ends_with("dataset.id")) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
+  as_tibble()
+
+
+
+# # Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
+# sameVariables <- function(x,y) {
+#     for (i in names(x)) {
+#         if (!(i %in% names(y))) {
+#             print('Warning: Names are not the same!')
+#             break
+#         }  
+#         else if(i==tail(names(y),n=1)) {
+#             print('Names are identical.')
+#         }
+#     }
+# }
 # 
-# # Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
-# # Then, combine the rows from the datasets together so that they are now in one tibble.
-# CT_metadata <- NAfossil_datasets %>%
-#   magrittr::extract(coreTops$dataset.id %>%
-#                       unique() %>%
-#                       as.character()) %>%
-#   map(compile_MP) %>%
-#   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT metadata)
-#   bind_rows() %>%
-#   dplyr::rename(dataset.id = dataset) %>%
-#   dplyr::mutate(type = "core top")
+# sameVariables(NAfossil_counts, MPCT_counts_noNAs)
+
+# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
+
+# First, merge (using a left_join) the metadata with the publication year, using the dataset.id to match, just to double check.
+NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
+                                          NAfossil_pub_date,
+                                          by  = "dataset.id")
+
+# The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same dataset.id.
+NAfossil_metadata_counts <- dplyr::left_join(NAfossil_metadata_pub, NAfossil_counts,
+                                             by = c("dataset.id" = "dataset.id","depth")) %>%
+  dplyr::arrange(dataset.id)
+
+```
+
+## Process fossil pollen sites in Mexico, as one site falls right on the US-Mexico Border.
+
+```{r FossilPollen_MexicoBorder, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+mexicoID <- gpids %>%
+  dplyr::filter(GeoPoliticalName %in% c('Mexico'),
+                GeoPoliticalUnit == 'country') %$%
+  GeoPoliticalID
+
+mexico_data <- neotoma::get_dataset(gpid = mexicoID,
+                       datasettype = 'pollen') %>% 
+    neotoma::get_download()
+
+mexico_pub <- mexico_data %>% 
+    get_publication()
+
+# Get the fossil pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.Then, combine the rows from the datasets together so that they are now in one tibble.
+mexicoFossil_metadata <- mexico_data %>%
+  purrr::map(compile_pollen) %>%
+  bind_rows() %>%
+  dplyr::mutate(type = "fossil") %>% 
+  mutate(dataset.id = as.integer(dataset.id))
+
+mexicoFossil_metadata$site.id <- as.integer(mexicoFossil_metadata$site.id)
+
+# Get earliest publication dates for each fossil pollen site.
+mexico_pub_date <- mexico_pub %>%
+  purrr::map_dfr(.id = "dataset.id",
+                 .f = function(x){
+                   tibble::tibble(pub_year = x %>%
+                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
+                                    as.integer()) # coerce to integer
+                 }) %>%
+  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
+                                  1990,
+                                  pub_year),
+                dataset.id = as.integer(dataset.id)) %>% 
+  dplyr::group_by(dataset.id) %>% 
+  dplyr::slice(which.min(pub_year))
+
+mexico_pub_date$dataset.id <- as.integer(mexico_pub_date$dataset.id)
+
+# Get the fossil datasets in North America and use purrr::map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble. We remove dataset.id because dplyr::left_join cannot process having multiple rows with the same dataset.id.
+mexicofossil_counts <- mexico_data %>%
+  purrr::map("counts") %>%
+  purrr::map(as_tibble) %>%
+  purrr::map(compile_taxa,
+             list.name = "WhitmoreFull") %>%
+  purrr::map(as_tibble) %>%
+  purrr::imap(.f = function(x,y){
+    cbind(mexico_data[[y]]$sample.meta %>%
+            dplyr::select(dataset.id,depth),
+          x)
+  }) %>%
+  bind_rows() %>% 
+  # select(-ends_with("dataset.id")) %>%
+  mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
+  as_tibble()
+
+# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
+
+# First, merge (using a left_join) the metadata with the publication year, using the dataset.id to match, just to double check.
+mexico_metadata_pub <- dplyr::left_join(mexicoFossil_metadata,
+                                          mexico_pub_date,
+                                          by  = "dataset.id")
+
+# The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same dataset.id.
+mexico_metadata_counts <- dplyr::left_join(mexico_metadata_pub, mexicofossil_counts,
+                                             by = c("dataset.id" = "dataset.id","depth")) %>%
+  dplyr::arrange(dataset.id)
+
+# Extract the one site that is along the border.
+mexico_metadata_counts <- mexico_metadata_counts %>% 
+  dplyr::filter(sample.id == 214610)
+
+```
+
+## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
+
+```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+# Currently, to target the core top data from the fossil pollen (or "pollen") data, I am using a service online ( https://tilia.neotomadb.org/retrieve/doc2/), which allows for me to target the core tops through the SKOPE_GetSurfaceSampleData method (use selection #3 for core-top samples; 7 for surface samples). Then, I just copied the data and put it into a .csv file, which I am reading in here.
+coreTops <- read.csv("./data/surface_coretop_Minmeta.csv") %>% 
+  dplyr::distinct()
+
 # 
-# 
-# CTPub_Year <- NAfossil_pubs %>%
-#   magrittr::extract(coreTops$dataset.id %>%
-#                       unique() %>%
-#                       as.character()) %>%
-#   purrr::map_dfr(.id = "dataset.id",
-#                  .f = function(x){
-#                    tibble::tibble(pub_year = x %>%
-#                                     purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
-#                                     as.integer()) # coerce to integer
-#                  })
-# 
-# 
-# CTPub_Year %<>%
-#   dplyr::mutate(pub_year = ifelse(is.na(pub_year),
-#                                   1990,
-#                                   pub_year),
-#                 dataset.id = as.integer(dataset.id))
-# 
-# # Group each id together (since sites can have multiple publication years), then only keep the minimum publication year for each site (id).
-# CT_pubDate <- CTPub_Year %>%
-#   group_by(dataset.id) %>%
-#   slice(which.min(pub_year))
-# 
-# # Download the United States and Canada site fossil datasets and compile taxa into one dataframe.
-# CT_counts <- NAfossil_datasets %>%
-#   magrittr::extract(coreTops$dataset.id %>%
-#                       unique() %>%
-#                       as.character()) %>%
-#   purrr::map("counts") %>%
-#   purrr::map(as_tibble) %>%
-#   purrr::map(function(x){x[1,]}) %>% # This gets the first row of each (the CT counts)
-#   purrr::map(compile_taxa,
-#              list.name = "WhitmoreFull") %>%
-#   purrr::map(as_tibble) %>%
-#   bind_rows(.id = "dataset.id") %>%
-#   dplyr::mutate(dataset.id = as.integer(dataset.id))
-# 
-# # Sort the taxa to be in alphabetical order.
-# CT_counts <- CT_counts[,c(names(CT_counts)[1], sort(names(CT_counts)[2:ncol(CT_counts)]))]
-# 
-# # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
-# 
-# # First, merge the metadata with the publication year, using the dataset.id to match, just to double check.
-# CT_metadata_counts <- dplyr::left_join(CT_metadata,
-#                                        CT_pubDate,
-#                                        by  = "dataset.id") %>%
-#   dplyr::left_join(CT_counts,
-#                    by  = "dataset.id") %>%
-#   dplyr::arrange(dataset.id)
+CT_metadata_counts <- dplyr::left_join(coreTops,
+                                       NAfossil_metadata_counts,
+                                       by  = c("dataset.id", "site.id", "sample.id")) %>% 
+  rbind.fill(mexico_metadata_counts) %>% 
+  dplyr::mutate(type = "core top") %>% 
+  dplyr::arrange(dataset.id)
 
 ```
 
@@ -274,27 +368,40 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-# Also, temporarily commenting this section out, since I do not have the modern data to combine with the pollen surface samples.
+# This function is no longer needed. It looks like rbind.fill from plyr already does this.
 
 # Function to combine the core top and surface sample data, since one dataset may have more columns than the other, which would happen if not all species were represented in one dataset. Therefore, here we make sure that all unique columns are represented in the combined dataframe.
 # rbind.all.columns <- function(x, y) {
 #   x.diff <- setdiff(colnames(x), colnames(y))
 #   y.diff <- setdiff(colnames(y), colnames(x))
-#   
+# 
 #   x[, c(as.character(y.diff))] <- 0
 #   y[, c(as.character(x.diff))] <- 0
-#   
+# 
 #   return(rbind(x, y))
 # }
-# 
-# # Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
-# MPCT_metadata_counts <- rbind.all.columns(MP_metadata_counts, CT_metadata_counts) %>%
-#   dplyr::arrange(dataset.id) %>% 
-#   distinct(dataset.id, .keep_all = TRUE) %>%
-#   mutate_all(funs(ifelse(is.na(.), 0, .)))
-# 
-# # Sort the taxa to be in alphabetical order. 
-# MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:7], sort(names(MPCT_metadata_counts)[8:ncol(MPCT_metadata_counts)]))]
+
+# Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
+MPCT_metadata_counts <- rbind.fill(MP_metadata_counts, CT_metadata_counts) %>%
+  dplyr::arrange(dataset.id) # %>%
+  #distinct(dataset.id, .keep_all = TRUE)
+
+# Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
+MPCT_metadata <- MPCT_metadata_counts[,1:10]
+MPCT_counts <- MPCT_metadata_counts[,c(11:ncol(MPCT_metadata_counts))] %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+MPCT_metadata_counts <- cbind(MPCT_metadata, MPCT_counts)
+
+# Sort the taxa to be in alphabetical order.
+MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:10], sort(names(MPCT_metadata_counts)[11:ncol(MPCT_metadata_counts)]))]
+
+```
+
+## Remove Coretops data from the fossil pollen dataset
+```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+NAfossil_metadata_counts <-  anti_join(NAfossil_metadata_counts, coreTops, by = c("dataset.id", "site.id", "sample.id"))
 
 ```
 
@@ -310,9 +417,9 @@ map <- leaflet(width = 800, height = 800) %>%
           lat = 11.68,
           zoom = 2)
 
-map %>% addMarkers(lng = MPCT_metadata_counts_noNAs$long, lat = MPCT_metadata_counts_noNAs$lat, 
-                   popup = paste0('<b>', as.character(MPCT_metadata_counts_noNAs$site.name), '</b><br>',
-                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MPCT_metadata_counts_noNAs$dataset.id, '>Neotoma Database</a>'))
+map %>% addMarkers(lng = MPCT_metadata_counts$long, lat = MPCT_metadata_counts$lat, 
+                   popup = paste0('<b>', as.character(MPCT_metadata_counts$site.name), '</b><br>',
+                                  '<a href=http://apps.neotomadb.org/explorer/?datasetid=', MPCT_metadata_counts$dataset.id, '>Neotoma Database</a>'))
 
 
 
@@ -326,7 +433,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # Load Prism Climate data.
 
 # Temporarily bypassing the core tops code and setting the surface pollen samples equal to the other variable. Once the core top data is added in, then I should delete this line of code.
-MPCT_metadata_counts <- MP_metadata_counts
+# MPCT_metadata_counts <- MP_metadata_counts
 
 # Get Modern Pollen locational dataset.id numbers.
 names <- MPCT_metadata_counts$dataset.id
@@ -433,7 +540,7 @@ climate.points <- readr::read_rds("./data/raw_data/climate.points.Rds")
 climate.points$ID <- names
 
 # Rename the ID column to dataset.id.
-climate.points <- rename(climate.points, dataset.id = ID)
+climate.points <- dplyr::rename(climate.points, dataset.id = ID)
 
 # Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
 data_long <- melt(climate.points,
@@ -647,7 +754,7 @@ Clim_noNAs <- clim_wide[-(NAindex),]
 MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:10)] %>% 
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
@@ -701,96 +808,6 @@ The variance explained is very low for some variables, although the p value is v
 
 Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
 
-### Process North American Fossil Pollen Data.
-
-```{r FossilPollen, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
-
-# Compile function for the fossil pollen data from Neotoma. This is similar to the compile function for modern pollen, except that the age is added in for a site at each depth.
-compile_FP <- function(x){
-  tibble(
-    dataset.id = x$dataset$dataset.meta$dataset.id,
-    site.id = x$dataset$site.data$site.id,
-    site.name = x$dataset$site$site.name,
-    depth = x$sample.meta$depth,
-    lat = x$dataset$site$lat,
-    long = x$dataset$site$long,
-    elev = x$dataset$site$elev,
-    age = x$sample.meta$age)
-}
-
-# Get the fossil pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.Then, combine the rows from the datasets together so that they are now in one tibble.
-NAfossil_metadata <- NAfossil_datasets %>%
-  purrr::map(compile_FP) %>%
-  bind_rows() %>%
-  dplyr::mutate(type = "fossil") %>% 
-  mutate(dataset.id = as.integer(dataset.id))
-
-NAfossil_metadata$site.id <- as.integer(NAfossil_metadata$site.id)
-
-# Get earliest publication dates for each fossil pollen site.
-NAfossil_pub_date <- NAfossil_pubs %>%
-  purrr::map_dfr(.id = "dataset.id",
-                 .f = function(x){
-                   tibble::tibble(pub_year = x %>%
-                                    purrr::map_dbl(function(y) y$meta$year) %>% # Get the year from every element of x
-                                    as.integer()) # coerce to integer
-                 }) %>%
-  dplyr::mutate(pub_year = ifelse(is.na(pub_year),
-                                  1990,
-                                  pub_year),
-                dataset.id = as.integer(dataset.id)) %>% 
-  dplyr::group_by(dataset.id) %>% 
-  dplyr::slice(which.min(pub_year))
-
-NAfossil_pub_date$dataset.id <- as.integer(NAfossil_pub_date$dataset.id)
-
-# Get the fossil datasets in North America and use purrr::map to add in counts, then change to a tibble, then bind rows together. Then, use Neotoma's compile function for the Whitmore Full dataset of taxa, and finally change counts into a tibble. We remove dataset.id because dplyr::left_join cannot process having multiple rows with the same dataset.id.
-NAfossil_counts <- NAfossil_datasets %>%
-  purrr::map("counts") %>%
-  purrr::map(as_tibble) %>%
-  purrr::map(compile_taxa,
-             list.name = "WhitmoreFull") %>%
-  purrr::map(as_tibble) %>%
-  purrr::imap(.f = function(x,y){
-    cbind(NAfossil_datasets[[y]]$sample.meta %>%
-            dplyr::select(dataset.id,depth),
-          x)
-  }) %>%
-  bind_rows() %>% 
-  # select(-ends_with("dataset.id")) %>%
-  mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
-  as_tibble()
-
-# NAfossil_counts <- NAfossil_counts[,sort(names(NAfossil_counts)[1:ncol(NAfossil_counts)])]
-
-# # Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
-# sameVariables <- function(x,y) {
-#     for (i in names(x)) {
-#         if (!(i %in% names(y))) {
-#             print('Warning: Names are not the same!')
-#             break
-#         }  
-#         else if(i==tail(names(y),n=1)) {
-#             print('Names are identical.')
-#         }
-#     }
-# }
-# 
-# sameVariables(NAfossil_counts, MPCT_counts_noNAs)
-
-# Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
-
-# First, merge (using a left_join) the metadata with the publication year, using the dataset.id to match, just to double check.
-NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
-                                          NAfossil_pub_date,
-                                          by  = "dataset.id")
-
-# The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same dataset.id.
-NAfossil_metadata_counts <- dplyr::left_join(NAfossil_metadata_pub, NAfossil_counts,
-                                             by = c("dataset.id" = "dataset.id","depth")) %>%
-  dplyr::arrange(dataset.id)
-
-```
 
 ### Process Four Corners Fossil Pollen Data.
 
@@ -922,7 +939,7 @@ Temperature <- Clim_noNAs[,26:37]
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction csv and it will run. 
 
-if (!file.exists("./output/UUSS_reconst.csv")) {
+if (!file.exists("./output/UUSS_reconst_temp.csv")) {
   
   mat_models_temp <- purrr::map(1:12,
                               .f = function(j){
@@ -953,7 +970,7 @@ if (!file.exists("./output/UUSS_reconst.csv")) {
                  })
 
 
- write.csv(UUSS_reconst, "./output/UUSS_reconst.csv", row.names = FALSE)
+ write.csv(UUSS_reconst, "./output/UUSS_reconst_temp.csv", row.names = FALSE)
   
 } else {
   
@@ -1075,78 +1092,6 @@ UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dat
 
 ```{r summary_reconst, echo=FALSE}
 
-# Row names to change in first column for time periods.
-# periodNames <- c("1585-1685 AD", "1485-1585 AD", "1385-1485 AD", "1285-1385 AD", "PIII Exploit", "PIII Explore", "PII Exploit", "PII Explore", "PI Exploit", "PI Explore", "BMIII Exploit", "BMIII Explore","400-500 AD", "300-400 AD","200-300 AD", "100-200 AD", "1-100 AD", "1685-2005 AD")
-# 
-# # Breaks in time for grouping by each time period.
-# groupTime <- c(265, 365, 465, 565, 665, 750, 805, 915, 1060, 1160, 1250, 1350, 1450, 1550, 1650, 1750, 1850, 2000)
-# 
-# # Midpoints for each time period. This is used so that we can have continuous data.
-# date_midpoint = c(1635, 1535, 1435, 1335, 1242.5, 1173.5, 1090, 962.5, 840, 745, 650, 550, 450, 350, 250, 150, 50, 1845)
-# 
-# # First lump all monthly reconstructions together. Approximately 500 year time bins. 
-# 
-# UUSS_500yrAvgs <- UUSS_reconst %>% 
-#      dplyr::group_by(gr=cut(age, breaks= 4)) %>% 
-#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-#      dplyr::arrange(as.numeric(gr)) %>% 
-#      dplyr::select(-ends_with("err_n"))
-# 
-# # Lump all monthly reconstructions together. But break up into Pueblo periods.
-# UUSS_Puebloperiods <- UUSS_reconst %>% 
-#      dplyr::group_by(period=cut(age, breaks=18)) %>%
-#      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n())) %>%
-#      dplyr::arrange(as.numeric(period)) %>% 
-#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
-#      dplyr::select(-ends_with("err_n"))
-# 
-# UUSS_Puebloperiods$period <- periodNames
-# 
-# # Reconstruct temperature for the warmest month of the year.
-# 
-# # Check to see what the warmest month is.
-# monthlyAvgs <- UUSS_reconst %>% 
-#      dplyr::group_by(climate) %>% 
-#      dplyr::summarise(mean = mean(reconst))
-# 
-# UUSS_Puebloperiods_July <- UUSS_reconst %>% 
-#      dplyr::filter(climate == 7) %>% 
-#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-#      dplyr::arrange(as.numeric(period)) %>% 
-#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
-#      dplyr::select(-ends_with("err_n"))
-# 
-# UUSS_Puebloperiods_July$period <- periodNames
-# 
-# 
-# # Reconstruct temperature for the coldest month of the year.
-# 
-# UUSS_Puebloperiods_January <- UUSS_reconst %>% 
-#      dplyr::filter(climate == 1) %>% 
-#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-#      dplyr::summarise_at(c("reconst", "err"), funs(mean, n())) %>%
-#      dplyr::arrange(as.numeric(period)) %>% 
-#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
-#      dplyr::select(-ends_with("err_n"))
-# 
-# UUSS_Puebloperiods_January$period <- periodNames
-# 
-# # GDD
-# 
-# # Lump all monthly reconstructions together. But break up into Pueblo periods.
-# UUSS_Puebloperiods_GDD <- UUSS_GDD %>% 
-#      dplyr::group_by(period=cut(age, breaks=groupTime)) %>%
-#      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n())) %>%
-#      dplyr::arrange(as.numeric(period)) %>% 
-#      dplyr::mutate(date_midpoint = date_midpoint) %>% 
-#      dplyr::select(-c(err_mean_n, elev_n))
-# 
-# UUSS_Puebloperiods_GDD$period <- periodNames
-
-
-
-# ---------------------
 # First, convert the years BP in the age column to BC/AD dates, which we create a new column called date.
 
 UUSS_reconst <- UUSS_reconst %>% 
@@ -1155,7 +1100,7 @@ UUSS_reconst <- UUSS_reconst %>%
 UUSS_GDD <- UUSS_GDD %>% 
   dplyr::mutate(date = BPtoBCAD(UUSS_GDD$age))
 
-# Do 100 year averages across all months.
+# Do 100 year average temperatures across all months.
 UUSS_100yrAvgs <- UUSS_reconst %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>%
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1163,7 +1108,7 @@ UUSS_100yrAvgs <- UUSS_reconst %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
      
-# Do 100 year averages across growing season months.
+# Do 100 year average temperatures across growing season months (May through September).
 UUSS_100yrAvgs_GS <- UUSS_reconst %>%
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
@@ -1172,7 +1117,7 @@ UUSS_100yrAvgs_GS <- UUSS_reconst %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
-
+# Do 100 year average temperatures for the warmest month of the year, July.
 UUSS_100yrAvgs_July <- UUSS_reconst %>% 
      dplyr::filter(climate == 7) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
@@ -1181,6 +1126,7 @@ UUSS_100yrAvgs_July <- UUSS_reconst %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
+# Do 100 year average temperatures for the coldest month of the year, January.
 UUSS_100yrAvgs_January <- UUSS_reconst %>% 
      dplyr::filter(climate == 1) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
@@ -1189,7 +1135,7 @@ UUSS_100yrAvgs_January <- UUSS_reconst %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
-# Calculate GDD for the growing season.
+# Calculate GDD for the growing season (May through September).
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1208,142 +1154,7 @@ library(plotly)
 
 #UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
 
-
-# UUSS_Puebloperiods$elev_mean <- as.numeric(UUSS_Puebloperiods$elev_mean)
-# 
-# 
-# # gp1 <- UUSS_Puebloperiods %>% ggplot() +
-# #   #geom_bar(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity") +
-# #   geom_point(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-# #   geom_line(mapping = aes(x = date_midpoint, y = elev_mean * 1 / 3000), stat = "identity", colour = "red") +
-# #   geom_point(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-# #   geom_line(mapping = aes(x = date_midpoint, y = reconst_mean)) +
-# #   scale_y_continuous(name = expression("Temperature ("~degree~"C)"), limits = c(-1, 2))
-# # 
-# #   gp2 <- gp1 %+% scale_y_continuous(name = expression("Temperature ("~degree~"C)"), sec.axis = sec_axis(~ .* 3000  , name = "Elevation (meters)", scale_y_continuous("Elevatioin")), limits = c(-1, 2))
-# 
-# # Plot the all monthly temperatures lumped together. 
-# UUSS_Puebloperiods_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods)), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-#       geom_line() +
-#       geom_ribbon(aes(x=date_midpoint, ymin = reconst_mean - err_mean,
-#                       ymax = reconst_mean + err_mean,
-#                       alpha = 0.2),
-#                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_point(aes(x=date_midpoint, y=reconst_mean))  +
-#       xlab("Period") +
-#       ylab("Temperature (°C)") +
-#       scale_x_continuous(breaks=seq(1,2001,100)) +
-#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-#     
-#     # Save the plot for one month.
-#     ggsave(UUSS_Puebloperiods_plot, file = "UUSS_Puebloperiods_plot.tiff", path = "./output/UUSS/")
-#     
-#     # Create html files that have the interactive plots from plotly.
-#     UUSS_Puebloperiods_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_plot)
-#     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_plotly.html"
-#      htmlwidgets::saveWidget(UUSS_Puebloperiods_plot_ggplotly,    file.path(normalizePath(dirname(f)),basename(f)))
-# 
-# 
-# # Plot the warmest month, July.
-# UUSS_Puebloperiods_July_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_July[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-#       geom_line() +
-#       geom_ribbon(aes(ymin = reconst_mean - err_mean,
-#                       ymax = reconst_mean + err_mean,
-#                       alpha = 0.2),
-#                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_point() +
-#       #facet_wrap(~model_month, ncol = 2) +
-#       xlab("Period") +
-#       ylab("Temperature (°C)") +
-#       scale_x_continuous(breaks=seq(550,1250,100))
-#       
-#     
-#     # Save the plot for one month.
-#     ggsave(UUSS_Puebloperiods_July_plot, file = "UUSS_Puebloperiods_July_plot.tiff", path = "./output/UUSS/")
-#     
-#     # Create html files that have the interactive plots from plotly.
-#     UUSS_Puebloperiods_July_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_July_plot)
-#     f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_July_plot_ggplotly.html"
-#      htmlwidgets::saveWidget(UUSS_Puebloperiods_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
-#     
-#     
-# # Plot the coldest month, January.
-# UUSS_Puebloperiods_January_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_January[5:12,])), aes(x=date_midpoint, y=reconst_mean, color = reconst_mean)) +
-#       geom_line() +
-#   geom_ribbon(aes(ymin = reconst_mean - err_mean,
-#                       ymax = reconst_mean + err_mean,
-#                       alpha = 0.2),
-#                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_point() +
-#       #facet_wrap(~model_month, ncol = 2) +
-#       xlab("Period") +
-#       ylab("Temperature (°C)") +
-#       scale_x_continuous(breaks=waiver())
-#       
-#     
-#     # Save the plot for one month.
-#     ggsave(UUSS_Puebloperiods_January_plot, file = "UUSS_Puebloperiods_January_plot.tiff", path = "./output/UUSS/")
-#     
-#     # Create html files that have the interactive plots from plotly.
-#     UUSS_Puebloperiods_January_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_January_plot)
-#      f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_January_plot_ggplotly.html"
-#      htmlwidgets::saveWidget(UUSS_Puebloperiods_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
-# 
-# 
-# 
-# # Plot the all monthly temperature reconstruction site's elevation lumped together. 
-# UUSS_Puebloperiods_Elev_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_elevation)), aes(x=date_midpoint, y=mean, color = mean)) +
-#       geom_line() +
-#       geom_point() +
-#       xlab("Period") +
-#       ylab("Elevation") +
-#       scale_x_continuous(breaks=seq(1,2001,100)) +
-#       scale_y_continuous(breaks=seq(2750,3000,25)) +
-#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-
-
-# Combine two plots into one window. Plot all temperature and Elevation.
-# library(gridExtra)
-# grid.arrange(UUSS_Puebloperiods_plot, UUSS_Puebloperiods_Elev_plot, ncol=1)
-
-# library(grid)
-# grid.draw(rbind(ggplotGrob(UUSS_Puebloperiods_plot), ggplotGrob(UUSS_Puebloperiods_Elev_plot), size = "last"))
-# 
-# 
-# 
-# # Plot GDD
-# UUSS_Puebloperiods_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_Puebloperiods_GDD)), aes(x=date_midpoint, y=reconst_sum_mean, color = reconst_sum_mean)) +
-#       geom_line() +
-#   geom_ribbon(aes(ymin = reconst_sum_mean - err_mean_mean,
-#                       ymax = reconst_sum_mean + err_mean_mean,
-#                       alpha = 0.2),
-#                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_point() +
-#       #facet_wrap(~model_month, ncol = 2) +
-#       xlab("Period") +
-#       ylab("Growing Degree Days") +
-#       scale_x_continuous(breaks = seq(0,2000,100))
-#       
-#     
-#     # Save the plot for one month.
-#     ggsave(UUSS_Puebloperiods_GDD_plot, file = "UUSS_Puebloperiods_GDD_plot.tiff", path = "./output/UUSS/")
-#     
-#     # Create html files that have the interactive plots from plotly.
-#     UUSS_Puebloperiods_GDD_plot_ggplotly <- ggplotly(UUSS_Puebloperiods_GDD_plot)
-#      f<-"./output/UUSS/plotly_htmls/UUSS_Puebloperiods_GDD_plot_ggplotly.html"
-#      htmlwidgets::saveWidget(UUSS_Puebloperiods_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
-# ----------------------------------------------------------
-     
-     
-# With converted dates.
-
-# Plot the all monthly temperatures lumped together. 
+# Plot all monthly temperatures lumped together. 
 # UUSS_100yrAvgs_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs)), aes(x=midP, y=reconst_mean, color = reconst_mean)) +
 #       geom_line() +
 #       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
@@ -1367,7 +1178,7 @@ library(plotly)
 #      htmlwidgets::saveWidget(UUSS_100yrAvgs_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
-# Plot the warmest month, July.
+# Plot the warmest temperature month, July.
 UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
@@ -1395,7 +1206,7 @@ UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), ae
      htmlwidgets::saveWidget(UUSS_100yrAvgs_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
-# Plot the coldest month, January.
+# Plot the coldest temperature month, January.
 UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
@@ -1450,7 +1261,7 @@ UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(
      htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
      
 
-# Plot the all monthly temperature reconstruction site's elevation lumped together. 
+# Plot the avg. elevation of the fossil pollen sites used in the reconstruction for each 100 year time bin. 
 UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_January)), aes(x=midP, y=elev_mean)) +
       geom_line(size = 3.5) +
       xlab("Year (BC/AD)") +
@@ -1465,51 +1276,45 @@ UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_Janua
     ggsave(UUSS_100yrAvgs_Elevation_plot, file = "UUSS_100yrAvgs_Elevation_plot.tiff", path = "./output/UUSS/", units="in", width=19, height=12, dpi=600, compression = 'lzw')
 
 
-
 # ----------------------------------------------------------
      # # Loop to produce plots of each month for a site.
 # 
-# monthPlots <- c("MAT_tjan", "MAT_tfeb", "MAT_tmar", "MAT_tapr", "MAT_tmay", "MAT_tjun", "MAT_tjul", "MAT_taug", "MAT_tsep", "MAT_toct", "MAT_tnov", "MAT_tdec")
-# 
-# for (i in 1:length(fossil_sites)) {
-#   
-#   # Read in the reconstruction and error files for a given site.
-#   FS_reconst <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_reconst.csv"))
-#   FS_err <- read.csv(paste0("./output/UUSS/", fossil_sites[i], sep = "", "_clim_err.csv"))
-#   
-#   # Convert each of the two files into long format, and for the error file, we only need to keep the one column with the error data. This will be bound to the other reconstructed temperature dataframe.
-#   FS_reconst_long <- gather(FS_reconst, model_month, reconst, MAT_tjan:MAT_tdec, factor_key=TRUE)
-#   FS_err_long <- gather(FS_err, model_month, err, MAT_tjan:MAT_tdec, factor_key=TRUE) %>% 
-#     .$err
-#   
-#   # Bind reconstructed temperature and error together into one dataframe. This will make it easier for plotting.
-#   FS_long <- cbind(FS_reconst_long, err = FS_err_long)
-#   
-#   for (j in 1:12) {
-#     month_plot <- ggplot(data=(dplyr::filter(FS_long, model_month==monthPlots[j])), aes(x=age, y=reconst, group=model_month, colour=model_month)) +
-#       geom_ribbon(aes(ymin = reconst - err,
-#                       ymax = reconst + err,
+#   UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
+    
+# for (i in 1:12) {  
+#     
+#     UUSS_100yrAvgs_month <- UUSS_reconst %>% 
+#      dplyr::filter(climate == i) %>% 
+#      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+#      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+#      dplyr::arrange(as.numeric(period)) %>% 
+#      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
+#      dplyr::mutate(midP = seq(-50, 2050, 100))
+#     
+#     UUSS_100yrAvgs_month_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_month)), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
+#       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
+#                       ymax = reconst_mean + err_mean,
 #                       alpha = 0.2),
 #                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_line() +
-#       geom_point() +
-#       #facet_wrap(~model_month, ncol = 2) +
-#       xlab("Age - kyr BP") +
+#                   colour="dark grey", 
+#                   show.legend = F ) +
+#       geom_line(colour="red", size = 3.5) +
+#       xlab("Year (BC/AD)") +
 #       ylab("Temperature (°C)") +
-#       scale_x_continuous(breaks=waiver())
-#     
+#       scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
+#       scale_y_continuous(breaks=seq(-17,30,4), limits = c(-17, 30)) +
+#       theme_bw() + 
+#       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+#       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+#       labs(col = "Temperature (°C)")
+#       
 #     # Save the plot for one month.
-#     ggsave(month_plot, file = paste0(fossil_sites[i], "_", monthPlots[j], sep = "", "_plot.tiff"), path = "./output/UUSS/monthly_plots/")
+#     ggsave(UUSS_100yrAvgs_month_plot, file = paste0("UUSS_100yrAvgs_month_"[i], sep = "", "_plot.tiff"), path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
 #     
 #     # Create html files that have the interactive plots from plotly.
-#     month_plot_ggplotly <- ggplotly(month_plot)
-#     htmlwidgets::saveWidget(month_plot_ggplotly,
-#                             paste0("./output/UUSS/plotly_htmls/",
-#                                    fossil_sites[i], sep = "", "_", monthPlots[j], sep = "", "_plotly.html"))
-#     
-#   }
-#   
+#     UUSS_100yrAvgs_month_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_month_plot, originalData = TRUE)
+#     f<-paste0("./output/UUSS/plotly_htmls/UUSS_100yrAvgs_month_"[i], sep = "", "_plot_ggplotly.html")
+#      htmlwidgets::saveWidget(UUSS_100yrAvgs_month_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 # }
 
 ```
@@ -1549,6 +1354,10 @@ UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_G
       
     # Save the plot for one month.
     ggsave(UUSS_100yrAvgs_GDD_Residuals_plot, file = "UUSS_100yrAvgs_GDD_Residuals_plot.tiff", path = "./output/UUSS/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
+    
+     UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_Residuals_plot)
+     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 
@@ -1570,14 +1379,10 @@ visreg(temp_GDD, ylab = "Growing Degree Days", xlab = "Temperature (°C)")
 summary(temp_GDD)
 
 
-
-
-
-
 ```
 
 
-```{r UUSS_map}
+```{r UUSS_map2}
 
 ##updated 6/12/17 with new naming system of NHD classes (no longer NHD$NHD, now NHD$_)
 ##distill function does not work, but still seems to produce pdf with "dev.off"
@@ -1875,6 +1680,12 @@ scalebar.new(d=100000, lonlat=F, cex=1, font=2, side='right',lab.side='right', h
 dev.off()
 # distill('./Figures/UUSS_Map_Fossil_Locations.pdf')
 # distill('../FIGURES/FIG_1_EDITED.pdf') ## Manually edited the map that appears in publication.
+
+
+```
+
+``` {r Map_reconstructions}
+
 
 
 ```
