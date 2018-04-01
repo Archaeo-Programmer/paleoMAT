@@ -74,7 +74,8 @@ compile_pollen <- function(x){
     depth = x$sample.meta$depth,
     lat = x$dataset$site$lat,
     long = x$dataset$site$long,
-    elev = x$dataset$site$elev)
+    elev = x$dataset$site$elev, 
+    age = x$sample.meta$age)
 }
 
 # Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
@@ -228,7 +229,7 @@ NAfossil_counts <- NAfossil_datasets %>%
   purrr::map(as_tibble) %>%
   purrr::imap(.f = function(x,y){
     cbind(NAfossil_datasets[[y]]$sample.meta %>%
-            dplyr::select(dataset.id,depth),
+            dplyr::select(dataset.id, sample.id),
           x)
   }) %>%
   bind_rows() %>% 
@@ -236,15 +237,16 @@ NAfossil_counts <- NAfossil_datasets %>%
   mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
   as_tibble()
 
+# Sort the taxa to be in alphabetical order. 
+NAfossil_counts <- NAfossil_counts[,c(names(NAfossil_counts)[1:2], sort(names(NAfossil_counts)[3:ncol(NAfossil_counts)]))]
 
-
-# # Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
+# Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
 # sameVariables <- function(x,y) {
 #     for (i in names(x)) {
 #         if (!(i %in% names(y))) {
 #             print('Warning: Names are not the same!')
 #             break
-#         }  
+#         }
 #         else if(i==tail(names(y),n=1)) {
 #             print('Names are identical.')
 #         }
@@ -262,7 +264,7 @@ NAfossil_metadata_pub <- dplyr::left_join(NAfossil_metadata,
 
 # The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same dataset.id.
 NAfossil_metadata_counts <- dplyr::left_join(NAfossil_metadata_pub, NAfossil_counts,
-                                             by = c("dataset.id" = "dataset.id","depth")) %>%
+                                             by = c("dataset.id" = "dataset.id","sample.id")) %>%
   dplyr::arrange(dataset.id)
 
 ```
@@ -318,13 +320,16 @@ mexicofossil_counts <- mexico_data %>%
   purrr::map(as_tibble) %>%
   purrr::imap(.f = function(x,y){
     cbind(mexico_data[[y]]$sample.meta %>%
-            dplyr::select(dataset.id,depth),
+            dplyr::select(dataset.id, sample.id),
           x)
   }) %>%
   bind_rows() %>% 
   # select(-ends_with("dataset.id")) %>%
   mutate_all(funs(ifelse(is.na(.), 0, .))) %>%
   as_tibble()
+
+# Sort the taxa to be in alphabetical order. 
+mexicofossil_counts <- mexicofossil_counts[,c(names(mexicofossil_counts)[1:2], sort(names(mexicofossil_counts)[3:ncol(mexicofossil_counts)]))]
 
 # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
@@ -335,11 +340,11 @@ mexico_metadata_pub <- dplyr::left_join(mexicoFossil_metadata,
 
 # The fossil counts are just bound to the metadata_pub because it is not possible to do a left join when multiple rows have the same dataset.id.
 mexico_metadata_counts <- dplyr::left_join(mexico_metadata_pub, mexicofossil_counts,
-                                             by = c("dataset.id" = "dataset.id","depth")) %>%
+                                             by = c("dataset.id" = "dataset.id","sample.id")) %>%
   dplyr::arrange(dataset.id)
 
-# Extract the one site that is along the border.
-mexico_metadata_counts <- mexico_metadata_counts %>% 
+# Extract the one site that is along the border to add to modern calibrated dataset.
+CTmexico_metadata_counts <- mexico_metadata_counts %>% 
   dplyr::filter(sample.id == 214610)
 
 ```
@@ -356,7 +361,7 @@ coreTops <- read.csv("./data/surface_coretop_Minmeta.csv") %>%
 CT_metadata_counts <- dplyr::left_join(coreTops,
                                        NAfossil_metadata_counts,
                                        by  = c("dataset.id", "site.id", "sample.id")) %>% 
-  rbind.fill(mexico_metadata_counts) %>% 
+  dplyr::bind_rows(CTmexico_metadata_counts) %>% 
   dplyr::mutate(type = "core top") %>% 
   dplyr::arrange(dataset.id)
 
@@ -382,19 +387,19 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 # }
 
 # Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
-MPCT_metadata_counts <- rbind.fill(MP_metadata_counts, CT_metadata_counts) %>%
+MPCT_metadata_counts <- dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
   dplyr::arrange(dataset.id) # %>%
   #distinct(dataset.id, .keep_all = TRUE)
 
 # Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
-MPCT_metadata <- MPCT_metadata_counts[,1:10]
-MPCT_counts <- MPCT_metadata_counts[,c(11:ncol(MPCT_metadata_counts))] %>% 
+MPCT_metadata <- MPCT_metadata_counts[,1:11]
+MPCT_counts <- MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
-MPCT_metadata_counts <- cbind(MPCT_metadata, MPCT_counts)
+MPCT_metadata_counts <- dplyr::left_join(MPCT_metadata, MPCT_counts, by = c("dataset.id", "site.id", "sample.id"))
 
 # Sort the taxa to be in alphabetical order.
-MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:10], sort(names(MPCT_metadata_counts)[11:ncol(MPCT_metadata_counts)]))]
+MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11], sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
 
 ```
 
@@ -436,7 +441,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # MPCT_metadata_counts <- MP_metadata_counts
 
 # Get Modern Pollen locational dataset.id numbers.
-names <- MPCT_metadata_counts$dataset.id
+names <- MPCT_metadata_counts$sample.id
 
 #Extract longitude and latitude data.
 lons <- unlist(lapply(all,FUN=function(x){MPCT_metadata_counts$long}))
@@ -536,16 +541,16 @@ if(!file.exists("./data/raw_data/climate.points.Rds")){
 }
 climate.points <- readr::read_rds("./data/raw_data/climate.points.Rds")
 
-# Replace the first column of IDs with dataset.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
+# Replace the first column of IDs with sample.id. This will make it easier to match dataframes. This helps to check the data and not assume that the rows climate data are in the same order as the pollen data.
 climate.points$ID <- names
 
-# Rename the ID column to dataset.id.
-climate.points <- dplyr::rename(climate.points, dataset.id = ID)
+# Rename the ID column to sample.id.
+climate.points <- dplyr::rename(climate.points, sample.id = ID)
 
 # Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
 data_long <- melt(climate.points,
-                  # dataset.id variables - all the variables to keep but not split apart.
-                  id.vars="dataset.id") %>% 
+                  # sample.id variables - all the variables to keep but not split apart.
+                  id.vars="sample.id") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage")) %>% 
   separate(col = "yearmonth", into = c("year", "month"), sep = 4)
@@ -578,7 +583,7 @@ calc_gdd_monthly <- function(temp, t.base, t.cap=NULL, multiplier=1, to_fahrenhe
       tmax["value"] <- lapply(tmax["value"], function(x) { x[x>t.cap] <- t.cap; return(x) })
     }
     
-    temp_long <- left_join(tmin, tmax, by = c("dataset.id", "year", "month")) %>% 
+    temp_long <- left_join(tmin, tmax, by = c("sample.id", "year", "month")) %>% 
       dplyr::select(-starts_with("variable.")) %>% 
       plyr::rename(c("value.x" = "tmin", "value.y" = "tmax"))
     
@@ -603,7 +608,7 @@ calc_gdd_monthly <- function(temp, t.base, t.cap=NULL, multiplier=1, to_fahrenhe
       dplyr::select(-starts_with("Date")) %>% 
       dplyr::mutate(variable = "GDD") %>% 
       dplyr::rename(value = GDD) %>% 
-      dplyr::select(dataset.id, variable, year, month, value)
+      dplyr::select(sample.id, variable, year, month, value)
   
   return(temp_long)
 }
@@ -617,7 +622,7 @@ data_long <- rbind(data_long, temp_long)
 # Need to filter to 30 years prior from the publication date of each pollen surface sample site.
 # Possibly loop through for each site, determine the publication date, then take the previous 30 years of PRISM data and do avgs
 
-# for (i in 1:length(MPCT_metadata_counts$dataset.id)) {
+# for (i in 1:length(MPCT_metadata_counts$sample.id)) {
 # 
 #   
 #   
@@ -629,7 +634,7 @@ data_30yr <- data_long %>%
 
 # Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., max temp., and GDD), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
 data_avgs <- data_30yr %>%
-  dplyr::group_by(dataset.id, variable, month) %>% 
+  dplyr::group_by(sample.id, variable, month) %>% 
   dplyr::summarize(mean = mean(value))
 
 # The precipitation averages are extracted into its own dataframe.
@@ -639,10 +644,10 @@ ppt_avgs <- data_avgs %>%
 #The temperature (min. and max) are extracted into its own dataframe, so that we can get the temp. average for each month. We also create a new column for the variable type (i.e., tmp). Finally, we select the data that we want to keep in the dataframe.
 tmp_avgs <- data_avgs %>% 
   dplyr::filter(variable == "tmin" | variable == "tmax") %>% 
-  dplyr::group_by(dataset.id, month) %>% 
+  dplyr::group_by(sample.id, month) %>% 
   dplyr::summarize(mean = mean(mean)) %>% 
   dplyr::mutate(variable = "tmp") %>% 
-  dplyr::select(dataset.id, variable, month, mean)
+  dplyr::select(sample.id, variable, month, mean)
 
 # The GDD averages are extracted into its own dataframe.
 gdd_avgs <- data_avgs %>% 
@@ -650,9 +655,9 @@ gdd_avgs <- data_avgs %>%
 
 # Now, combine the precipitation, temperature, and GDD data back into one dataframe, and convert from long to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. Then, rename all the column names. 
 clim_wide <- rbind(gdd_avgs, ppt_avgs, tmp_avgs) %>% 
-  dcast(dataset.id ~ variable + month, value.var="mean") %>% 
+  dcast(sample.id ~ variable + month, value.var="mean") %>% 
   #dplyr::select(-one_of("dataset.id")) %>% 
-  set_colnames(c('dataset.id', 'gjan', 'gfeb', 'gmar', 'gapr', 'gmay', 'gjun', 'gjul', 'gaug', 'gsep', 'goct', 'gnov', 'gdec', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
+  set_colnames(c('sample.id', 'gjan', 'gfeb', 'gmar', 'gapr', 'gmay', 'gjun', 'gjul', 'gaug', 'gsep', 'goct', 'gnov', 'gdec', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
 
 
 ```
@@ -749,12 +754,13 @@ NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
 
 # Remove rows with NA values for the precipitation, temperature, and GDD using the index.
 Clim_noNAs <- clim_wide[-(NAindex),]
+rownames(Clim_noNAs) <- seq(length=nrow(Clim_noNAs))
 
 # Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
 MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:10)] %>% 
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
@@ -825,8 +831,8 @@ UUSS_sitesOLDER <- subset(NAfossil_metadata_counts, long >= extent.FourCorners@x
 # Temporarily removing sites that only have one row of data, since the reconstruction won't run because it gets coerced to 1 dimension.
 #UUSS_sites <- subset(UUSS_sites, !(UUSS_sites$dataset.id==1717 | UUSS_sites$dataset.id==3608 | UUSS_sites$dataset.id==3611 | UUSS_sites$dataset.id==15106 | UUSS_sites$dataset.id==15298 | UUSS_sites$dataset.id==15368))
 
-# Alphabetize the taxa.
-UUSS_sites <- UUSS_sitesOLDER[ , c(names(UUSS_sitesOLDER)[1:10], sort(names(UUSS_sitesOLDER)[11:ncol(UUSS_sitesOLDER)]))]
+# Alphabetize the taxa. Double-checking.
+UUSS_sites <- UUSS_sitesOLDER[ , c(names(UUSS_sitesOLDER)[1:11], sort(names(UUSS_sitesOLDER)[12:ncol(UUSS_sitesOLDER)]))]
 
 ```
 
@@ -1033,15 +1039,15 @@ if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
 
 UUSS_reconst_GDD_total <- UUSS_reconst_GDD %>% 
   dplyr::filter(climate >= 5 & climate <= 9) %>% 
-  dplyr::group_by(dataset.id, depth) %>% 
+  dplyr::group_by(dataset.id, sample.id, depth) %>% 
   dplyr::summarise_at(c("reconst", "err"), funs(sum, mean)) %>% 
-  dplyr::select(dataset.id, depth, reconst_sum, err_mean)
+  dplyr::select(dataset.id, sample.id, depth, reconst_sum, err_mean)
 
 UUSS_reconst_GDD_meta <- UUSS_reconst_GDD %>% 
   dplyr::filter(climate == 5) %>%
   dplyr::select(-c(reconst, err, climate))
 
-UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dataset.id", "depth"))
+UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dataset.id", "sample.id", "depth"))
 
 
 
@@ -1233,7 +1239,6 @@ UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y
     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_January_plot_ggplotly.html"
      htmlwidgets::saveWidget(UUSS_100yrAvgs_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))     
      
-UUSS_100yrAvgs_GDD_edited <- UUSS_100yrAvgs_GDD
   
 # Plot GDD
 UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=reconst_sum_mean, color = reconst_sum_mean, label = reconst_sum_n, label2 = reconst_sum_unique_sites)) +
@@ -1247,7 +1252,7 @@ UUSS_100yrAvgs_GDD_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(
       xlab("Year (BC/AD)") +
       ylab("Growing Degree Days") +
       scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks = seq(900,1400,50)) +
+      scale_y_continuous(breaks = seq(500,1400,50)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica"))
@@ -1340,14 +1345,14 @@ UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD %>%
 
 # Plot GDD
 UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=residuals)) +
-      geom_rect(aes(xmin=-55,xmax=2056,ymin=-125,ymax=0,fill="blue"),alpha=0.009) +
-      geom_rect(aes(xmin=-55,xmax=2056,ymin=0,ymax=135,fill="red"),alpha=0.009) +
+      geom_rect(aes(xmin=-55,xmax=2056,ymin=-130,ymax=0,fill="blue"),alpha=0.009) +
+      geom_rect(aes(xmin=-55,xmax=2056,ymin=0,ymax=140,fill="red"),alpha=0.009) +
       scale_fill_identity() +
       geom_line(size = 3.5, color = "black") +
       xlab("Year (BC/AD)") +
       ylab("Growing Degree Days Anomaly (controlling for Elevation)") +
       scale_x_continuous(breaks = seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks = seq(-150,150, 25)) +
+      scale_y_continuous(breaks = seq(-140,140, 20)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"))
