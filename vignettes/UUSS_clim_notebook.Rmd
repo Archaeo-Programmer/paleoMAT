@@ -89,9 +89,9 @@ NAID <-  gpids %>%
   GeoPoliticalID
 
 # This is only used to count the number of records in the contiguous US, which ignores Alaksa and Hawaii. However, the data needs to be retained, as it can be used for WorldClim Data, but not PRISM.
-# NAID <-  gpids %>%
+# USID <-  gpids %>%
 #   dplyr::filter(HigherGeoPoliticalID %in% "6129",
-#                 Rank == "2") %>% 
+#                 Rank == "2") %>%
 #   dplyr::filter(GeoPoliticalName != 'Alaska' & GeoPoliticalName != 'Hawaii') %$%
 #   GeoPoliticalID
 
@@ -156,6 +156,7 @@ MP_metadata_counts <- dplyr::left_join(MP_metadata,
   dplyr::left_join(MP_counts,
                    by  = "dataset.id") %>%
   dplyr::arrange(dataset.id)
+
 
 ```
 
@@ -1160,28 +1161,37 @@ library(plotly)
 
 #UUSS_reconst <- read.csv("./output/UUSS_reconst.csv")
 
-# Plot all monthly temperatures lumped together. 
-# UUSS_100yrAvgs_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs)), aes(x=midP, y=reconst_mean, color = reconst_mean)) +
-#       geom_line() +
-#       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
-#                       ymax = reconst_mean + err_mean,
-#                       alpha = 0.2),
-#                   fill = "grey",
-#                   colour="dark grey") +
-#       geom_point(aes(x=midP, y=reconst_mean))  +
-#       xlab("Year (BC/AD)") +
-#       ylab("Temperature (°C)") +
-#       scale_x_continuous(breaks=seq(-100,2100,100)) +
-#       theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),
-#       panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-#     
-#     # Save the plot for one month.
-#     ggsave(UUSS_100yrAvgs_plot, file = "UUSS_100yrAvgs_plot.tiff", path = "./output/UUSS/")
-#     
-#     # Create html files that have the interactive plots from plotly.
-#     UUSS_100yrAvgs_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_plot)
-#     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_plotly.html"
-#      htmlwidgets::saveWidget(UUSS_100yrAvgs_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+# Plot monthly temperatures for growing season months.
+
+temp_UUSS_100yrAvgs_GS <- UUSS_100yrAvgs_GS
+temp_UUSS_100yrAvgs_GS[2,7] <- 0
+temp_UUSS_100yrAvgs_GS[21,7] <- 2000
+
+UUSS_100yrAvgs_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GS[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) + 
+      #scale_color_gradient(low="blue", high="red") +
+      geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
+                      ymax = reconst_mean + err_mean,
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey", 
+                  show.legend = F ) +
+      geom_line(colour="red", size = 3.5) +
+      xlab("Year (BC/AD)") +
+      ylab("Temperature (°C)") +
+      scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
+      scale_y_continuous(breaks=seq(0,20,2), limits = c(0, 20)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+      labs(col = "Temperature (°C)")
+      
+    # Save the plot for GS.
+    ggsave(UUSS_100yrAvgs_GS_plot, file = "UUSS_100yrAvgs_GS_plot.tiff", path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_100yrAvgs_GS_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GS_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GS_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the warmest temperature month, July.
@@ -1237,7 +1247,7 @@ UUSS_100yrAvgs_January_plot <- ggplot(data=UUSS_100yrAvgs_January, aes(x=midP, y
     # Create html files that have the interactive plots from plotly.
     UUSS_100yrAvgs_January_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_January_plot)
     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_January_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))     
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_January_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
      
   
 # Plot GDD
@@ -1344,15 +1354,26 @@ UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD %>%
   dplyr::mutate(residuals = GDD_fit$residuals)
 
 # Plot GDD
-UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_GDD)), aes(x=midP, y=residuals)) +
-      geom_rect(aes(xmin=-55,xmax=2056,ymin=-130,ymax=0,fill="blue"),alpha=0.009) +
-      geom_rect(aes(xmin=-55,xmax=2056,ymin=0,ymax=140,fill="red"),alpha=0.009) +
+temp_UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD
+temp_UUSS_100yrAvgs_GDD[2,7] <- 0
+temp_UUSS_100yrAvgs_GDD[21,7] <- 2000
+
+UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD[2:21, ])), aes(x=midP, y=residuals)) +
+      geom_rect(aes(xmin=0,xmax=2000,ymin=-210,ymax=0,fill="blue"),alpha=0.009) +
+      geom_rect(aes(xmin=0,xmax=2000,ymin=0,ymax=210,fill="red"),alpha=0.009) +
       scale_fill_identity() +
+      geom_ribbon(aes(x=midP, ymin = residuals - sigma(GDD_fit),
+                      ymax = residuals + sigma(GDD_fit),
+                      alpha = 0.2),
+                  fill = "grey",
+                  colour="dark grey", 
+                  show.legend = F) +
+      geom_line(colour="black", size = 3.5) +
       geom_line(size = 3.5, color = "black") +
       xlab("Year (BC/AD)") +
       ylab("Growing Degree Days Anomaly (controlling for Elevation)") +
-      scale_x_continuous(breaks = seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks = seq(-140,140, 20)) +
+      scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
+      scale_y_continuous(breaks = seq(-210,210, 30)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"))
@@ -1691,12 +1712,165 @@ dev.off()
 
 ``` {r Map_reconstructions}
 
+# First, we want to create one raster layer that has the modern PRISM data. This creates a modern temperature surface that is reflecting the variability across space, which are affected by various factors (e.g., elevation). 
+# Use the rebus package to generate a regular expression for a number range, which will allow for the extraction of specific years in the prism data (i.e., 1961-1990).
+rx <- rebus.numbers::number_range(1961, 1990)
 
+# Now use the expression stored in rx, and trim list of files to to 1961:1990.
+monthly.files.delta <- grep(rx, monthly.files, value = TRUE, perl = TRUE)
+
+toMatch <- c("05.bil", "06.bil", "07.bil", "08.bil", "09.bil")
+monthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        monthly.files.delta, value=TRUE))
+
+toMatch <- c("tmin", "tmax")
+monthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        monthly.files.delta, value=TRUE))
+
+# Generate the raster stack.
+type.list.delta <- raster::stack(monthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+type.list.delta <- raster::crop(type.list.delta, extent.FourCorners)
+
+# Convert the raster stack to a brick. Don't need this. Cropping converts it into a brick.
+#type.list.delta.brick <- raster::brick(type.list.delta)
+
+# Read raster data into memory.
+type.list.delta.memory <- readAll(type.list.delta)
+
+# Get the average of the raster layers and get return one raster layer.
+avg.delta <- type.list.delta.memory %>% mean()
+
+
+# Step 2: We want to extract the modern average temperature conditions for the fossil pollen site locations. We want to limit the comparison between the modern temperature data and the fossil pollen reconstructions to the conditions that they are in. 
+
+tempsites <- UUSS_sites %>% 
+  dplyr::select(dataset.id, long, lat) %>% 
+  distinct(dataset.id, long, lat)
+
+tempsitesID <- tempsites %>% dplyr::select(long, lat)
+
+# templons <- unlist(lapply(all,FUN=function(x){UUSS_sites$long}))
+# templats <- unlist(lapply(all,FUN=function(x){UUSS_sites$lat}))
+# 
+# # Bind longitude and latitude and convert to SpatialPoints.
+# tempcoords <- cbind(LONGITUDE=templons,LATITUDE=templats)
+tempcoordsPoints <- SpatialPoints(tempsitesID, proj4string=CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+
+# Use the raster extract function to extract out the average temperature value at a fossil pollen location.
+climate.points.delta <- raster::extract(x = avg.delta, y = tempcoordsPoints, df = TRUE)
+
+climate.points.delta.avg <- mean(climate.points.delta$layer)
+
+# Step 3: Now, take the 100 year temperature averages of the Growing Season and subtract the modern mean temperature conditions at the fossil pollen sites. This gives an anomaly and how different the past was from the present. 
+UUSS_100yrDelta <- UUSS_100yrAvgs_GS %>% 
+  dplyr::mutate(anomaly = reconst_mean - climate.points.delta.avg)
+
+UUSS_100yrDelta.list <- UUSS_100yrDelta$anomaly
+
+# Step 4: Create 22 raster layers. Add anomaly from each 100 year time bin to the modern average temperature raster (i.e., avg.delta raster layer). 
+RAST.DIR <- "./output/raster/"
+
+for (i in 1:length(UUSS_100yrDelta.list)) {
+  temprast14 <- avg.delta + UUSS_100yrDelta.list[14]
+  writeRaster(temprast, file=paste0(RAST.DIR, "UUSS_delta_", 14, ".tif"), format="GTiff", options=c("COMPRESS=DEFLATE", "ZLEVEL=9", "INTERLEAVE=BAND"), overwrite=T, setStatistics=FALSE)
+}
+
+raster_files <- raster("./output/raster/UUSS_delta_1.tif") 
+
+
+##### FIGURE for Delta #####
+
+#temprast2 <- 
+  
+  plot(avg.delta + UUSS_100yrDelta.list[21])
+
+# (Down)Load the states shapefile form the National Atlas
+# if(!dir.exists("../DATA/NATIONAL_ATLAS/statesp010g")){
+#   dir.create("../DATA/NATIONAL_ATLAS/", showWarnings = F, recursive = T)
+#   download.file("http://dds.cr.usgs.gov/pub/data/nationalatlas/statesp010g.shp_nt00938.tar.gz", destfile="../DATA/NATIONAL_ATLAS/statesp010g.shp_nt00938.tar.gz", mode='wb')
+#   untar("../DATA/NATIONAL_ATLAS/statesp010g.shp_nt00938.tar.gz", exdir="../DATA/NATIONAL_ATLAS/statesp010g")
+# }
+states <- readOGR("../DATA/NATIONAL_ATLAS/statesp010g", layer='statesp010g')
+
+states <- states[states$NAME %in% c("Colorado","Utah","New Mexico","Arizona"),]
+FOUR.extent <- extent(states)
+states <- spTransform(states,"+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+# # Define the plot area as a polygon around the states
+# sim.poly <- polygon_from_extent(rgeos::gBuffer(states, width=20000, quadsegs=1000))
+# sim.extent <- extent(sim.poly)
+#"+proj=lcc +lat_1=37 +lon_0=-109.045225"
+#+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0
+
+# Define the aspect ratio of the plot, and its dimensions
+plot.ratio <- (ymax(FOUR.extent)-ymin(FOUR.extent))/(xmax(FOUR.extent)-xmin(FOUR.extent))
+fig.width <- 4.6
+legend.height <- 0.0
+plot.width <- fig.width
+plot.height <- plot.width/plot.ratio
+fig.height <- plot.height + legend.height
+
+# define some colors for temperature
+colors <- colorRampPalette(c("#1874CD" , "#CD2626")) (8)
+#color.breaks <- seq(from=0,to=1,by=0.1)
+
+pdf(file='./Figures/UUSS_delta_1200-1300.pdf', width=fig.width, height=fig.height, bg="white", pointsize=8, version="1.7")
+par(bg='white',fg='black',col.lab='black', col.main='black', col.axis='black', font=2, lend='round',ljoin='round')
+
+par(mai=c(0.25, 0.25, 0.25, 0.25), lend='round', ljoin='round', xpd=T)
+plot(1, type='n', xlab="", ylab="",xaxs='i',yaxs='i', xlim=c(5,6), ylim=c(0,1), axes=FALSE, main='')
+
+par(mai=c(0.25,0.25,0.25,0.25), xpd=F, new=T)
+plot(1, type='n', xlab="", ylab="",xlim=c(xmin(FOUR.extent),xmax(FOUR.extent)), ylim=c(ymin(FOUR.extent),ymax(FOUR.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
+#rasterImage(temprast14, xleft=xmin(FOUR.extent), xright=xmax(FOUR.extent), ybottom=ymin(FOUR.extent), ytop=ymax(FOUR.extent), interpolate=F)
+raster::plot(temprast14, col=colors, useRaster=T, legend=F, xlab="", ylab="", add=T)
+plot(temprast14, legend.only=TRUE, col=colors, legend.shrink=0.25, legend.args=list(text='Temperature (°C)', side=4, font=2, line=2.5, cex=0.6))
+
+plot(states, add=T)
+#plot(SWUS.poly.lam, add=T, lty=3)
+
+label.coords <- coordinates(states)
+#text(label.coords, labels=states$NAME , cex=1)
+
+
+inch.x <- (FOUR.extent@xmax-FOUR.extent@xmin)/(fig.width-par('mai')[2]-par('mai')[4])
+inch.y <- (FOUR.extent@ymax-FOUR.extent@ymin)/(fig.height-par('mai')[1]-par('mai')[3])
+# scalebar.new(d=100000, lonlat=F, cex=1, font=2, side='right',lab.side='right', height=0.05*inch.y, label="100 km", line.offset=c(0.05*inch.x,0.05*inch.y), xy=c(xmin(FOUR.extent),ymin(FOUR.extent)), lwd=4, lend=1)
+
+dev.off()
+
+
+
+# Plot the anomaly for GS.
+temp_UUSS_100yrDelta <- UUSS_100yrDelta
+temp_UUSS_100yrDelta[2,7] <- 0
+temp_UUSS_100yrDelta[21,7] <- 2000
+
+UUSS_100yrAvgs_deltaAnomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrDelta[2:21, ])), aes(x=midP, y=anomaly, label = reconst_n, label2 = reconst_unique_sites)) +
+      geom_line(colour="red", size = 3.5) +
+      xlab("Year (BC/AD)") +
+      ylab("Anomaly (°C)") +
+      scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
+      scale_y_continuous(breaks=seq(0,5,.5), limits = c(0, 5)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+      labs(col = "Temperature (°C)")
+      
+    # Save the plot for GS.
+    ggsave(UUSS_100yrAvgs_deltaAnomaly_plot, file = "UUSS_100yrAvgs_deltaAnomaly_plot.tiff", path = "./output/UUSS/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_100yrAvgs_deltaAnomaly_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_deltaAnomaly_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_deltaAnomaly_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 ```
 
 ``` {r compare_reconstructions}
 
-Moberg <- read.delim("../DATA/nhtemp-moberg2005.txt", header = TRUE, sep = "\t\t\t", dec = ".")
+Moberg <- read.delim("./data/nhtemp-moberg2005.txt", header = TRUE, sep = "\t", dec = ".")
 
 ```
