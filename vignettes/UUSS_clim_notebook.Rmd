@@ -554,7 +554,7 @@ data_long <- melt(climate.points,
                   id.vars="sample.id") %>% 
   tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
   dplyr::select(-starts_with("garbage")) %>% 
-  separate(col = "yearmonth", into = c("year", "month"), sep = 4)
+  separate(col = "yearmonth", into = c("year", "month"), sep = 4) 
 
 
 # Now use the long format data to create an additional variable, called Growing Degree Days (GDD). A function has been created here to convert the tmin and tmax data into GDD, using the data_long dataframe.
@@ -946,18 +946,18 @@ Temperature <- Clim_noNAs[,26:37]
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction csv and it will run. 
 
-if (!file.exists("./output/UUSS_reconst_temp.csv")) {
+if (!file.exists("./output/UUSS_reconst_temp_7analog.csv")) {
   
-  mat_models_temp <- purrr::map(1:12,
+  mat_models_temp_7analog <- purrr::map(1:12,
                               .f = function(j){
                                 rioja::MAT(y = MPCT_counts_noNAs, 
                                            x = Temperature[,j], 
-                                           k = 10, 
+                                           k = 7, 
                                            dist.method="sq.chord",
                                            lean = FALSE)
                               })
   
-  UUSS_reconst <- mat_models_temp %>%
+  UUSS_reconst_7analog <- mat_models_temp_7analog %>%
   purrr::map_dfr(.id = "climate",
                  .f = function(the.model){
                    # Create the MAT reconstruction.
@@ -977,7 +977,7 @@ if (!file.exists("./output/UUSS_reconst_temp.csv")) {
                  })
 
 
- write.csv(UUSS_reconst, "./output/UUSS_reconst_temp.csv", row.names = FALSE)
+ write.csv(UUSS_reconst_7analog, "./output/UUSS_reconst_temp_7analog.csv", row.names = FALSE)
   
 } else {
   
@@ -994,18 +994,18 @@ if (!file.exists("./output/UUSS_reconst_temp.csv")) {
 # Subset the climate data to just GDD 
 GDD_noNAs <- Clim_noNAs[,2:13]
 
-if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
+if (!file.exists("./output/UUSS_reconst_GDD_7analog.csv")) {
   
-  mat_models_gdd <- purrr::map(1:12,
+  mat_models_gdd_7analog <- purrr::map(1:12,
                               .f = function(j){
                                 rioja::MAT(y = MPCT_counts_noNAs, 
                                            x = GDD_noNAs[,j], 
-                                           k = 10, 
+                                           k = 7, 
                                            dist.method="sq.chord",
                                            lean = FALSE)
                               })
   
-  UUSS_reconst_GDD <- mat_models_gdd %>%
+  UUSS_reconst_GDD_7analog <- mat_models_gdd_7analog %>%
   purrr::map_dfr(.id = "climate",
                  .f = function(the.model){
                    # Create the MAT reconstruction.
@@ -1025,7 +1025,7 @@ if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
                  })
 
 
- write.csv(UUSS_reconst_GDD, "./output/UUSS_reconst_GDD.csv", row.names = FALSE)
+ write.csv(UUSS_reconst_GDD_7analog, "./output/UUSS_reconst_GDD_7analog.csv", row.names = FALSE)
   
 } else {
   
@@ -1038,24 +1038,22 @@ if (!file.exists("./output/UUSS_reconst_GDD.csv")) {
 
 
 
-UUSS_reconst_GDD_total <- UUSS_reconst_GDD %>% 
+UUSS_reconst_GDD_7analog_total <- UUSS_reconst_GDD_7analog %>% 
   dplyr::filter(climate >= 5 & climate <= 9) %>% 
   dplyr::group_by(dataset.id, sample.id, depth) %>% 
   dplyr::summarise_at(c("reconst", "err"), funs(sum, mean)) %>% 
   dplyr::select(dataset.id, sample.id, depth, reconst_sum, err_mean)
 
-UUSS_reconst_GDD_meta <- UUSS_reconst_GDD %>% 
+UUSS_reconst_GDD_7analog_meta <- UUSS_reconst_GDD_7analog %>% 
   dplyr::filter(climate == 5) %>%
   dplyr::select(-c(reconst, err, climate))
 
-UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dataset.id", "sample.id", "depth"))
+UUSS_GDD_7analog <- left_join(UUSS_reconst_GDD_7analog_meta, UUSS_reconst_GDD_7analog_total, by = c("dataset.id", "sample.id", "depth"))
 
 
 
 
-
-
---------
+#--------
 
 # # Filter to one site to do the reconstruction.
 #   site <- dplyr::filter(UUSS_sites, dataset.id == fossil_sites[1])
@@ -1098,14 +1096,16 @@ UUSS_GDD <- left_join(UUSS_reconst_GDD_meta, UUSS_reconst_GDD_total, by = c("dat
 ### Summary of the results. 
 
 ```{r summary_reconst, echo=FALSE}
+UUSS_reconst_7analog <- read.csv("./output/UUSS_reconst_temp_7analog.csv")
+UUSS_reconst <- read.csv("./output/UUSS_reconst_temp.csv")
 
 # First, convert the years BP in the age column to BC/AD dates, which we create a new column called date.
 
-UUSS_reconst <- UUSS_reconst %>% 
-  dplyr::mutate(date = BPtoBCAD(UUSS_reconst$age))
+UUSS_reconst_7analog <- UUSS_reconst_7analog %>% 
+  dplyr::mutate(date = BPtoBCAD(UUSS_reconst_7analog$age))
 
-UUSS_GDD <- UUSS_GDD %>% 
-  dplyr::mutate(date = BPtoBCAD(UUSS_GDD$age))
+UUSS_GDD_7analog <- UUSS_GDD_7analog %>% 
+  dplyr::mutate(date = BPtoBCAD(UUSS_GDD_7analog$age))
 
 # Do 100 year average temperatures across all months.
 UUSS_100yrAvgs <- UUSS_reconst %>% 
@@ -1116,7 +1116,7 @@ UUSS_100yrAvgs <- UUSS_reconst %>%
      dplyr::mutate(midP = seq(-50, 2050, 100))
      
 # Do 100 year average temperatures across growing season months (May through September).
-UUSS_100yrAvgs_GS <- UUSS_reconst %>%
+UUSS_100yrAvgs_7analog_GS <- UUSS_reconst_7analog %>%
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1125,7 +1125,7 @@ UUSS_100yrAvgs_GS <- UUSS_reconst %>%
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 # Do 100 year average temperatures for the warmest month of the year, July.
-UUSS_100yrAvgs_July <- UUSS_reconst %>% 
+UUSS_100yrAvgs_7analog_July <- UUSS_reconst_7analog %>% 
      dplyr::filter(climate == 7) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1143,7 +1143,7 @@ UUSS_100yrAvgs_January <- UUSS_reconst %>%
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 # Calculate GDD for the growing season (May through September).
-UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
+UUSS_100yrAvgs_GDD_7analog <- UUSS_GDD_7analog %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
@@ -1163,11 +1163,11 @@ library(plotly)
 
 # Plot monthly temperatures for growing season months.
 
-temp_UUSS_100yrAvgs_GS <- UUSS_100yrAvgs_GS
-temp_UUSS_100yrAvgs_GS[2,7] <- 0
-temp_UUSS_100yrAvgs_GS[21,7] <- 2000
+temp_UUSS_100yrAvgs_7analog_GS <- UUSS_100yrAvgs_7analog_GS
+temp_UUSS_100yrAvgs_7analog_GS[2,7] <- 0
+temp_UUSS_100yrAvgs_7analog_GS[21,7] <- 2000
 
-UUSS_100yrAvgs_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GS[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) + 
+UUSS_100yrAvgs_7analog_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_7analog_GS[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) + 
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1179,23 +1179,27 @@ UUSS_100yrAvgs_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GS[2:21
       xlab("Year (BC/AD)") +
       ylab("Temperature (°C)") +
       scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
-      scale_y_continuous(breaks=seq(0,20,2), limits = c(0, 20)) +
+      scale_y_continuous(breaks=seq(0,22,2), limits = c(0, 22)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
       labs(col = "Temperature (°C)")
       
     # Save the plot for GS.
-    ggsave(UUSS_100yrAvgs_GS_plot, file = "UUSS_100yrAvgs_GS_plot.tiff", path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_7analog_GS_plot, file = "UUSS_100yrAvgs_7analog_GS_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_GS_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GS_plot, originalData = TRUE)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GS_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+    UUSS_100yrAvgs_7analog_GS_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_7analog_GS_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_7analog_GS_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_7analog_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
+     
+temp_UUSS_100yrAvgs_7analog_July <- UUSS_100yrAvgs_7analog_July
+temp_UUSS_100yrAvgs_7analog_July[2,7] <- 0
+temp_UUSS_100yrAvgs_7analog_July[21,7] <- 2000
 
 # Plot the warmest temperature month, July.
-UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
+UUSS_100yrAvgs_7analog_July_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_7analog_July[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1206,20 +1210,20 @@ UUSS_100yrAvgs_July_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_July)), ae
       geom_line(colour="red", size = 3.5) +
       xlab("Year (BC/AD)") +
       ylab("Temperature (°C)") +
-      scale_x_continuous(breaks=seq(-100,2100,100), minor_breaks = seq(-50, 2050, 200)) +
-      scale_y_continuous(breaks=seq(-17,30,4), limits = c(-17, 30)) +
+      scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
+      scale_y_continuous(breaks=seq(0,22,2), limits = c(0, 22)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
       labs(col = "Temperature (°C)")
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_July_plot, file = "UUSS_100yrAvgs_July_plot.tiff", path = "./output/UUSS/months/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_7analog_July_plot, file = "UUSS_100yrAvgs_7analog_July_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_July_plot, originalData = TRUE)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_July_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+    UUSS_100yrAvgs_7analog_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_7analog_July_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_7analog_July_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_7analog_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the coldest temperature month, January.
@@ -1340,25 +1344,25 @@ UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_Janua
 ```{r regressions, echo=FALSE}
 
 
-GDD_fit <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD)
-tiff(file = "./Figures/GDD_elev_regression.tiff", height = 12, width = 15, units = 'in', 
+GDD_fit_7analog <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD_7analog)
+tiff(file = "./Figures/GDD_elev_regression_7analog.tiff", height = 12, width = 15, units = 'in', 
      compression = "lzw", res = 600)
-visreg(GDD_fit, xlab = "Elevation (m)", ylab = "Growing Degree Days", points=list(cex=.8))
+visreg(GDD_fit_7analog, xlab = "Elevation (m)", ylab = "Growing Degree Days", points=list(cex=.8))
 
 dev.off()
 
-summary(GDD_fit)
+summary(GDD_fit_7analog)
 
 # Graph the residuals through time.
-UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD %>% 
-  dplyr::mutate(residuals = GDD_fit$residuals)
+UUSS_100yrAvgs_GDD_7analog <- UUSS_100yrAvgs_GDD_7analog %>% 
+  dplyr::mutate(residuals = GDD_fit_7analog$residuals)
 
 # Plot GDD
-temp_UUSS_100yrAvgs_GDD <- UUSS_100yrAvgs_GDD
-temp_UUSS_100yrAvgs_GDD[2,7] <- 0
-temp_UUSS_100yrAvgs_GDD[21,7] <- 2000
+temp_UUSS_100yrAvgs_GDD_7analog <- UUSS_100yrAvgs_GDD_7analog
+temp_UUSS_100yrAvgs_GDD_7analog[2,7] <- 0
+temp_UUSS_100yrAvgs_GDD_7analog[21,7] <- 2000
 
-UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD[2:21, ])), aes(x=midP, y=residuals)) +
+UUSS_100yrAvgs_GDD_7analog_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_7analog[2:21, ])), aes(x=midP, y=residuals)) +
       geom_rect(aes(xmin=0,xmax=2000,ymin=-210,ymax=0,fill="blue"),alpha=0.009) +
       geom_rect(aes(xmin=0,xmax=2000,ymin=0,ymax=210,fill="red"),alpha=0.009) +
       scale_fill_identity() +
@@ -1379,11 +1383,11 @@ UUSS_100yrAvgs_GDD_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrA
       panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"))
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_GDD_Residuals_plot, file = "UUSS_100yrAvgs_GDD_Residuals_plot.tiff", path = "./output/UUSS/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_GDD_7analog_Residuals_plot, file = "UUSS_100yrAvgs_GDD_7analog_Residuals_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
     
-     UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_Residuals_plot)
-     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_Residuals_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_7analog_Residuals_plot)
+     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 
@@ -1719,11 +1723,11 @@ rx <- rebus.numbers::number_range(1961, 1990)
 # Now use the expression stored in rx, and trim list of files to to 1961:1990.
 monthly.files.delta <- grep(rx, monthly.files, value = TRUE, perl = TRUE)
 
-toMatch <- c("05.bil", "06.bil", "07.bil", "08.bil", "09.bil")
+toMatch <- c("tmin", "tmax")
 monthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
                         monthly.files.delta, value=TRUE))
 
-toMatch <- c("tmin", "tmax")
+toMatch <- c("05.bil", "06.bil", "07.bil", "08.bil", "09.bil")
 monthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
                         monthly.files.delta, value=TRUE))
 
@@ -1760,6 +1764,7 @@ tempcoordsPoints <- SpatialPoints(tempsitesID, proj4string=CRS("+proj=longlat +d
 
 # Use the raster extract function to extract out the average temperature value at a fossil pollen location.
 climate.points.delta <- raster::extract(x = avg.delta, y = tempcoordsPoints, df = TRUE)
+climate.points.delta$ID <- tempsites$dataset.id
 
 climate.points.delta.avg <- mean(climate.points.delta$layer)
 
@@ -1785,6 +1790,9 @@ raster_files <- raster("./output/raster/UUSS_delta_1.tif")
 #temprast2 <- 
   
   plot(avg.delta + UUSS_100yrDelta.list[21])
+plot(temprast14)
+plot(states,add=TRUE)
+temprast14Crop <- raster::mask(temprast14, states)
 
 # (Down)Load the states shapefile form the National Atlas
 # if(!dir.exists("../DATA/NATIONAL_ATLAS/statesp010g")){
@@ -1825,8 +1833,8 @@ plot(1, type='n', xlab="", ylab="",xaxs='i',yaxs='i', xlim=c(5,6), ylim=c(0,1), 
 par(mai=c(0.25,0.25,0.25,0.25), xpd=F, new=T)
 plot(1, type='n', xlab="", ylab="",xlim=c(xmin(FOUR.extent),xmax(FOUR.extent)), ylim=c(ymin(FOUR.extent),ymax(FOUR.extent)), xaxs="i", yaxs="i", axes=FALSE, main='')
 #rasterImage(temprast14, xleft=xmin(FOUR.extent), xright=xmax(FOUR.extent), ybottom=ymin(FOUR.extent), ytop=ymax(FOUR.extent), interpolate=F)
-raster::plot(temprast14, col=colors, useRaster=T, legend=F, xlab="", ylab="", add=T)
-plot(temprast14, legend.only=TRUE, col=colors, legend.shrink=0.25, legend.args=list(text='Temperature (°C)', side=4, font=2, line=2.5, cex=0.6))
+raster::plot(temprast14, col=colors, useRaster=T, legend=F, legend.shrink=0.25, xlab="", ylab="", add=T, zlim=c(0,35))
+#plot(temprast14, legend.only=TRUE, inset=c(-0.2,0), col=colors, legend.shrink=0.25, legend.args=list(text='Temperature (°C)', side=4, font=2, line=2.5, cex=0.6), par(mar=c(5, 4, 4, 2) + 0.1))
 
 plot(states, add=T)
 #plot(SWUS.poly.lam, add=T, lty=3)
@@ -1853,7 +1861,7 @@ UUSS_100yrAvgs_deltaAnomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrDe
       xlab("Year (BC/AD)") +
       ylab("Anomaly (°C)") +
       scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
-      scale_y_continuous(breaks=seq(0,5,.5), limits = c(0, 5)) +
+      scale_y_continuous(breaks=seq(-1,5,.5), limits = c(-1, 5)) +
       theme_bw() + 
       theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
       panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
@@ -1868,6 +1876,288 @@ UUSS_100yrAvgs_deltaAnomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrDe
      htmlwidgets::saveWidget(UUSS_100yrAvgs_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 ```
+
+
+``` {r MP_temp_data_FP}
+
+rx <- rebus.numbers::number_range(1961, 1990)
+
+# Now use the expression stored in rx, and trim list of files to to 1961:1990.
+FP.monthly.files <- grep(rx, monthly.files, value = TRUE, perl = TRUE)
+
+toMatch <- c("tmin", "tmax")
+FP.monthly.files <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FP.monthly.files,native=F,quick=T)
+
+FP.climate.points <- raster::extract(x = FP.type.list, y = tempcoordsPoints, df = TRUE)
+
+FP.climate.points$ID <- tempsites$dataset.id
+
+# Rename the ID column to sample.id.
+FP.climate.points <- dplyr::rename(FP.climate.points, dataset.id = ID)
+
+# Convert climate data from wide to long format, but keep ID so that we can remember the location that each record came from. Then, we use the separate function to split apart the long prism file names, of which some of the new columns we will not need; therefore, they are labeled as garbage, and these get deleted. Finally, we separate the yearmonth into two columns. This will allow for these to be grouped together to do summarizing below. sep = 4 is the location in the string of six numbers (yearmonth) to separate.
+FPdata_long <- melt(FP.climate.points,
+                  # dataset.id variables - all the variables to keep but not split apart.
+                  id.vars="dataset.id") %>% 
+  tidyr::separate(col = "variable", into = c("garbage1", "variable", "garbage2", "garbage3", "garbage4", "yearmonth"), sep = "_") %>% 
+  dplyr::select(-starts_with("garbage")) %>% 
+  separate(col = "yearmonth", into = c("year", "month"), sep = 4)
+
+# Take the long format data, then group by ID, which is a unique location, the variable (i.e., precipitiation, min. temp., max temp., and GDD), and each month (e.g., 01 for January, 02 for February, etc.). So, we essentially get a 30 year average for each of the 12 months for the 3 variables at each unique location.
+FPdata_avgs <- FPdata_long %>%
+  dplyr::group_by(dataset.id, month) %>% 
+  dplyr::summarize(mean = mean(value))
+
+FPdata_avgs <- dplyr::rename(FPdata_avgs, climate = month)
+
+UUSS_reconst_7analog$climate <- as.integer(UUSS_reconst_7analog$climate)
+FPdata_avgs$climate <- as.integer(FPdata_avgs$climate)
+
+FPdata_avgs_monthly <- dplyr::left_join(UUSS_reconst_7analog, FPdata_avgs, by= c("dataset.id", "climate"))
+FPdata_avgs_monthly <- FPdata_avgs_monthly %>% 
+  dplyr::mutate(date = BPtoBCAD(FPdata_avgs_monthly$age))
+FPdata_avgs_monthly <- FPdata_avgs_monthly %>% dplyr::mutate(anomaly = (reconst - mean))
+write.csv(FPdata_avgs_monthly, "./output/FPdata_avgs_monthly.csv", row.names = FALSE)
+
+
+UUSS_100yrAvgs_GDD_7analog_anomaly <- FPdata_avgs_monthly %>% 
+     dplyr::filter(climate >= 5 & climate <= 9) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
+     dplyr::summarise_at(c("reconst", "err", "elev", "mean", "anomaly"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(err_n, elev_n, mean_n, anomaly_n, err_unique_sites, elev_unique_sites, mean_unique_sites, anomaly_unique_sites)) %>% 
+     dplyr::mutate(midP = seq(-50, 2050, 100))
+
+# Plot the anomaly for GS.
+temp_UUSS_100yrAvgs_GDD_7analog_anomaly <- UUSS_100yrAvgs_GDD_7analog_anomaly
+temp_UUSS_100yrAvgs_GDD_7analog_anomaly[2,7] <- 0
+temp_UUSS_100yrAvgs_GDD_7analog_anomaly[21,7] <- 2000
+
+UUSS_100yrAvgs_GDD_7analog_anomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_7analog_anomaly[2:21, ])), aes(x=midP, y=anomaly_mean, label = reconst_n, label2 = reconst_unique_sites)) +
+      geom_line(colour="red", size = 3.5) +
+      xlab("Year (BC/AD)") +
+      ylab("Anomaly (°C)") +
+      scale_x_continuous(breaks=seq(0,2000,100), minor_breaks = seq(50, 1950, 200)) +
+      scale_y_continuous(breaks=seq(-1,5,.5), limits = c(-1, 5)) +
+      theme_bw() + 
+      theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=22, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+      panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 22, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+      labs(col = "Temperature (°C)")
+      
+    # Save the plot for GS.
+    ggsave(UUSS_100yrAvgs_GDD_7analog_anomaly_plot, file = "UUSS_100yrAvgs_GDD_7analog_anomaly_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    
+    # Create html files that have the interactive plots from plotly.
+    UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_7analog_anomaly_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+
+# ----------------------
+
+
+#January
+toMatch <- "01.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Convert the raster stack to a brick. Don't need this. Cropping converts it into a brick.
+#type.list.delta.brick <- raster::brick(type.list.delta)
+
+# Read raster data into memory.
+FP.type.list.memory <- readAll(FP.type.list)
+
+# Get the average of the raster layers and get return one raster layer.
+January.avg <- FP.type.list %>% mean()
+
+
+#February
+toMatch <- "02.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+February.avg <- FP.type.list %>% mean()
+
+
+#March
+toMatch <- "03.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+March.avg <- FP.type.list %>% mean()
+
+
+#April
+toMatch <- "04.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+April.avg <- FP.type.list %>% mean()
+
+
+#May
+toMatch <- "05.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+May.avg <- FP.type.list %>% mean()
+
+
+#June
+toMatch <- "06.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+June.avg <- FP.type.list %>% mean()
+
+
+#July
+toMatch <- "07.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+July.avg <- FP.type.list %>% mean()
+
+
+#August
+toMatch <- "08.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+August.avg <- FP.type.list %>% mean()
+
+
+#September
+toMatch <- "09.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+September.avg <- FP.type.list %>% mean()
+
+
+#October
+toMatch <- "10.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+October.avg <- FP.type.list %>% mean()
+
+
+#November
+toMatch <- "11.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+November.avg <- FP.type.list %>% mean()
+
+
+#December
+toMatch <- "12.bil"
+FPmonthly.files.delta <- unique (grep(paste(toMatch,collapse="|"), 
+                        FP.monthly.files, value=TRUE))
+
+# Generate the raster stack.
+FP.type.list <- raster::stack(FPmonthly.files.delta,native=F,quick=T)
+
+#Crop raster to the extent of the Four Corner states.
+FP.type.list <- raster::crop(FP.type.list, extent.FourCorners)
+
+# Get the average of the raster layers and get return one raster layer.
+December.avg <- FP.type.list %>% mean()
+
+
+# Now stack all of the monthly raster layers that are the monthly 30-year avgs. (1961-1990) for the Four Corners.
+months.avg <- c(January.avg, February.avg, March.avg, April.avg, May.avg, June.avg, July.avg, August.avg, September.avg, October.avg, November.avg, December.avg)
+PRISM.monthly.30yrAvg <- raster::stack(x=c(months.avg),native=F,quick=T)
+PRISM.monthly.30yrAvg.brick <- raster::brick(months.avg)
+
+RAST.DIR <- "./output/raster/"
+
+writeRaster(PRISM.monthly.30yrAvg, filename=paste0(RAST.DIR, "PRISM.monthly.30yrAvg.tif"), format="GTiff", options=c("COMPRESS=DEFLATE", "ZLEVEL=9", "INTERLEAVE=BAND"), overwrite=T, setStatistics=FALSE)
+
+writeRaster(PRISM.monthly.30yrAvg.brick, filename=paste0(RAST.DIR, "PRISM.monthly.30yrAvg.brick.tif"), format="GTiff", options=c("COMPRESS=DEFLATE", "ZLEVEL=9", "INTERLEAVE=BAND"), overwrite=T, setStatistics=FALSE)
+
+```
+
 
 ``` {r compare_reconstructions}
 
