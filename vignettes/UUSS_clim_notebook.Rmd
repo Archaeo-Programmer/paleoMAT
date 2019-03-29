@@ -996,7 +996,7 @@ if (!file.exists("./output/UUSS_reconst_temp_5analog.csv")) {
 # Subset the climate data to just GDD 
 GDD_noNAs <- Clim_noNAs[,2:13]
 
-if (!file.exists("./output/UUSS_reconst_GDD_7analog.csv")) {
+if (!file.exists("./output/UUSS_reconst_GDD_5analog.csv")) {
   
   mat_models_gdd_5analog <- purrr::map(1:12,
                               .f = function(j){
@@ -1040,17 +1040,17 @@ if (!file.exists("./output/UUSS_reconst_GDD_7analog.csv")) {
 
 
 
-UUSS_reconst_GDD_7analog_total <- UUSS_reconst_GDD_7analog %>% 
+UUSS_reconst_GDD_5analog_total <- UUSS_reconst_GDD_5analog %>% 
   dplyr::filter(climate >= 5 & climate <= 9) %>% 
   dplyr::group_by(dataset.id, sample.id, depth) %>% 
   dplyr::summarise_at(c("reconst", "err"), funs(sum, mean)) %>% 
   dplyr::select(dataset.id, sample.id, depth, reconst_sum, err_mean)
 
-UUSS_reconst_GDD_7analog_meta <- UUSS_reconst_GDD_7analog %>% 
+UUSS_reconst_GDD_5analog_meta <- UUSS_reconst_GDD_5analog %>% 
   dplyr::filter(climate == 5) %>%
   dplyr::select(-c(reconst, err, climate))
 
-UUSS_GDD_7analog <- left_join(UUSS_reconst_GDD_7analog_meta, UUSS_reconst_GDD_7analog_total, by = c("dataset.id", "sample.id", "depth"))
+UUSS_GDD_5analog <- left_join(UUSS_reconst_GDD_5analog_meta, UUSS_reconst_GDD_5analog_total, by = c("dataset.id", "sample.id", "depth"))
 
 
 
@@ -1098,20 +1098,20 @@ UUSS_GDD_7analog <- left_join(UUSS_reconst_GDD_7analog_meta, UUSS_reconst_GDD_7a
 ### Summary of the results. 
 
 ```{r summary_reconst, echo=FALSE}
-UUSS_reconst_7analog <- read.csv("./output/UUSS_reconst_temp_7analog.csv")
+UUSS_reconst_5analog <- read.csv("./output/UUSS_reconst_temp_5analog.csv")
 UUSS_reconst <- read.csv("./output/UUSS_reconst_temp.csv")
 
 # First, convert the years BP in the age column to BC/AD dates, which we create a new column called date.
 
-UUSS_reconst_7analog <- UUSS_reconst_7analog %>% 
-  dplyr::mutate(date = BPtoBCAD(UUSS_reconst_7analog$age))
+UUSS_reconst_5analog <- UUSS_reconst_5analog %>% 
+  dplyr::mutate(date = BPtoBCAD(UUSS_reconst_5analog$age))
 
-UUSS_GDD_7analog <- UUSS_GDD_7analog %>% 
-  dplyr::mutate(date = BPtoBCAD(UUSS_GDD_7analog$age))
+UUSS_GDD_5analog <- UUSS_GDD_5analog %>% 
+  dplyr::mutate(date = BPtoBCAD(UUSS_GDD_5analog$age))
 
 # Do 100 year average temperatures across all months.
 # 200 yr interval: -3100,2100,200 and -3000, 2000, 200. For 100 yr interval: -3100,2100,100 and -3050, 1950, 100
-UUSS_100yrAvgs <- UUSS_reconst_7analog %>% 
+UUSS_100yrAvgs <- UUSS_reconst_5analog %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>%
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
@@ -1119,7 +1119,7 @@ UUSS_100yrAvgs <- UUSS_reconst_7analog %>%
      dplyr::mutate(midP = seq(-3000, 2000, 200))
      
 # Do 100 year average temperatures across growing season months (May through September).
-UUSS_100yrAvgs_7analog_GS <- UUSS_reconst_7analog %>%
+UUSS_100yrAvgs_5analog_GS <- UUSS_reconst_5analog %>%
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,200))) %>% 
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1127,7 +1127,7 @@ UUSS_100yrAvgs_7analog_GS <- UUSS_reconst_7analog %>%
      dplyr::select(-c(err_n, elev_n, err_unique_sites, elev_unique_sites)) %>% 
      dplyr::mutate(midP = seq(-3000, 2000, 200))
 
-UUSS_100yrAvgs_7analog_GS_BP <- UUSS_reconst_7analog %>%
+UUSS_100yrAvgs_5analog_GS_BP <- UUSS_reconst_5analog %>%
      dplyr::filter(site.name == "Beef Pasture") %>%
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,200))) %>% 
@@ -1137,7 +1137,7 @@ UUSS_100yrAvgs_7analog_GS_BP <- UUSS_reconst_7analog %>%
      dplyr::mutate(midP = seq(-3000, 2000, 200))
 
 # Do 100 year average temperatures for the warmest month of the year, July.
-UUSS_100yrAvgs_7analog_July <- UUSS_reconst_7analog %>% 
+UUSS_100yrAvgs_5analog_July <- UUSS_reconst_5analog %>% 
      dplyr::filter(climate == 7) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst", "err", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1155,7 +1155,7 @@ UUSS_100yrAvgs_January <- UUSS_reconst %>%
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 # Calculate GDD for the growing season (May through September).
-UUSS_100yrAvgs_GDD_7analog <- UUSS_GDD_7analog %>% 
+UUSS_100yrAvgs_GDD_5analog <- UUSS_GDD_5analog %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst_sum", "err_mean", "elev"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
@@ -1175,11 +1175,11 @@ library(plotly)
 
 # Plot monthly temperatures for growing season months.
 
-temp_UUSS_100yrAvgs_7analog_GS <- UUSS_100yrAvgs_7analog_GS
-temp_UUSS_100yrAvgs_7analog_GS[2,7] <- 0
-temp_UUSS_100yrAvgs_7analog_GS[21,7] <- 2000
+temp_UUSS_100yrAvgs_5analog_GS <- UUSS_100yrAvgs_5analog_GS
+temp_UUSS_100yrAvgs_5analog_GS[2,7] <- 0
+temp_UUSS_100yrAvgs_5analog_GS[21,7] <- 2000
 
-UUSS_100yrAvgs_7analog_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_7analog_GS[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) + 
+UUSS_100yrAvgs_5analog_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_5analog_GS[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) + 
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1198,20 +1198,20 @@ UUSS_100yrAvgs_7analog_GS_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs
       labs(col = "Temperature (°C)")
       
     # Save the plot for GS.
-    ggsave(UUSS_100yrAvgs_7analog_GS_plot, file = "UUSS_100yrAvgs_7analog_GS_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_5analog_GS_plot, file = "UUSS_100yrAvgs_5analog_GS_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_7analog_GS_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_7analog_GS_plot, originalData = TRUE)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_7analog_GS_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_7analog_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+    UUSS_100yrAvgs_5analog_GS_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_5analog_GS_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_5analog_GS_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_5analog_GS_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
      
-temp_UUSS_100yrAvgs_7analog_July <- UUSS_100yrAvgs_7analog_July
-temp_UUSS_100yrAvgs_7analog_July[2,7] <- 0
-temp_UUSS_100yrAvgs_7analog_July[21,7] <- 2000
+temp_UUSS_100yrAvgs_5analog_July <- UUSS_100yrAvgs_5analog_July
+temp_UUSS_100yrAvgs_5analog_July[2,7] <- 0
+temp_UUSS_100yrAvgs_5analog_July[21,7] <- 2000
 
 # Plot the warmest temperature month, July.
-UUSS_100yrAvgs_7analog_July_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_7analog_July[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
+UUSS_100yrAvgs_5analog_July_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_5analog_July[2:21, ])), aes(x=midP, y=reconst_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       #scale_color_gradient(low="blue", high="red") +
       geom_ribbon(aes(x=midP, ymin = reconst_mean - err_mean,
                       ymax = reconst_mean + err_mean,
@@ -1230,12 +1230,12 @@ UUSS_100yrAvgs_7analog_July_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAv
       labs(col = "Temperature (°C)")
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_7analog_July_plot, file = "UUSS_100yrAvgs_7analog_July_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_5analog_July_plot, file = "UUSS_100yrAvgs_5analog_July_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=21, height=13, dpi=600, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_7analog_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_7analog_July_plot, originalData = TRUE)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_7analog_July_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_7analog_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+    UUSS_100yrAvgs_5analog_July_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_5analog_July_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_5analog_July_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_5analog_July_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 # Plot the coldest temperature month, January.
@@ -1356,25 +1356,25 @@ UUSS_100yrAvgs_Elevation_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_Janua
 ```{r regressions, echo=FALSE}
 
 
-GDD_fit_7analog <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD_7analog)
-tiff(file = "./Figures/GDD_elev_regression_7analog.tiff", height = 12, width = 15, units = 'in', 
+GDD_fit_5analog <- lm(reconst_sum_mean ~ elev_mean, data = UUSS_100yrAvgs_GDD_5analog)
+tiff(file = "./Figures/GDD_elev_regression_5analog.tiff", height = 12, width = 15, units = 'in', 
      compression = "lzw", res = 600)
-visreg(GDD_fit_7analog, xlab = "Elevation (m)", ylab = "Growing Degree Days", points=list(cex=.8))
+visreg(GDD_fit_5analog, xlab = "Elevation (m)", ylab = "Growing Degree Days", points=list(cex=.8))
 
 dev.off()
 
-summary(GDD_fit_7analog)
+summary(GDD_fit_5analog)
 
 # Graph the residuals through time.
-UUSS_100yrAvgs_GDD_7analog <- UUSS_100yrAvgs_GDD_7analog %>% 
-  dplyr::mutate(residuals = GDD_fit_7analog$residuals)
+UUSS_100yrAvgs_GDD_5analog <- UUSS_100yrAvgs_GDD_5analog %>% 
+  dplyr::mutate(residuals = GDD_fit_5analog$residuals)
 
 # Plot GDD
-temp_UUSS_100yrAvgs_GDD_7analog <- UUSS_100yrAvgs_GDD_7analog
-temp_UUSS_100yrAvgs_GDD_7analog[2,7] <- 0
-temp_UUSS_100yrAvgs_GDD_7analog[21,7] <- 2000
+temp_UUSS_100yrAvgs_GDD_5analog <- UUSS_100yrAvgs_GDD_5analog
+temp_UUSS_100yrAvgs_GDD_5analog[2,7] <- 0
+temp_UUSS_100yrAvgs_GDD_5analog[21,7] <- 2000
 
-UUSS_100yrAvgs_GDD_7analog_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_7analog[2:21, ])), aes(x=midP, y=residuals)) +
+UUSS_100yrAvgs_GDD_5analog_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_5analog[2:21, ])), aes(x=midP, y=residuals)) +
       geom_rect(aes(xmin=0,xmax=2000,ymin=-210,ymax=0,fill="blue"),alpha=0.009) +
       geom_rect(aes(xmin=0,xmax=2000,ymin=0,ymax=210,fill="red"),alpha=0.009) +
       scale_fill_identity() +
@@ -1395,11 +1395,11 @@ UUSS_100yrAvgs_GDD_7analog_Residuals_plot <- ggplot(data=(dplyr::filter(temp_UUS
       panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"))
       
     # Save the plot for one month.
-    ggsave(UUSS_100yrAvgs_GDD_7analog_Residuals_plot, file = "UUSS_100yrAvgs_GDD_7analog_Residuals_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_GDD_5analog_Residuals_plot, file = "UUSS_100yrAvgs_GDD_5analog_Residuals_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=22, height=13, dpi=600, compression = 'lzw')
     
-     UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_7analog_Residuals_plot)
-     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_7analog_Residuals_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+     UUSS_100yrAvgs_GDD_5analog_Residuals_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_5analog_Residuals_plot)
+     f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_5analog_Residuals_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_5analog_Residuals_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 
 
@@ -1932,10 +1932,10 @@ FPdata_avgs <- FPdata_long %>%
 
 FPdata_avgs <- dplyr::rename(FPdata_avgs, climate = month)
 
-UUSS_reconst_7analog$climate <- as.integer(UUSS_reconst_7analog$climate)
+UUSS_reconst_5analog$climate <- as.integer(UUSS_reconst_5analog$climate)
 FPdata_avgs$climate <- as.integer(FPdata_avgs$climate)
 
-FPdata_avgs_monthly <- dplyr::left_join(UUSS_reconst_7analog, FPdata_avgs, by= c("dataset.id", "climate"))
+FPdata_avgs_monthly <- dplyr::left_join(UUSS_reconst_5analog, FPdata_avgs, by= c("dataset.id", "climate"))
 FPdata_avgs_monthly <- FPdata_avgs_monthly %>% 
   dplyr::mutate(date = BPtoBCAD(FPdata_avgs_monthly$age))
 FPdata_avgs_monthly <- FPdata_avgs_monthly %>% dplyr::mutate(anomaly = (reconst - mean))
@@ -1943,7 +1943,7 @@ write.csv(FPdata_avgs_monthly, "./output/FPdata_avgs_monthly.csv", row.names = F
 
 FPdata_avgs_monthly <- read.csv("./output/FPdata_avgs_monthly.csv")
 
-UUSS_100yrAvgs_GDD_7analog_anomaly <- FPdata_avgs_monthly %>% 
+UUSS_100yrAvgs_GDD_5analog_anomaly <- FPdata_avgs_monthly %>% 
      dplyr::filter(climate >= 5 & climate <= 9) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-100,2100,100))) %>% 
      dplyr::summarise_at(c("reconst", "err", "elev", "mean", "anomaly"), funs(mean, n(), unique_sites = n_distinct(dataset.id))) %>%
@@ -1952,11 +1952,11 @@ UUSS_100yrAvgs_GDD_7analog_anomaly <- FPdata_avgs_monthly %>%
      dplyr::mutate(midP = seq(-50, 2050, 100))
 
 # Plot the anomaly for GS.
-temp_UUSS_100yrAvgs_GDD_7analog_anomaly <- UUSS_100yrAvgs_GDD_7analog_anomaly
-temp_UUSS_100yrAvgs_GDD_7analog_anomaly[2,7] <- 1
-temp_UUSS_100yrAvgs_GDD_7analog_anomaly[21,7] <- 2000
+temp_UUSS_100yrAvgs_GDD_5analog_anomaly <- UUSS_100yrAvgs_GDD_5analog_anomaly
+temp_UUSS_100yrAvgs_GDD_5analog_anomaly[2,7] <- 1
+temp_UUSS_100yrAvgs_GDD_5analog_anomaly[21,7] <- 2000
 
-UUSS_100yrAvgs_GDD_7analog_anomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_7analog_anomaly[2:21, ])), aes(x=midP, y=anomaly_mean, label = reconst_n, label2 = reconst_unique_sites)) +
+UUSS_100yrAvgs_GDD_5analog_anomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_100yrAvgs_GDD_5analog_anomaly[2:21, ])), aes(x=midP, y=anomaly_mean, label = reconst_n, label2 = reconst_unique_sites)) +
       geom_line(colour="black", size = 3) +
       xlab("Year AD") +
       ylab("Anomaly °C") +
@@ -1968,12 +1968,12 @@ UUSS_100yrAvgs_GDD_7analog_anomaly_plot <- ggplot(data=(dplyr::filter(temp_UUSS_
       labs(col = "Temperature (°C)")
       
     # Save the plot for GS.
-    ggsave(UUSS_100yrAvgs_GDD_7analog_anomaly_plot, file = "UUSS_100yrAvgs_GDD_7analog_anomaly_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=13.3, height=3, dpi=200, compression = 'lzw')
+    ggsave(UUSS_100yrAvgs_GDD_5analog_anomaly_plot, file = "UUSS_100yrAvgs_GDD_5analog_anomaly_plot.tiff", path = "./output/UUSS/analog_7/", units="in", width=13.3, height=3, dpi=200, compression = 'lzw')
     
     # Create html files that have the interactive plots from plotly.
-    UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_7analog_anomaly_plot, originalData = TRUE)
-    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly.html"
-     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_7analog_anomaly_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
+    UUSS_100yrAvgs_GDD_5analog_anomaly_plot_ggplotly <- ggplotly(UUSS_100yrAvgs_GDD_5analog_anomaly_plot, originalData = TRUE)
+    f<-"./output/UUSS/plotly_htmls/UUSS_100yrAvgs_GDD_5analog_anomaly_plot_ggplotly.html"
+     htmlwidgets::saveWidget(UUSS_100yrAvgs_GDD_5analog_anomaly_plot_ggplotly, file.path(normalizePath(dirname(f)),basename(f)))
 
 # ----------------------
 
