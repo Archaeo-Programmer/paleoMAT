@@ -46,6 +46,8 @@ purrr::walk(.x = packages,
 
 setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
 
+
+
 ```
 
 # Introduction
@@ -73,7 +75,8 @@ MP_metadata_counts <- get_modern_pollen(gpid = NAID)
 
 NAfossil_metadata_counts <- get_fossil_pollen(gpid = NAID)
 
-coreTops <- get_coreTops() %>% 
+coreTops <- 
+  get_coreTops() %>% 
   rename(
     dataset.id = DatasetID,
     site.id = SiteID, 
