@@ -1,0 +1,129 @@
+---
+title: "Upland United States Southwest Pollen-based Climate Reconstruction"
+author: "Andrew Gillreath-Brown"
+mainfont: Calibri
+output:
+  html_document:
+    code_folding: show
+    keep_md: yes
+    number_sections: yes
+    theme: sandstone
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE, results='hide'}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+#update.packages(ask=F, repos = "http://cran.rstudio.com")
+
+if(!require("FedData")) install.packages("FedData")
+if(!require("purrr")) install.packages("purrr")
+
+packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
+              "foreach", "doParallel", # Packages for parallel processeing
+              "rgdal", "sp", "raster", "leaflet", # For spatial data
+              "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
+              "ggplot2", "RColorBrewer", "plotly", # For plotting
+              "rebus", "Hmisc", # For other useful functions
+              "rgdal",
+              "knitr", # For rmarkdown
+              "zoo", "Hmisc", # Date conversions
+              "rcarbon", # Converting BP to BC/AD 
+              "visreg" # For regressions
+)
+
+purrr::walk(.x = packages,
+            .f = FedData::pkg_test)
+
+setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
+
+```
+
+# Introduction
+
+Pollen data can be used to do paleo-temperature reconstructions. However, this type of modeling can be affected by a lot of different aspects, such as paleoecological processes, chronology, and topographic effects on communities and species. 
+
+However, improvements in these techniques, and the increasing breadth of paleoclimatic proxies available have furthered our understanding of the effects of climate-driven variability on past societies. 
+
+This program allows you to reconstruct the climate for multiple locations across North America (when data are sufficient to do). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too.
+
+# Get fossil, modern, and coretop pollen data.
+```{r function_model, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+
+# Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
+
+# Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs. 
+gpids <- neotoma::get_table(table.name='GeoPoliticalUnits')
+
+NAID <-  gpids %>%
+  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
+                GeoPoliticalUnit == 'country') %$%
+  GeoPoliticalID
+
+MP_metadata_counts <- get_modern_pollen(gpid = NAID)
+
+NAfossil_metadata_counts <- get_fossil_pollen(gpid = NAID)
+
+coreTops <- get_coreTops() %>% 
+  rename(
+    dataset.id = DatasetID,
+    site.id = SiteID, 
+    sample.id = SampleID
+    )
+
+
+```
+
+# Load and cleanup modern data (i.e., pollen, climate, and locations)
+
+## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
+
+```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+CT_metadata_counts <- dplyr::left_join(coreTops,
+                                       NAfossil_metadata_counts,
+                                       by  = c("dataset.id", "site.id", "sample.id")) %>% 
+  dplyr::mutate(type = "core top") %>% 
+  dplyr::arrange(dataset.id)
+
+```
+
+The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, representing `r ncol(MP_counts)` different pollen taxa.
+
+## Combine Core Top and Modern Pollen Data
+
+```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+# Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
+MPCT_metadata_counts <- dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
+  dplyr::arrange(dataset.id) # %>%
+  #distinct(dataset.id, .keep_all = TRUE)
+
+# Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
+MPCT_metadata <- MPCT_metadata_counts[,1:11]
+MPCT_counts <- MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+MPCT_metadata_counts <- dplyr::left_join(MPCT_metadata, MPCT_counts, by = c("dataset.id", "site.id", "sample.id"))
+
+# Sort the taxa to be in alphabetical order.
+MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11], sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
+
+```
+
+## Remove Coretops data from the fossil pollen dataset
+```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+NAfossil_metadata_counts <-  anti_join(NAfossil_metadata_counts, coreTops, by = c("dataset.id", "site.id", "sample.id"))
+
+```
+

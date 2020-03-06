@@ -56,6 +56,30 @@ However, improvements in these techniques, and the increasing breadth of paleocl
 
 This program allows you to reconstruct the climate for multiple locations across North America (when data are sufficient to do). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too.
 
+# Run Functions and model
+```{r function_model, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+
+# Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
+
+# Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs. 
+gpids <- neotoma::get_table(table.name='GeoPoliticalUnits')
+
+NAID <-  gpids %>%
+  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
+                GeoPoliticalUnit == 'country') %$%
+  GeoPoliticalID
+
+MP_metadata_counts <- get_modern_pollen(gpid = NAID)
+
+NAfossil_metadata_counts <- get_fossil_pollen(gpid = NAID)
+
+coreTops <- get_coreTops()
+
+
+
+```
+
+
 # Load and cleanup modern data (i.e., pollen, climate, and locations)
 
 ## Modern Pollen Data from Neotoma
@@ -84,7 +108,7 @@ compile_pollen <- function(x){
 gpids <- neotoma::get_table(table.name='GeoPoliticalUnits')
 
 NAID <-  gpids %>%
-  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada'),
+  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
                 GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
 
