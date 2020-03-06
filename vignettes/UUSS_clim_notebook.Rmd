@@ -909,9 +909,12 @@ source('../R/sig_test2.R')
 # This is an altered wrapper for the randomTF function.
 source('../R/sig_test2.R')
 
+MP_counts_noNAs <- MP_counts %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
 mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
         climate = Clim_noNAs[,13:24], 
-        func = MAT, col = 2, k = 10) 
+        func = MAT, col = 2, k = 10)
  
  mat_reconst[[1]]
 
