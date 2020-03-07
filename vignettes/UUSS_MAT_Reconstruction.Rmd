@@ -130,3 +130,64 @@ NAfossil_metadata_counts <-  anti_join(NAfossil_metadata_counts, coreTops, by = 
 
 ```
 
+# Load Prism Climate Data
+
+The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
+
+```{r load_Prsim, echo = FALSE, warning=FALSE}
+# Load Prism Climate data.
+
+# Returns clim_wide.
+load_prism(MPCT_metadata_counts, "./data", "/Volumes/DATA/PRISM/LT81_800M/")
+
+
+```
+
+## Clean up datasets to remove NAs for PRISM data
+
+Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
+
+```{r removePrismNAs, echo=FALSE, warning=FALSE}
+
+# Get row number in first column that have NA values.
+NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
+
+# Remove rows with NA values for the precipitation, temperature, and GDD using the index.
+Clim_noNAs <- clim_wide[-(NAindex),]
+rownames(Clim_noNAs) <- seq(length=nrow(Clim_noNAs))
+
+# Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
+MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
+
+# Remove metadata columns to run significance test.
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+```
+
+## Checking the calibration data set
+
+Need to change this into a function. **
+
+To test the model, I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. If we do get a significance for a climate variable, then we know that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data. Here, we use a wrapper function for [randomTF](https://github.com/NeotomaDB/Workbooks/blob/master/PollenClimate/R/sig_test.R).
+
+The MAT method is testing whether the modern calibration is able to detect signals in each of the climate parameters. The example here uses the entire North American Modern Pollen Database, rather than a targeted data subset.
+
+### MAT - ten closest
+
+```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
+
+# Remove metadata columns to run significance test.
+MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+# For some reason this fails consistently when we try to use the weighted MAT (col=2).
+mat_sig <- run_tf(pollen = MPCT_counts_noNAs, 
+                  climate = Clim_noNAs[,14:25],
+                  func = MAT, col = 1, k = 10)
+#col 1 is just the closest analogue.
+mat_sig[[1]]
+
+```
+
+The variance explained is very low for some variables, although the p value is very low. This highlights that in some cases you may not just want to rely on the p value. This also shows the issue with temporal autocorrelation on temperature and, to some extent also, on precipitation variables.
