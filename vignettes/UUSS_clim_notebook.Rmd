@@ -466,6 +466,8 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 ```{r load_Prsim, echo = FALSE, warning=FALSE}
 # Load Prism Climate data.
 
+# load_prism(MPCT_metadata_counts, "./data", "/Volumes/DATA/PRISM/LT81_800M/")
+
 # Temporarily bypassing the core tops code and setting the surface pollen samples equal to the other variable. Once the core top data is added in, then I should delete this line of code.
 # MPCT_metadata_counts <- MP_metadata_counts
 
@@ -481,6 +483,7 @@ lats <- unlist(lapply(all,FUN=function(x){MPCT_metadata_counts$lat}))
 # Bind longitude and latitude and convert to SpatialPoints.
 coords <- cbind(LONGITUDE=lons,LATITUDE=lats)
 coordsPoints <- SpatialPoints(coords, proj4string=CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+
 
 # Create a SpatialPointsDataFrame of the samples and clean up locations.
 # points <- SpatialPointsDataFrame(coords,data.frame(NAME=names,MP_counts), 
@@ -685,7 +688,7 @@ gdd_avgs <- data_avgs %>%
   dplyr::filter(variable == "GDD")
 
 # Now, combine the precipitation, temperature, and GDD data back into one dataframe, and convert from long to wide format. Then, we can get rid of the ID column as it will be the same as the location dataframe. Then, rename all the column names. 
-? <- rbind(gdd_avgs, ppt_avgs, tmp_avgs) %>% 
+clim_wide <- rbind(gdd_avgs, ppt_avgs, tmp_avgs) %>% 
   dcast(sample.id ~ variable + month, value.var="mean") %>% 
   #dplyr::select(-one_of("dataset.id")) %>% 
   set_colnames(c('sample.id', 'gjan', 'gfeb', 'gmar', 'gapr', 'gmay', 'gjun', 'gjul', 'gaug', 'gsep', 'goct', 'gnov', 'gdec', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
