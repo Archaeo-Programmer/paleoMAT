@@ -69,7 +69,7 @@ load_prism <- function(sites, out.dir, prism.dir) {
   
   # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
   # You can make it run again by deleting the file.
-  climate.points <- raster::extract(x = type.list, y = modern_pollen_sites(sites), df = TRUE)
+  climate.points <- raster::extract(x = type.list, y = modern_pollen_points(sites), df = TRUE)
   
   names <- sites$sample.id
   
