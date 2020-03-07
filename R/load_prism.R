@@ -191,4 +191,6 @@ load_prism <- function(sites, out.dir, prism.dir) {
     #dplyr::select(-one_of("dataset.id")) %>% 
     set_colnames(c('sample.id', 'gjan', 'gfeb', 'gmar', 'gapr', 'gmay', 'gjun', 'gjul', 'gaug', 'gsep', 'goct', 'gnov', 'gdec', 'pjan', 'pfeb', 'pmar', 'papr', 'pmay', 'pjun', 'pjul', 'paug', 'psep', 'poct', 'pnov', 'pdec', 'tjan', 'tfeb', 'tmar', 'tapr', 'tmay', 'tjun', 'tjul', 'taug', 'tsep', 'toct', 'tnov', 'tdec'))
   
+  clim_wide
+  
 }
