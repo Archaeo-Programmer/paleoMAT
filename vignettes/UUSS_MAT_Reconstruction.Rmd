@@ -46,7 +46,10 @@ purrr::walk(.x = packages,
 
 setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
 
-
+list.files("R", 
+           full.names = TRUE,
+           include.dirs = FALSE) %>%
+  purrr::walk(source)
 
 ```
 
