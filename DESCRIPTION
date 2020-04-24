@@ -10,3 +10,23 @@ LazyData: TRUE
 Suggests: testthat
 Depends: 
     magrittr
+Imports: 
+    neotoma,
+    rioja,
+    readr,
+    purrr,
+    dplyr,
+    tibble,
+    tidyr,
+    rebus.numbers,
+    Hmisc,
+    zoo,
+    raster,
+    leaflet,
+    sp,
+    rgdal,
+    analogue,
+    palaeoSig,
+    plotly,
+    RColorBrewer,
+    ggplot2

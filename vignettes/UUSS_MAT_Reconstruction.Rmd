@@ -28,6 +28,8 @@ knitr::opts_chunk$set(echo = TRUE)
 if(!require("FedData")) install.packages("FedData")
 if(!require("purrr")) install.packages("purrr")
 
+library(paleomat)
+
 packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
               "rgdal", "sp", "raster", "leaflet", # For spatial data
@@ -67,9 +69,11 @@ This program allows you to reconstruct the climate for multiple locations across
 # Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
 
 # Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs. 
-gpids <- neotoma::get_table(table.name='GeoPoliticalUnits')
+gpids <- 
+  neotoma::get_table(table.name='GeoPoliticalUnits')
 
-NAID <-  gpids %>%
+NAID <-  
+  gpids %>%
   dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
                 GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
@@ -79,12 +83,12 @@ MP_metadata_counts <- get_modern_pollen(gpid = NAID)
 NAfossil_metadata_counts <- get_fossil_pollen(gpid = NAID)
 
 coreTops <- 
-  get_coreTops() %>% 
-  rename(
+  paleomat::get_coreTops() %>% 
+  dplyr::rename(
     dataset.id = DatasetID,
     site.id = SiteID, 
     sample.id = SampleID
-    )
+  )
 
 
 ```
@@ -95,9 +99,10 @@ coreTops <-
 
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-CT_metadata_counts <- dplyr::left_join(coreTops,
-                                       NAfossil_metadata_counts,
-                                       by  = c("dataset.id", "site.id", "sample.id")) %>% 
+CT_metadata_counts <- 
+  dplyr::left_join(coreTops,
+                   NAfossil_metadata_counts,
+                   by  = c("dataset.id", "site.id", "sample.id")) %>% 
   dplyr::mutate(type = "core top") %>% 
   dplyr::arrange(dataset.id)
 
@@ -110,16 +115,20 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
-MPCT_metadata_counts <- dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
+MPCT_metadata_counts <- 
+  dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
   dplyr::arrange(dataset.id) # %>%
-  #distinct(dataset.id, .keep_all = TRUE)
+#distinct(dataset.id, .keep_all = TRUE)
 
 # Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
 MPCT_metadata <- MPCT_metadata_counts[,1:11]
 MPCT_counts <- MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
-MPCT_metadata_counts <- dplyr::left_join(MPCT_metadata, MPCT_counts, by = c("dataset.id", "site.id", "sample.id"))
+MPCT_metadata_counts <- 
+  dplyr::left_join(MPCT_metadata, 
+                   MPCT_counts, 
+                   by = c("dataset.id", "site.id", "sample.id"))
 
 # Sort the taxa to be in alphabetical order.
 MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11], sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
@@ -129,7 +138,10 @@ MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11
 ## Remove Coretops data from the fossil pollen dataset
 ```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-NAfossil_metadata_counts <-  anti_join(NAfossil_metadata_counts, coreTops, by = c("dataset.id", "site.id", "sample.id"))
+NAfossil_metadata_counts <- 
+  dplyr::anti_join(NAfossil_metadata_counts, 
+                   coreTops, 
+                   by = c("dataset.id", "site.id", "sample.id"))
 
 ```
 
@@ -141,7 +153,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # Load Prism Climate data.
 
 # Returns clim_wide.
-load_prism(MPCT_metadata_counts, "./data", "/Volumes/DATA/PRISM/LT81_800M/")
+paleomat::load_prism(MPCT_metadata_counts, "./data", "/Volumes/DATA/PRISM/LT81_800M/")
 
 
 ```
@@ -163,8 +175,9 @@ rownames(Clim_noNAs) <- seq(length=nrow(Clim_noNAs))
 MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+MPCT_counts_noNAs <- 
+  MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
+  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
 
@@ -181,13 +194,17 @@ The MAT method is testing whether the modern calibration is able to detect signa
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+MPCT_counts_noNAs <- 
+  MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
+  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-mat_sig <- run_tf(pollen = MPCT_counts_noNAs, 
+mat_sig <- 
+  paleomat::run_tf(pollen = MPCT_counts_noNAs, 
                   climate = Clim_noNAs[,14:25],
-                  func = MAT, col = 1, k = 10)
+                  func = rioja::MAT, 
+                  col = 1, 
+                  k = 10)
 #col 1 is just the closest analogue.
 mat_sig[[1]]
 
