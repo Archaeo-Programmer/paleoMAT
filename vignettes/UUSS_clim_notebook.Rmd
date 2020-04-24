@@ -28,12 +28,14 @@ knitr::opts_chunk$set(echo = TRUE)
 if(!require("FedData")) install.packages("FedData")
 if(!require("purrr")) install.packages("purrr")
 
-packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
+library(paleomat)
+
+packages <- c("tidyverse", "purrrlyr", "reshape2", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
               "rgdal", "sp", "raster", "leaflet", # For spatial data
               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
               "ggplot2", "RColorBrewer", "plotly", # For plotting
-              "rebus", "Hmisc", # For other useful functions
+              "rebus", # For other useful functions
               "rgdal",
               "knitr", # For rmarkdown
               "zoo", "Hmisc", # Date conversions
@@ -81,7 +83,6 @@ coreTops <- get_coreTops()
 
 
 # Load and cleanup modern data (i.e., pollen, climate, and locations)
-
 ## Modern Pollen Data from Neotoma
 
 ```{r load_modernPollen, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
