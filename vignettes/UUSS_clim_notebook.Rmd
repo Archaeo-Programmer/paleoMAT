@@ -32,7 +32,6 @@ library(paleomat)
 
 packages <- c("tidyverse", "purrrlyr", "reshape2", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
-              "ggplot2", "RColorBrewer", "plotly", # For plotting
               "rebus", # For other useful functions
               "rgdal",
               "knitr", # For rmarkdown

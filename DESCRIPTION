@@ -27,4 +27,6 @@ Imports:
     rgdal,
     analogue,
     palaeoSig,
-    plotly
+    plotly,
+    RColorBrewer,
+    ggplot2
