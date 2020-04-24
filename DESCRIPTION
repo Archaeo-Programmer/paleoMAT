@@ -10,3 +10,6 @@ LazyData: TRUE
 Suggests: testthat
 Depends: 
     magrittr
+Imports: 
+    neotoma,
+    rioja
