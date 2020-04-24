@@ -25,27 +25,6 @@ knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE)
 
 library(paleomat)
-# 
-# packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
-#               "foreach", "doParallel", # Packages for parallel processeing
-#               "rgdal", "sp", "raster", "leaflet", # For spatial data
-#               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
-#               "ggplot2", "RColorBrewer", "plotly", # For plotting
-#               "rebus", "Hmisc", # For other useful functions
-#               "rgdal",
-#               "knitr", # For rmarkdown
-#               "zoo", "Hmisc", # Date conversions
-#               "rcarbon", # Converting BP to BC/AD 
-#               "visreg" # For regressions
-# )
-# 
-# purrr::walk(.x = packages,
-#             .f = FedData::pkg_test)
-
-# list.files("R", 
-#            full.names = TRUE,
-#            include.dirs = FALSE) %>%
-#   purrr::walk(source)
 
 ```
 
