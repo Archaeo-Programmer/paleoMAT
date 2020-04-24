@@ -21,37 +21,31 @@ editor_options:
 
 ```{r setup, include=FALSE, results='hide'}
 
-knitr::opts_chunk$set(echo = TRUE)
-
-#update.packages(ask=F, repos = "http://cran.rstudio.com")
-
-if(!require("FedData")) install.packages("FedData")
-if(!require("purrr")) install.packages("purrr")
+knitr::opts_chunk$set(echo = TRUE,
+                      cache = TRUE)
 
 library(paleomat)
+# 
+# packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
+#               "foreach", "doParallel", # Packages for parallel processeing
+#               "rgdal", "sp", "raster", "leaflet", # For spatial data
+#               "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
+#               "ggplot2", "RColorBrewer", "plotly", # For plotting
+#               "rebus", "Hmisc", # For other useful functions
+#               "rgdal",
+#               "knitr", # For rmarkdown
+#               "zoo", "Hmisc", # Date conversions
+#               "rcarbon", # Converting BP to BC/AD 
+#               "visreg" # For regressions
+# )
+# 
+# purrr::walk(.x = packages,
+#             .f = FedData::pkg_test)
 
-packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
-              "foreach", "doParallel", # Packages for parallel processeing
-              "rgdal", "sp", "raster", "leaflet", # For spatial data
-              "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
-              "ggplot2", "RColorBrewer", "plotly", # For plotting
-              "rebus", "Hmisc", # For other useful functions
-              "rgdal",
-              "knitr", # For rmarkdown
-              "zoo", "Hmisc", # Date conversions
-              "rcarbon", # Converting BP to BC/AD 
-              "visreg" # For regressions
-)
-
-purrr::walk(.x = packages,
-            .f = FedData::pkg_test)
-
-setwd("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat")
-
-list.files("R", 
-           full.names = TRUE,
-           include.dirs = FALSE) %>%
-  purrr::walk(source)
+# list.files("R", 
+#            full.names = TRUE,
+#            include.dirs = FALSE) %>%
+#   purrr::walk(source)
 
 ```
 
@@ -77,10 +71,22 @@ NAID <-
   dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
                 GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
+  
+if(!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))){
+  MP_metadata_counts <- 
+  get_modern_pollen(gpid = NAID) %T>%
+  readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
+}
+MP_metadata_counts <- 
+  readr::read_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 
-MP_metadata_counts <- get_modern_pollen(gpid = NAID)
-
-NAfossil_metadata_counts <- get_fossil_pollen(gpid = NAID)
+if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
+NAfossil_metadata_counts <- 
+  get_fossil_pollen(gpid = NAID) %T>%
+  readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
+}
+NAfossil_metadata_counts <- 
+  readr::read_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
 
 coreTops <- 
   paleomat::get_coreTops() %>% 
@@ -121,9 +127,11 @@ MPCT_metadata_counts <-
 #distinct(dataset.id, .keep_all = TRUE)
 
 # Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
-MPCT_metadata <- MPCT_metadata_counts[,1:11]
-MPCT_counts <- MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+MPCT_metadata <- 
+  MPCT_metadata_counts[,1:11]
+MPCT_counts <- 
+  MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
+  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 MPCT_metadata_counts <- 
   dplyr::left_join(MPCT_metadata, 
@@ -131,7 +139,9 @@ MPCT_metadata_counts <-
                    by = c("dataset.id", "site.id", "sample.id"))
 
 # Sort the taxa to be in alphabetical order.
-MPCT_metadata_counts <- MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11], sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
+MPCT_metadata_counts <- 
+  MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11],
+                          sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
 
 ```
 
@@ -165,14 +175,19 @@ Need to further clean up the datasets to remove any rows with NA values. Althoug
 ```{r removePrismNAs, echo=FALSE, warning=FALSE}
 
 # Get row number in first column that have NA values.
-NAindex <- which(is.na(clim_wide[,2]), arr.ind=FALSE)
+NAindex <- 
+  which(is.na(clim_wide[,2]), arr.ind=FALSE)
 
 # Remove rows with NA values for the precipitation, temperature, and GDD using the index.
-Clim_noNAs <- clim_wide[-(NAindex),]
-rownames(Clim_noNAs) <- seq(length=nrow(Clim_noNAs))
+Clim_noNAs <- 
+  clim_wide[-(NAindex),]
+
+rownames(Clim_noNAs) <- 
+  seq(length=nrow(Clim_noNAs))
 
 # Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
-MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
+MPCT_metadata_counts_noNAs <- 
+  MPCT_metadata_counts[-(NAindex),]
 
 # Remove metadata columns to run significance test.
 MPCT_counts_noNAs <- 
@@ -201,10 +216,11 @@ MPCT_counts_noNAs <-
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
 mat_sig <- 
   paleomat::run_tf(pollen = MPCT_counts_noNAs, 
-                  climate = Clim_noNAs[,14:25],
-                  func = rioja::MAT, 
-                  col = 1, 
-                  k = 10)
+                   climate = Clim_noNAs[,14:25],
+                   func = rioja::MAT, 
+                   col = 1, 
+                   k = 10)
+
 #col 1 is just the closest analogue.
 mat_sig[[1]]
 
