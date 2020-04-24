@@ -175,8 +175,9 @@ rownames(Clim_noNAs) <- seq(length=nrow(Clim_noNAs))
 MPCT_metadata_counts_noNAs <- MPCT_metadata_counts[-(NAindex),]
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+MPCT_counts_noNAs <- 
+  MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
+  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
 
@@ -193,13 +194,17 @@ The MAT method is testing whether the modern calibration is able to detect signa
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
 # Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
+MPCT_counts_noNAs <- 
+  MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
+  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-mat_sig <- run_tf(pollen = MPCT_counts_noNAs, 
+mat_sig <- 
+  paleomat::run_tf(pollen = MPCT_counts_noNAs, 
                   climate = Clim_noNAs[,14:25],
-                  func = MAT, col = 1, k = 10)
+                  func = rioja::MAT, 
+                  col = 1, 
+                  k = 10)
 #col 1 is just the closest analogue.
 mat_sig[[1]]
 
