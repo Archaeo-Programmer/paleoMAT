@@ -32,8 +32,6 @@ library(paleomat)
 
 packages <- c("tidyverse", "purrrlyr", "reshape2", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
-              "rgdal", "sp", "raster", "leaflet", # For spatial data
-              "palaeoSig", "rioja", "analogue", "neotoma", "prism", # For MAT and climate data
               "ggplot2", "RColorBrewer", "plotly", # For plotting
               "rebus", # For other useful functions
               "rgdal",

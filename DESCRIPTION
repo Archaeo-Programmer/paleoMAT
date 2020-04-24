@@ -20,4 +20,11 @@ Imports:
     tidyr,
     rebus.numbers,
     Hmisc,
-    zoo
+    zoo,
+    raster,
+    leaflet,
+    sp,
+    rgdal,
+    analogue,
+    palaeoSig,
+    plotly
