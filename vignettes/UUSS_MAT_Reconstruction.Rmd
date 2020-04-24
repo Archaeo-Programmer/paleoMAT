@@ -28,6 +28,8 @@ knitr::opts_chunk$set(echo = TRUE)
 if(!require("FedData")) install.packages("FedData")
 if(!require("purrr")) install.packages("purrr")
 
+library(paleomat)
+
 packages <- c("magrittr", "tidyverse", "purrrlyr", "reshape2", "dplyr", "plyr", # For tidy data
               "foreach", "doParallel", # Packages for parallel processeing
               "rgdal", "sp", "raster", "leaflet", # For spatial data
