@@ -12,4 +12,9 @@ Depends:
     magrittr
 Imports: 
     neotoma,
-    rioja
+    rioja,
+    readr,
+    purrr,
+    dplyr,
+    tibble,
+    tidyr
