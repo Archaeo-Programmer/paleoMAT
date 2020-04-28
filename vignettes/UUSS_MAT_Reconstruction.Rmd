@@ -51,6 +51,23 @@ NAID <-
   dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
                 GeoPoliticalUnit == 'country') %$%
   GeoPoliticalID
+
+# BEGIN TESTING for MP_metadata_counts
+# AZID <-  
+#   gpids %>%
+#   dplyr::filter(GeoPoliticalName %in% c('Arizona'),
+#                 GeoPoliticalUnit == 'state') %$%
+#   GeoPoliticalID
+# 
+# if(!file.exists(here::here("vignettes/data/AZ_metadata_counts.rds"))){
+#   AZ_metadata_counts <- 
+#   get_modern_pollen(gpid = AZID) %T>%
+#   readr::write_rds(here::here("vignettes/data/AZ_metadata_counts.rds"))
+# }
+# AZ_metadata_counts <- 
+#   readr::read_rds(here::here("vignettes/data/AZ_metadata_counts.rds"))
+
+# END TESTING.
   
 if(!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))){
   MP_metadata_counts <- 
