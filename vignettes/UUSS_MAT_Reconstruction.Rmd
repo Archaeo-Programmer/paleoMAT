@@ -125,29 +125,7 @@ MPCT_metadata_counts <-
                    0) %>%
   dplyr::select(dataset.id:pub_year, 
                 sort(tidyselect::peek_vars()))
-# %>%
-#distinct(dataset.id, .keep_all = TRUE)
 
-# Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
-# MPCT_metadata <- 
-#   MPCT_metadata_counts %>%
-#   dplyr::select(dataset.id:pub_year)
-# 
-# MPCT_counts <- 
-#   MPCT_metadata_counts %>%
-#   dplyr::select(-site.name:-pub_year) %>%
-#   # MPCT_metadata_counts[,c(1:3, 12:ncol(MPCT_metadata_counts))] %>% 
-#   dplyr::mutate_all(tidyr::replace_na, 0)
-# 
-# MPCT_metadata_counts <- 
-#   dplyr::left_join(MPCT_metadata, 
-#                    MPCT_counts, 
-#                    by = c("dataset.id", "site.id", "sample.id"))
-# Sort the taxa to be in alphabetical order.
-# MPCT_metadata_counts <- 
-#   MPCT_metadata_counts 
-#   MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11],
-#                           sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
 ```
 
 ## Remove Coretops data from the fossil pollen dataset
