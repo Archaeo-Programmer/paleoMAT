@@ -1,63 +1,22 @@
-load_prism <- function(sites, out.dir, prism.dir) {
+load_prism <-
+  function(sites,
+           out.dir,
+           prism.dir) {
 
   # Create an output directory
   dir.create(out.dir, showWarnings = F, recursive = T)
-
-  # Load all the auxillary functions
-  all.functions <- lapply(
-    list.files("./src", full.names=T),
-    source)
-
-  # Suppress scientific notation
-  options(scipen=999)
-
-  # Force Raster to load large rasters into memory
-  raster::rasterOptions(chunksize = 2e+08,
-                        maxmemory = 2e+09)
-
-  # This MUST point at an original LT81 dataset available from the PRISM climate group (http://www.prism.oregonstate.edu).
-  PRISM800.DIR <- prism.dir
-
-  # Specify a directory for extraction
-  EXTRACTION.DIR <- list.files(paste0(PRISM800.DIR), recursive=TRUE, full.names=T)
 
   # The climate parameters to be extracted
   types <- c("ppt", "tmin","tmax")
 
   ##### BEGIN RAW DATA EXTRACTION #####
-  # Create data output directory if it doesn't already exist
-  dir.create("./data/extraction", showWarnings = F, recursive = T)
-
-  # (Down)Load the states shapefile from the National Atlas
-  # if(!dir.exists("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statep010")){
-  #   dir.create("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/", showWarnings = F, recursive = T)
-  #   download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz", destfile="/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", mode='wb')
-  #   untar("/Volumes/VILLAGE/SKOPEII/MAT/WORKING/paleomat/data/statesp010g.shp_nt00938.tar.gz", exdir="/Volumes/DATA/NATIONAL_ATLAS/statesp010g")
-  # }
-
-  # Download the states shapefile form the National Atlas
-    download.file("https://prd-tnm.s3.amazonaws.com/StagedProducts/Small-scale/data/Boundaries/statesp010g.shp_nt00938.tar.gz",
-                  destfile = "./data/raw_data/statesp010g.shp_nt00938.tar.gz",
-                  mode='wb')
-    untar("./data/raw_data/statesp010g.shp_nt00938.tar.gz",
-        exdir="./data/raw_data/statesp010g")
-
-  states <- readOGR("./data/raw_data/statesp010g/statesp010g.shp", layer='statesp010g')
-
-  # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
-  states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
-
-  # Get the extent (i.e., the continental United States)
-  extent.states <- raster::extent(states)
-
-  # Floor the minimums, ceiling the maximums.
-  extent.states@xmin <- floor(extent.states@xmin)
-  extent.states@ymin <- floor(extent.states@ymin)
-  extent.states@xmax <- ceiling(extent.states@xmax)
-  extent.states@ymax <- ceiling(extent.states@ymax)
 
   # Get list of all file names in the prism directory.
-  monthly.files <- EXTRACTION.DIR
+  monthly.files <-
+    list.files(prism.dir,
+               recursive = TRUE,
+               full.names = TRUE,
+               pattern = "*\\.bil$")
 
   # Trim to only file names that are rasters.
   monthly.files <- grep("*\\.bil$", monthly.files, value=TRUE)
@@ -65,14 +24,16 @@ load_prism <- function(sites, out.dir, prism.dir) {
   monthly.files <- grep("/cai", monthly.files, value=TRUE)
 
   # Generate the raster stack.
-  type.list <- raster::stack(monthly.files,native=F,quick=T)
+  type.list <- raster::stack(monthly.files, native=F, quick=T)
 
 
 
 
   # Use the raster extract function to extract out the monthly values at a modern pollen location in a table.
   # You can make it run again by deleting the file.
-  climate.points <- raster::extract(x = type.list, y = modern_pollen_points(sites), df = TRUE)
+  climate.points <- raster::extract(x = type.list,
+                                    y = modern_pollen_points(sites),
+                                    df = TRUE)
 
   names <- sites$sample.id
 
