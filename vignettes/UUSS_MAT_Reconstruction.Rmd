@@ -75,7 +75,6 @@ coreTops <-
     sample.id = SampleID
   )
 
-
 ```
 
 # Load and cleanup modern data (i.e., pollen, climate, and locations)
@@ -145,7 +144,6 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 paleomat::load_prism(MPCT_metadata_counts, 
                      here::here("vignettes/data"), 
                      "/Volumes/DATA/PRISM/LT81_800M/")
-
 
 ```
 
