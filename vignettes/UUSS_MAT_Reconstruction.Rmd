@@ -68,19 +68,19 @@ NAID <-
 #   readr::read_rds(here::here("vignettes/data/AZ_metadata_counts.rds"))
 
 # END TESTING.
-  
+
 if(!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))){
   MP_metadata_counts <- 
-  get_modern_pollen(gpid = NAID) %T>%
-  readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
+    get_modern_pollen(gpid = NAID) %T>%
+    readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 }
 MP_metadata_counts <- 
   readr::read_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 
 if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
-NAfossil_metadata_counts <- 
-  get_fossil_pollen(gpid = NAID) %T>%
-  readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
+  NAfossil_metadata_counts <- 
+    get_fossil_pollen(gpid = NAID) %T>%
+    readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
 }
 NAfossil_metadata_counts <- 
   readr::read_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
@@ -119,7 +119,13 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 # Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
 MPCT_metadata_counts <- 
   dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
-  dplyr::arrange(dataset.id) # %>%
+  dplyr::arrange(dataset.id) %>%
+  dplyr::mutate_at(.vars = dplyr::vars(-dataset.id:-pub_year),
+                   .funs = tidyr::replace_na,
+                   0) %>%
+  dplyr::select(dataset.id:pub_year, 
+                sort(tidyselect::peek_vars()))
+# %>%
 #distinct(dataset.id, .keep_all = TRUE)
 
 # Splitting these apart so that all of the NAs for the taxa counts can be changed to zero. Then combine back together.
@@ -137,17 +143,11 @@ MPCT_metadata_counts <-
 #   dplyr::left_join(MPCT_metadata, 
 #                    MPCT_counts, 
 #                    by = c("dataset.id", "site.id", "sample.id"))
-
-MPCT_metadata_counts %<>%
-  dplyr::mutate_at(.vars = dplyr::vars(-dataset.id:-pub_year),
-                   .funs = tidyr::replace_na,
-                   0)
-
 # Sort the taxa to be in alphabetical order.
-MPCT_metadata_counts <- 
-  MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11],
-                          sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
-
+# MPCT_metadata_counts <- 
+#   MPCT_metadata_counts 
+#   MPCT_metadata_counts[,c(names(MPCT_metadata_counts)[1:11],
+#                           sort(names(MPCT_metadata_counts)[12:ncol(MPCT_metadata_counts)]))]
 ```
 
 ## Remove Coretops data from the fossil pollen dataset
@@ -253,10 +253,10 @@ MP_counts_noNAs <- MP_counts %>%
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
-        climate = Clim_noNAs[,13:24], 
-        func = MAT, col = 2, k = 10)
- 
- mat_reconst[[1]]
+                       climate = Clim_noNAs[,13:24], 
+                       func = MAT, col = 2, k = 10)
+
+mat_reconst[[1]]
 
 # for (i in 1:length(fossil_sites)) {
 #   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
@@ -294,35 +294,35 @@ Temperature <- Clim_noNAs[,26:37]
 if (!file.exists("./output/US_reconst_temp_7analog.csv")) {
   
   mat_models_temp_7analog <- purrr::map(1:12,
-                              .f = function(j){
-                                rioja::MAT(y = MPCT_counts_noNAs, 
-                                           x = Temperature[,j], 
-                                           k = 7, 
-                                           dist.method="sq.chord",
-                                           lean = FALSE)
-                              })
+                                        .f = function(j){
+                                          rioja::MAT(y = MPCT_counts_noNAs, 
+                                                     x = Temperature[,j], 
+                                                     k = 7, 
+                                                     dist.method="sq.chord",
+                                                     lean = FALSE)
+                                        })
   
   US_reconst_7analog <- mat_models_temp_7analog %>%
-  purrr::map_dfr(.id = "climate",
-                 .f = function(the.model){
-                   # Create the MAT reconstruction.
-                   mat_reconst <- predict(the.model,
-                                          newdata = NAfossil_metadata_counts %>%
-                                            dplyr::select(-dataset.id:-pub_year),
-                                          sse = TRUE)
-                   
-                   # Put the reconstructed data into a dataframe.
-                   NAfossil_metadata_counts %>%
-                     dplyr::select(dataset.id:pub_year) %>%
-                     dplyr::mutate(model = "MAT") %>%
-                     cbind(
-                       tibble(reconst = mat_reconst$fit[,1],
-                              err = mat_reconst$SEP[,1])
-                     )
-                 })
-
-
- write.csv(US_reconst_7analog, "./output/US_reconst_temp_7analog.csv", row.names = FALSE)
+    purrr::map_dfr(.id = "climate",
+                   .f = function(the.model){
+                     # Create the MAT reconstruction.
+                     mat_reconst <- predict(the.model,
+                                            newdata = NAfossil_metadata_counts %>%
+                                              dplyr::select(-dataset.id:-pub_year),
+                                            sse = TRUE)
+                     
+                     # Put the reconstructed data into a dataframe.
+                     NAfossil_metadata_counts %>%
+                       dplyr::select(dataset.id:pub_year) %>%
+                       dplyr::mutate(model = "MAT") %>%
+                       cbind(
+                         tibble(reconst = mat_reconst$fit[,1],
+                                err = mat_reconst$SEP[,1])
+                       )
+                   })
+  
+  
+  write.csv(US_reconst_7analog, "./output/US_reconst_temp_7analog.csv", row.names = FALSE)
   
 } else {
   
@@ -342,35 +342,35 @@ GDD_noNAs <- Clim_noNAs[,2:13]
 if (!file.exists("./output/US_reconst_GDD_7analog.csv")) {
   
   mat_models_gdd_7analog <- purrr::map(1:12,
-                              .f = function(j){
-                                rioja::MAT(y = MPCT_counts_noNAs, 
-                                           x = GDD_noNAs[,j], 
-                                           k = 7, 
-                                           dist.method="sq.chord",
-                                           lean = FALSE)
-                              })
+                                       .f = function(j){
+                                         rioja::MAT(y = MPCT_counts_noNAs, 
+                                                    x = GDD_noNAs[,j], 
+                                                    k = 7, 
+                                                    dist.method="sq.chord",
+                                                    lean = FALSE)
+                                       })
   
   US_reconst_GDD_7analog <- mat_models_gdd_7analog %>%
-  purrr::map_dfr(.id = "climate",
-                 .f = function(the.model){
-                   # Create the MAT reconstruction.
-                   mat_reconst <- predict(the.model,
-                                          newdata = NAfossil_metadata_counts %>%
-                                            dplyr::select(-dataset.id:-pub_year),
-                                          sse = TRUE)
-                   
-                   # Put the reconstructed data into a dataframe.
-                   NAfossil_metadata_counts %>%
-                     dplyr::select(dataset.id:pub_year) %>%
-                     dplyr::mutate(model = "MAT") %>%
-                     cbind(
-                       tibble(reconst = mat_reconst$fit[,1],
-                              err = mat_reconst$SEP[,1])
-                     )
-                 })
-
-
- write.csv(US_reconst_GDD_7analog, "./output/US_reconst_GDD_7analog.csv", row.names = FALSE)
+    purrr::map_dfr(.id = "climate",
+                   .f = function(the.model){
+                     # Create the MAT reconstruction.
+                     mat_reconst <- predict(the.model,
+                                            newdata = NAfossil_metadata_counts %>%
+                                              dplyr::select(-dataset.id:-pub_year),
+                                            sse = TRUE)
+                     
+                     # Put the reconstructed data into a dataframe.
+                     NAfossil_metadata_counts %>%
+                       dplyr::select(dataset.id:pub_year) %>%
+                       dplyr::mutate(model = "MAT") %>%
+                       cbind(
+                         tibble(reconst = mat_reconst$fit[,1],
+                                err = mat_reconst$SEP[,1])
+                       )
+                   })
+  
+  
+  write.csv(US_reconst_GDD_7analog, "./output/US_reconst_GDD_7analog.csv", row.names = FALSE)
   
 } else {
   
