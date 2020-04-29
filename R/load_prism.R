@@ -5,8 +5,7 @@ load_prism <- function(sites, out.dir, prism.dir) {
 
   # Load all the auxillary functions
   all.functions <- lapply(
-    list.files("./src",
-                                     full.names=T),
+    list.files("./src", full.names=T),
     source)
 
   # Suppress scientific notation

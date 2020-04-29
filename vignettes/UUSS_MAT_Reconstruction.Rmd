@@ -226,3 +226,150 @@ mat_sig[[1]]
 ```
 
 The variance explained is very low for some variables, although the p value is very low. This highlights that in some cases you may not just want to rely on the p value. This also shows the issue with temporal autocorrelation on temperature and, to some extent also, on precipitation variables.
+
+# Reconstruction Statistics
+
+## Reconstruction Significance
+
+Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
+
+Now, we apply a reconstruction to a real dataset.
+
+#### MAT - ten closest
+
+```{r MAT_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# This is an altered wrapper for the randomTF function.
+source('../R/sig_test2.R')
+
+MP_counts_noNAs <- MP_counts %>% 
+  mutate_all(funs(ifelse(is.na(.), 0, .)))
+
+mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
+        climate = Clim_noNAs[,13:24], 
+        func = MAT, col = 2, k = 10)
+ 
+ mat_reconst[[1]]
+
+# for (i in 1:length(fossil_sites)) {
+#   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
+#   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
+#                  climate = Temperature,
+#                  func = mat, col = 2, k = 10)
+#   assign(nam, dat)
+# }
+
+```
+
+Again, no significance for the model. This indicates that we are just not able to see a signal within the data, but this is probably due to the calibration dataset being too broad.
+
+## Reconstruction
+
+Once we have validated the methods, we re-run the analyses using MAT.
+
+### Model Summary and saving values to file.
+
+```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# This is an altered wrapper for the randomTF function.
+source('../R/sig_test2.R')
+
+# Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
+fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
+
+# Subset the climate data to just Temperature. 
+Temperature <- Clim_noNAs[,26:37]
+
+# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States The reconstructions are in one output file, which has the reconstructed temperatures and associated error.
+
+# First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
+
+if (!file.exists("./output/US_reconst_temp_7analog.csv")) {
+  
+  mat_models_temp_7analog <- purrr::map(1:12,
+                              .f = function(j){
+                                rioja::MAT(y = MPCT_counts_noNAs, 
+                                           x = Temperature[,j], 
+                                           k = 7, 
+                                           dist.method="sq.chord",
+                                           lean = FALSE)
+                              })
+  
+  US_reconst_7analog <- mat_models_temp_7analog %>%
+  purrr::map_dfr(.id = "climate",
+                 .f = function(the.model){
+                   # Create the MAT reconstruction.
+                   mat_reconst <- predict(the.model,
+                                          newdata = NAfossil_metadata_counts %>%
+                                            dplyr::select(-dataset.id:-pub_year),
+                                          sse = TRUE)
+                   
+                   # Put the reconstructed data into a dataframe.
+                   NAfossil_metadata_counts %>%
+                     dplyr::select(dataset.id:pub_year) %>%
+                     dplyr::mutate(model = "MAT") %>%
+                     cbind(
+                       tibble(reconst = mat_reconst$fit[,1],
+                              err = mat_reconst$SEP[,1])
+                     )
+                 })
+
+
+ write.csv(US_reconst_7analog, "./output/US_reconst_temp_7analog.csv", row.names = FALSE)
+  
+} else {
+  
+  stop("The US Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
+  
+}
+
+
+#---------------
+
+
+# Do reconstruction for Growing Degree Days. 
+
+# Subset the climate data to just GDD 
+GDD_noNAs <- Clim_noNAs[,2:13]
+
+if (!file.exists("./output/US_reconst_GDD_7analog.csv")) {
+  
+  mat_models_gdd_7analog <- purrr::map(1:12,
+                              .f = function(j){
+                                rioja::MAT(y = MPCT_counts_noNAs, 
+                                           x = GDD_noNAs[,j], 
+                                           k = 7, 
+                                           dist.method="sq.chord",
+                                           lean = FALSE)
+                              })
+  
+  US_reconst_GDD_7analog <- mat_models_gdd_7analog %>%
+  purrr::map_dfr(.id = "climate",
+                 .f = function(the.model){
+                   # Create the MAT reconstruction.
+                   mat_reconst <- predict(the.model,
+                                          newdata = NAfossil_metadata_counts %>%
+                                            dplyr::select(-dataset.id:-pub_year),
+                                          sse = TRUE)
+                   
+                   # Put the reconstructed data into a dataframe.
+                   NAfossil_metadata_counts %>%
+                     dplyr::select(dataset.id:pub_year) %>%
+                     dplyr::mutate(model = "MAT") %>%
+                     cbind(
+                       tibble(reconst = mat_reconst$fit[,1],
+                              err = mat_reconst$SEP[,1])
+                     )
+                 })
+
+
+ write.csv(US_reconst_GDD_7analog, "./output/US_reconst_GDD_7analog.csv", row.names = FALSE)
+  
+} else {
+  
+  stop("The US GDD Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
+  
+}
+
+```
+
