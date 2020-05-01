@@ -9,7 +9,8 @@ License: What license is it under?
 LazyData: TRUE
 Suggests: testthat
 Depends: 
-    magrittr
+    magrittr,
+    R (>= 2.10)
 Imports: 
     neotoma,
     rioja,
@@ -19,8 +20,6 @@ Imports:
     tibble,
     tidyr,
     rebus.numbers,
-    Hmisc,
-    zoo,
     raster,
     leaflet,
     sp,
@@ -30,4 +29,10 @@ Imports:
     plotly,
     RColorBrewer,
     ggplot2,
-    here
+    here,
+    velox (>= 0.2.0.9002),
+    S4Vectors,
+    lubridate,
+    units
+Remotes: 
+    hunzikp/velox

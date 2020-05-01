@@ -124,7 +124,8 @@ MPCT_metadata_counts <-
                    .funs = tidyr::replace_na,
                    0) %>%
   dplyr::select(dataset.id:pub_year, 
-                sort(tidyselect::peek_vars()))
+                sort(tidyselect::peek_vars())) %>%
+  sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
 ```
 
@@ -134,7 +135,9 @@ MPCT_metadata_counts <-
 NAfossil_metadata_counts <- 
   dplyr::anti_join(NAfossil_metadata_counts, 
                    coreTops, 
-                   by = c("dataset.id", "site.id", "sample.id"))
+                   by = c("dataset.id", "site.id", "sample.id")) %>%
+  sf::st_as_sf(coords = c("long","lat"), crs = 4326)
+
 
 ```
 
@@ -142,41 +145,48 @@ NAfossil_metadata_counts <-
 
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
 
-```{r load_Prsim, echo = FALSE, warning=FALSE}
-# Load Prism Climate data.
+```{r extract_prism_normals, echo = FALSE, warning=FALSE}
+# Extract Prism Climate data for modern pollen.
+MPCT_climate <-
+  MPCT_metadata_counts %>%
+  dplyr::select(sample.id) %>%
+  extract_prism_normals() %>%
+  sf::st_drop_geometry() %>%
+  dplyr::left_join(MPCT_metadata_counts) %>%
+  dplyr::select(sample.id, 
+                prism.normals,
+                geometry,
+                ABIES:XANTHIUM) %>%
+  tidyr::nest(pollen.counts = c(-sample.id, -prism.normals, -geometry)) %>%
+  sf::st_as_sf() %>%
+  dplyr::select(sample.id, 
+                climate = prism.normals,
+                pollen = pollen.counts)
 
-# Returns clim_wide.
-paleomat::load_prism(MPCT_metadata_counts, 
-                     here::here("vignettes/data"), 
-                     prism.dir = "/Volumes/DATA/PRISM/LT81_800M/")
+# Get the data into the final format used by the palaeoSig and rioja packages
+MPCT_final <- 
+  MPCT_climate %>%
+  dplyr::mutate(
+    pollen = 
+      purrr::map(
+        function(x){
+          x/rowSums(x)
+        }),
+    climate = 
+      purrr::map(
+        function(x){
+          x %>%
+            dplyr::select(month,
+                          ppt ,
+                          gdd) %>%
+            tidyr::pivot_longer(ppt:gdd,
+                                names_to = "element") %>%
+            tidyr::unite("element_month", element, month) %>%
+            tidyr::pivot_wider(names_from = element_month,
+                               values_from = value)
+        })
+  )
 
-```
-
-## Clean up datasets to remove NAs for PRISM data
-
-Need to further clean up the datasets to remove any rows with NA values. Although currently working with United States data, we do not currently have climate (prism) data for Alaska, which is the reason for all rows with NAs.
-
-```{r removePrismNAs, echo=FALSE, warning=FALSE}
-
-# Get row number in first column that have NA values.
-NAindex <- 
-  which(is.na(clim_wide[,2]), arr.ind=FALSE)
-
-# Remove rows with NA values for the precipitation, temperature, and GDD using the index.
-Clim_noNAs <- 
-  clim_wide[-(NAindex),]
-
-rownames(Clim_noNAs) <- 
-  seq(length=nrow(Clim_noNAs))
-
-# Remove rows in Moden Pollen dataset, using the same index. This will keep the sites/locations still matched up between the climate data and the modern pollen counts.
-MPCT_metadata_counts_noNAs <- 
-  MPCT_metadata_counts[-(NAindex),]
-
-# Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- 
-  MPCT_metadata_counts_noNAs[,-(1:11)] %>% 
-  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 ```
 
@@ -192,21 +202,31 @@ The MAT method is testing whether the modern calibration is able to detect signa
 
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
-# Remove metadata columns to run significance test.
-MPCT_counts_noNAs <- 
-  MPCT_metadata_counts_noNAs[,-(1:9)] %>% 
-  dplyr::mutate_all(funs(ifelse(is.na(.), 0, .)))
-
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-mat_sig <- 
-  paleomat::run_tf(pollen = MPCT_counts_noNAs, 
-                   climate = Clim_noNAs[,14:25],
-                   func = rioja::MAT, 
-                   col = 1, 
-                   k = 10)
-
-#col 1 is just the closest analogue.
-mat_sig[[1]]
+palaeoSig::randomTF(spp = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest() %>%
+                      tibble::column_to_rownames("sample.id"),
+                    env = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, climate) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest() %>%
+                      tibble::column_to_rownames("sample.id"),
+                    fos = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest() %>%
+                      tibble::column_to_rownames("sample.id"),
+                    n = 99,
+                    fun = rioja::MAT,
+                    col = 1,
+                    k = 10) %$%
+  tibble::tibble("% Explained" = EX,
+                 "p-value" = sig)
 
 ```
 

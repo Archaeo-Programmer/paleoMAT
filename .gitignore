@@ -9,8 +9,8 @@
 /Figures/*
 /raw_data
 /raw_data/*
-vignettes/data/raw_data/LT81_800M
-vignettes/data/raw_data/LT81_800M/*
+data-raw/LT81_800M
+data-raw/LT81_800M/*
 
 # Mac trash files
 .DS_Store
