@@ -52,4 +52,24 @@ prism_normals$normal %<>%
     x
   })
 
-usethis::use_data(prism_normals, version = 3, overwrite = TRUE)
+prism_normals %<>%
+  dplyr::group_by(month) %>%
+  dplyr::group_split() %>%
+  magrittr::set_names(paste0("prism_", 1:12))
+
+for(i in 1:length(prism_normals)) assign(names(prism_normals)[i], prism_normals[[i]])
+
+usethis::use_data(prism_1,
+                  prism_2,
+                  prism_3,
+                  prism_4,
+                  prism_5,
+                  prism_6,
+                  prism_7,
+                  prism_8,
+                  prism_9,
+                  prism_10,
+                  prism_11,
+                  prism_12,
+                  version = 3,
+                  overwrite = TRUE)
