@@ -24,6 +24,7 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE)
 
+# devtools::install()
 # devtools::load_all()
 library(paleomat)
 
@@ -125,6 +126,7 @@ MPCT_metadata_counts <-
                    0) %>%
   dplyr::select(dataset.id:pub_year, 
                 sort(tidyselect::peek_vars())) %>%
+  dplyr::filter(!is.na(long)) %>% 
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
 ```
@@ -168,12 +170,12 @@ MPCT_final <-
   MPCT_climate %>%
   dplyr::mutate(
     pollen = 
-      purrr::map(
+      purrr::map(pollen,
         function(x){
           x/rowSums(x)
         }),
     climate = 
-      purrr::map(
+      purrr::map(climate,
         function(x){
           x %>%
             dplyr::select(month,
@@ -194,9 +196,10 @@ MPCT_final <-
 
 Need to change this into a function. **
 
-To test the model, I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. If we do get a significance for a climate variable, then we know that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data. Here, we use a wrapper function for [randomTF](https://github.com/NeotomaDB/Workbooks/blob/master/PollenClimate/R/sig_test.R).
+To test the model, I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. If we get a significance for a climate variable, then we know that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data.
 
 The MAT method is testing whether the modern calibration is able to detect signals in each of the climate parameters. The example here uses the entire North American Modern Pollen Database, rather than a targeted data subset.
+
 
 ### MAT - ten closest
 
@@ -207,25 +210,26 @@ palaeoSig::randomTF(spp =
                       MPCT_final %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
-                      tidyr::unnest() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
                       tibble::column_to_rownames("sample.id"),
                     env = 
                       MPCT_final %>%
                       dplyr::select(sample.id, climate) %>%
                       sf::st_drop_geometry() %>%
-                      tidyr::unnest() %>%
+                      tidyr::unnest(cols = c(climate)) %>%
                       tibble::column_to_rownames("sample.id"),
                     fos = 
                       MPCT_final %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
-                      tidyr::unnest() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
                       tibble::column_to_rownames("sample.id"),
                     n = 99,
                     fun = rioja::MAT,
                     col = 1,
                     k = 10) %$%
-  tibble::tibble("% Explained" = EX,
+  tibble::tibble("variable" = colnames(MPCT_final$climate[[1]]),
+                 "% Explained" = EX*100,
                  "p-value" = sig)
 
 ```
@@ -244,14 +248,43 @@ Now, we apply a reconstruction to a real dataset.
 
 ```{r MAT_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+palaeoSig::randomTF(spp = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    env = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, climate) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(climate)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    fos = 
+                      MPCT_final %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    n = 99,
+                    fun = rioja::MAT,
+                    col = 1,
+                    k = 10) %$%
+  tibble::tibble("variable" = colnames(MPCT_final[[3]][[1]]),
+                 "% Explained" = EX*100,
+                 "p-value" = sig)
+
+
+# Old
 # This is an altered wrapper for the randomTF function.
 source('../R/sig_test2.R')
 
-MP_counts_noNAs <- MP_counts %>% 
+MP_counts_noNAs <- MPCT_metadata_counts %>% 
+  dplyr::select(-site.id:-pub_year) %>% 
   mutate_all(funs(ifelse(is.na(.), 0, .)))
 
 mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
-                       climate = Clim_noNAs[,13:24], 
+                       climate = Clim_noNAs[,13:24],
                        func = MAT, col = 2, k = 10)
 
 mat_reconst[[1]]
