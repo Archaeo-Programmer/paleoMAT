@@ -189,7 +189,7 @@ MPCT_final <-
         function(x){
           x %>%
             dplyr::select(month,
-                          ppt ,
+                          ppt,
                           gdd) %>%
             tidyr::pivot_longer(ppt:gdd,
                                 names_to = "element") %>%
@@ -320,24 +320,36 @@ Once we have validated the methods, we re-run the analyses using MAT.
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # This is an altered wrapper for the randomTF function.
-source('../R/sig_test2.R')
+source('./R/sig_test2.R')
 
 # Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
 fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
 
-# Subset the climate data to just Temperature. 
-Temperature <- Clim_noNAs[,26:37]
+# Subset the MPCT_final to just the modern pollen.
+modern_pollen <- MPCT_final %>%
+    dplyr::select(sample.id, pollen) %>%
+    sf::st_drop_geometry() %>%
+    tidyr::unnest(cols = c(pollen)) %>%
+    tibble::column_to_rownames("sample.id")
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States The reconstructions are in one output file, which has the reconstructed temperatures and associated error.
+# Subset the MPCT_final to just the modern pollen.
+modern_gdd <- MPCT_final %>%
+    dplyr::select(sample.id, climate) %>%
+    sf::st_drop_geometry() %>%
+    tidyr::unnest(cols = c(climate)) %>%
+    tibble::column_to_rownames("sample.id") %>% 
+    dplyr::select(-contains("ppt"))
+
+# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. The reconstructions are in one output file, which has the reconstructed gdd and associated error.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./output/US_reconst_temp_7analog.csv")) {
+if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.csv")) {
   
   mat_models_temp_7analog <- purrr::map(1:12,
                                         .f = function(j){
-                                          rioja::MAT(y = MPCT_counts_noNAs, 
-                                                     x = Temperature[,j],
+                                          rioja::MAT(y = modern_pollen, 
+                                                     x = modern_gdd[,j],
                                                      k = 7, 
                                                      dist.method="sq.chord",
                                                      lean = FALSE)
@@ -363,59 +375,11 @@ if (!file.exists("./output/US_reconst_temp_7analog.csv")) {
                    })
   
   
-  write.csv(US_reconst_7analog, "./output/US_reconst_temp_7analog.csv", row.names = FALSE)
+  write.csv(US_reconst_7analog, "./output/US_reconst_gdd_7analog.csv", row.names = FALSE)
   
 } else {
   
-  stop("The US Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
-  
-}
-
-
-#---------------
-
-
-# Do reconstruction for Growing Degree Days. 
-
-# Subset the climate data to just GDD 
-GDD_noNAs <- Clim_noNAs[,2:13]
-
-if (!file.exists("./output/US_reconst_GDD_7analog.csv")) {
-  
-  mat_models_gdd_7analog <- purrr::map(1:12,
-                                       .f = function(j){
-                                         rioja::MAT(y = MPCT_counts_noNAs, 
-                                                    x = GDD_noNAs[,j], 
-                                                    k = 7, 
-                                                    dist.method="sq.chord",
-                                                    lean = FALSE)
-                                       })
-  
-  US_reconst_GDD_7analog <- mat_models_gdd_7analog %>%
-    purrr::map_dfr(.id = "climate",
-                   .f = function(the.model){
-                     # Create the MAT reconstruction.
-                     mat_reconst <- predict(the.model,
-                                            newdata = NAfossil_metadata_counts %>%
-                                              dplyr::select(-dataset.id:-pub_year),
-                                            sse = TRUE)
-                     
-                     # Put the reconstructed data into a dataframe.
-                     NAfossil_metadata_counts %>%
-                       dplyr::select(dataset.id:pub_year) %>%
-                       dplyr::mutate(model = "MAT") %>%
-                       cbind(
-                         tibble(reconst = mat_reconst$fit[,1],
-                                err = mat_reconst$SEP[,1])
-                       )
-                   })
-  
-  
-  write.csv(US_reconst_GDD_7analog, "./output/US_reconst_GDD_7analog.csv", row.names = FALSE)
-  
-} else {
-  
-  stop("The US GDD Reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
+  stop("The US reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
   
 }
 
