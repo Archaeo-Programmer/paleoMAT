@@ -146,6 +146,7 @@ NAfossil_final <-
                 geometry,
                 ABIES:XANTHIUM) %>%
   tibble::as_tibble() %>% 
+  dplyr::mutate_all(tidyr::replace_na, 0) %>% 
   tidyr::nest(pollen.counts = c(-sample.id, -geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(sample.id,
@@ -325,57 +326,33 @@ source('./R/sig_test2.R')
 # Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
 fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
 
-# Subset the MPCT_final to just the modern pollen.
-modern_pollen <- MPCT_final %>%
-    dplyr::select(sample.id, pollen) %>%
-    sf::st_drop_geometry() %>%
-    tidyr::unnest(cols = c(pollen)) %>%
-    tibble::column_to_rownames("sample.id")
-
-# Subset the MPCT_final to just the modern pollen.
-modern_gdd <- MPCT_final %>%
-    dplyr::select(sample.id, climate) %>%
-    sf::st_drop_geometry() %>%
-    tidyr::unnest(cols = c(climate)) %>%
-    tibble::column_to_rownames("sample.id") %>% 
-    dplyr::select(-contains("ppt"))
-
 # Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. The reconstructions are in one output file, which has the reconstructed gdd and associated error.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.csv")) {
+if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.rds")) {
   
   mat_models_temp_7analog <- purrr::map(1:12,
                                         .f = function(j){
-                                          rioja::MAT(y = modern_pollen, 
-                                                     x = modern_gdd[,j],
+                                          rioja::MAT(y = dplyr::bind_rows(MPCT_final$pollen), 
+                                                     x = dplyr::bind_rows(MPCT_final$climate)[,paste0("gdd_",j)],
                                                      k = 7, 
                                                      dist.method="sq.chord",
                                                      lean = FALSE)
                                         })
   
   US_reconst_7analog <- mat_models_temp_7analog %>%
-    purrr::map_dfr(.id = "climate",
-                   .f = function(the.model){
-                     # Create the MAT reconstruction.
-                     mat_reconst <- predict(the.model,
-                                            newdata = NAfossil_metadata_counts %>%
-                                              dplyr::select(-dataset.id:-pub_year),
-                                            sse = TRUE)
-                     
-                     # Put the reconstructed data into a dataframe.
-                     NAfossil_metadata_counts %>%
-                       dplyr::select(dataset.id:pub_year) %>%
-                       dplyr::mutate(model = "MAT") %>%
-                       cbind(
-                         tibble(reconst = mat_reconst$fit[,1],
-                                err = mat_reconst$SEP[,1])
-                       )
-                   })
+    purrr::map(.id = "climate",
+               .f = function(the.model){
+                 # Create the MAT reconstruction.
+                 predict(the.model,
+                         newdata = dplyr::bind_rows(NAfossil_final$pollen) %>% 
+                           as.data.frame() %>% 
+                           set_rownames(NAfossil_final$sample.id),
+                         sse = FALSE)
+               })
   
-  
-  write.csv(US_reconst_7analog, "./output/US_reconst_gdd_7analog.csv", row.names = FALSE)
+  readr::write_rds(US_reconst_7analog, "./vignettes/data/US_reconst_gdd_7analog.rds")
   
 } else {
   
@@ -385,3 +362,16 @@ if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.csv")) {
 
 ```
 
+
+```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# Put the reconstructed data into a dataframe.
+NAfossil_metadata_counts %>%
+  dplyr::select(dataset.id:pub_year) %>%
+  dplyr::mutate(model = "MAT") %>%
+  cbind(
+    tibble::tibble(reconst = mat_reconst$fit[,1],
+                   err = mat_reconst$SEP[,1])
+  )
+
+```
