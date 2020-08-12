@@ -335,20 +335,20 @@ if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.rds")) {
   mat_models_temp_7analog <- purrr::map(1:12,
                                         .f = function(j){
                                           rioja::MAT(y = dplyr::bind_rows(MPCT_final$pollen), 
-                                                     x = dplyr::bind_rows(MPCT_final$climate)[,paste0("gdd_",j)],
+                                                     x = dplyr::bind_rows(MPCT_final$climate)[[paste0("gdd_",j)]],
                                                      k = 7, 
                                                      dist.method="sq.chord",
                                                      lean = FALSE)
                                         })
   
   US_reconst_7analog <- mat_models_temp_7analog %>%
-    purrr::map(.id = "climate",
-               .f = function(the.model){
+    purrr::map(.f = function(the.model){
                  # Create the MAT reconstruction.
-                 predict(the.model,
+                 predict(object = the.model,
                          newdata = dplyr::bind_rows(NAfossil_final$pollen) %>% 
                            as.data.frame() %>% 
-                           set_rownames(NAfossil_final$sample.id),
+                           set_rownames(NAfossil_final$sample.id) %>% 
+                           dplyr::mutate_all(~ ifelse(. < 0, 0, .)),
                          sse = FALSE)
                })
   
@@ -359,6 +359,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.rds")) {
   stop("The US reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
   
 }
+
 
 
 ```
