@@ -11,6 +11,8 @@ data-raw/LT81_800M
 data-raw/LT81_800M/*
 vignettes/data/US_reconst_gdd_7analog.rds
 vignettes/data/US_reconst_gdd_7analog.rds/*
+vignettes/data/US_reconst_gdd.rds
+vignettes/data/US_reconst_gdd.rds/*
 
 # Mac trash files
 .DS_Store

@@ -330,53 +330,60 @@ fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.rds")) {
+if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
+  mat_models_temp <- purrr::map(
+    1:12,
+    .f = function(j) {
+      rioja::MAT(
+        y = dplyr::bind_rows(MPCT_final$pollen),
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("gdd_", j)]],
+        k = 7,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
+    }
+  )
   
-  mat_models_temp_7analog <- purrr::map(1:12,
-                                        .f = function(j){
-                                          rioja::MAT(y = dplyr::bind_rows(MPCT_final$pollen), 
-                                                     x = dplyr::bind_rows(MPCT_final$climate)[[paste0("gdd_",j)]],
-                                                     k = 7, 
-                                                     dist.method="sq.chord",
-                                                     lean = FALSE)
-                                        })
+  US_reconst_gdd <- mat_models_temp %>%
+    purrr::map(
+      .f = function(the.model) {
+        # Create the MAT reconstruction.
+        predict(
+          object = the.model,
+          newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
+            as.data.frame() %>%
+            set_rownames(NAfossil_final$sample.id) %>%
+            dplyr::mutate_all(~ ifelse(. < 0, 0, .)),
+          sse = FALSE
+        )
+      }
+    )
   
-  US_reconst_7analog <- mat_models_temp_7analog %>%
-    purrr::map(.f = function(the.model){
-                 # Create the MAT reconstruction.
-                 predict(object = the.model,
-                         newdata = dplyr::bind_rows(NAfossil_final$pollen) %>% 
-                           as.data.frame() %>% 
-                           set_rownames(NAfossil_final$sample.id) %>% 
-                           dplyr::mutate_all(~ ifelse(. < 0, 0, .)),
-                         sse = FALSE)
-               })
-  
-  readr::write_rds(US_reconst_7analog, "./vignettes/data/US_reconst_gdd_7analog.rds")
+  readr::write_rds(US_reconst_gdd, "./vignettes/data/US_reconst_gdd.rds")
   
 } else {
-  
-  stop("The US reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory.")
+  stop(
+    "The US reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory."
+  )
   
 }
-
-
 
 ```
 
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-if(!exists("US_reconst_7analog")) {
-  US_reconst_7analog <-
-    readr::read_rds(here::here("./vignettes/data/US_reconst_gdd_7analog.rds"))
+if(!exists("US_reconst_gdd")) {
+  US_reconst_gdd <-
+    readr::read_rds(here::here("./vignettes/data/US_reconst_gdd.rds"))
 }
 
 # Put the reconstructed data into a dataframe.
-NAfossil_metadata_counts %>%
+US_reconst_simple <- NAfossil_metadata_counts %>%
   dplyr::select(dataset.id:pub_year) %>%
   dplyr::mutate(model = "MAT") %>%
   cbind(tibble::tibble(reconst = mat_reconst$fit[, 1],
                        err = mat_reconst$SEP[, 1]))
+
 
 ```
