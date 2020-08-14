@@ -367,13 +367,16 @@ if (!file.exists("./vignettes/data/US_reconst_gdd_7analog.rds")) {
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+if(!exists("US_reconst_7analog")) {
+  US_reconst_7analog <-
+    readr::read_rds(here::here("./vignettes/data/US_reconst_gdd_7analog.rds"))
+}
+
 # Put the reconstructed data into a dataframe.
 NAfossil_metadata_counts %>%
   dplyr::select(dataset.id:pub_year) %>%
   dplyr::mutate(model = "MAT") %>%
-  cbind(
-    tibble::tibble(reconst = mat_reconst$fit[,1],
-                   err = mat_reconst$SEP[,1])
-  )
+  cbind(tibble::tibble(reconst = mat_reconst$fit[, 1],
+                       err = mat_reconst$SEP[, 1]))
 
 ```
