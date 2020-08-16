@@ -354,7 +354,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
             as.data.frame() %>%
             set_rownames(NAfossil_final$sample.id) %>%
             dplyr::mutate_all(~ ifelse(. < 0, 0, .)),
-          sse = FALSE
+          sse = TRUE
         )
       }
     )
@@ -367,6 +367,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
   )
   
 }
+
 
 ```
 
@@ -382,8 +383,8 @@ if(!exists("US_reconst_gdd")) {
 US_reconst_simple <- NAfossil_metadata_counts %>%
   dplyr::select(dataset.id:pub_year) %>%
   dplyr::mutate(model = "MAT") %>%
-  cbind(tibble::tibble(reconst = mat_reconst$fit[, 1],
-                       err = mat_reconst$SEP[, 1]))
+  cbind(tibble::tibble(reconst = US_reconst_gdd$fit[, 1],
+                       err = US_reconst_gdd$SEP[, 1]))
 
 
 ```
