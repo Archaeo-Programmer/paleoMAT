@@ -381,5 +381,6 @@ if(!exists("US_reconst_gdd")) {
 US_reconst_simple <-
   simplify_reconstruction(reconstruction.data = US_reconst_gdd,
                           fossil.metadata = NAfossil_metadata_counts)
+    
 
 ```
