@@ -140,15 +140,12 @@ NAfossil_metadata_counts <-
                    by = c("dataset.id", "site.id", "sample.id")) %>%
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
-NAfossil_final <- ok <- 
+NAfossil_final <-  
   NAfossil_metadata_counts %>%
-  dplyr::select(sample.id,
-                geometry,
-                ABIES:XANTHIUM) %>%
+  dplyr::select(!c(dataset.id, site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>% 
   dplyr::mutate_all(tidyr::replace_na, 0) %>% 
-  dplyr::mutate_at(vars(-sample.id, -geometry), ~ ifelse(. < 0, 0, .)) %>% 
-  #mutate_each(funs(replace(. < 0, 0, .)), -geometry) %>% 
+  dplyr::mutate(dplyr::across(!c(sample.id, geometry), ~ifelse(.x < 0, 0, .x))) %>%
   tidyr::nest(pollen.counts = c(-sample.id, -geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(sample.id,
@@ -354,8 +351,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
           object = the.model,
           newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
             as.data.frame() %>%
-            set_rownames(NAfossil_final$sample.id) %>%
-            dplyr::mutate_all(~ ifelse(. < 0, 0, .)),
+            set_rownames(NAfossil_final$sample.id),
           sse = TRUE
         )
       }
@@ -381,12 +377,9 @@ if(!exists("US_reconst_gdd")) {
     readr::read_rds(here::here("./vignettes/data/US_reconst_gdd.rds"))
 }
 
-# Put the reconstructed data into a dataframe.
-US_reconst_simple <- NAfossil_metadata_counts %>%
-  dplyr::select(dataset.id:pub_year) %>%
-  dplyr::mutate(model = "MAT") %>%
-  cbind(tibble::tibble(reconst = US_reconst_gdd$fit[, 1],
-                       err = US_reconst_gdd$SEP[, 1]))
-
+# Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts. 
+US_reconst_simple <-
+  simplify_reconstruction(reconstruction.data = US_reconst_gdd,
+                          fossil.metadata = NAfossil_metadata_counts)
 
 ```
