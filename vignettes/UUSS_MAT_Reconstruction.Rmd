@@ -140,13 +140,15 @@ NAfossil_metadata_counts <-
                    by = c("dataset.id", "site.id", "sample.id")) %>%
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
-NAfossil_final <-
+NAfossil_final <- ok <- 
   NAfossil_metadata_counts %>%
   dplyr::select(sample.id,
                 geometry,
                 ABIES:XANTHIUM) %>%
   tibble::as_tibble() %>% 
   dplyr::mutate_all(tidyr::replace_na, 0) %>% 
+  dplyr::mutate_at(vars(-sample.id, -geometry), ~ ifelse(. < 0, 0, .)) %>% 
+  #mutate_each(funs(replace(. < 0, 0, .)), -geometry) %>% 
   tidyr::nest(pollen.counts = c(-sample.id, -geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(sample.id,
