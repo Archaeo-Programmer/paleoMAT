@@ -347,7 +347,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
     purrr::map(
       .f = function(the.model) {
         # Create the MAT reconstruction.
-        predict(
+        rioja:::predict.MAT(
           object = the.model,
           newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
             as.data.frame() %>%
