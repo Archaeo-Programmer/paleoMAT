@@ -1,14 +1,21 @@
+# object is the mat model that was created from the modern pollen and modern climate.
 predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
           nboot = 100, match.data = TRUE, verbose = TRUE, lean = TRUE,
           ...)
 {
+  # Check to make sure that k is greater than 1 or less than or equal to k used in the modern mat model.
   if (k < 1 | k > object$k)
     stop("k out of range")
+  # If the fossil pollen data is null (newdata), then return the prediction based on the number of k values; just for the modern samples.
   if (is.null(newdata)) {
     return(object$fitted.values[, c(k, k + object$k), drop = FALSE])
   }
+  # match.data will match two species datasets if their column names are the same (a logical).
   if (match.data) {
+    # Combine the modern pollen samples (as proportions) with the fossil pollen samples into
+    # a list of 2 dataframes.
     d <- rioja:::Merge(object$y, newdata, split = TRUE)
+    #
     y1 <- as.matrix(d[[1]])
     y2 <- as.matrix(d[[2]])
     rownames(y2) <- rownames(newdata)
