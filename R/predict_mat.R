@@ -6,7 +6,8 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
   # Check to make sure that k is greater than 1 or less than or equal to k used in the modern mat model.
   if (k < 1 | k > object$k)
     stop("k out of range")
-  # If the fossil pollen data is null (newdata), then return the prediction based on the number of k values; just for the modern samples.
+  # If the fossil pollen data is null (newdata), then return the prediction based on the number of k values;
+  # just for the modern samples.
   if (is.null(newdata)) {
     return(object$fitted.values[, c(k, k + object$k), drop = FALSE])
   }
@@ -19,28 +20,44 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
     y1 <- as.matrix(d[[1]])
     y2 <- as.matrix(d[[2]])
     rownames(y2) <- rownames(newdata)
-  }
-  else {
+  } else {
+    # The number of taxa (i.e., the # of columns) in the modern pollen and fossil pollen
+    # dataset must be the same. If not, then will get an error here. Checking by # of columns and column names.
     if (ncol(object$y) != ncol(newdata))
       stop("Number of taxa does not match between datasets")
     if (any(colnames(object$y) != colnames(newdata)))
       stop("Taxon names do not match between datasets")
+    # Assign modern pollen proportions to y1. Assign fossil pollen portions to y2.
     y1 <- object$y
     y2 <- newdata
   }
+
+  # n is the number of training sets. If there are rownames (ID numbers) that overlap, then there would
+  # be 2 training sets. If not, then there will just be 1 training set.
   if (nrow(y1) != nrow(y2)) {
     n = 1
-  }
-  else if (any(rownames(y1) == rownames(y2))) {
+  } else if (any(rownames(y1) == rownames(y2))) {
     n = 2
-  }
-  else {
+  } else {
     n = 1
   }
+
+  # x is the output from randomTF (i.e., proportion of variance in the fossil data explained by an environmental reconstruction).
   x1 <- object$x
+
+  # All row-wise dissimilarities between the two datasets (i.e., modern and fossil pollen).
   diss <- rioja:::paldist2(y1, y2, dist.method = object$dist.method)
+
+  # Put the dissimilarities in order for each column, which creates an index # in each column of the dataframe.
   ind <- apply(diss, 2, order)
-  dist.n <- t(apply(diss, 2, sort)[n:(n + k - 1), , drop = FALSE])
+
+  # Sort the dissimilarities in each column, then only keep the top k rows and drop any FALSE, then transpose.
+  # original code for next 3 lines:  dist.n <- t(apply(diss, 2, sort)[n:(n + k - 1), , drop = FALSE])
+  sor <- apply(diss, 2, sort)
+  sor2 <- do.call(rbind, sor)
+  dist.n <- t(sor2[n:(n + k - 1), , drop = FALSE])
+
+
   rownames(dist.n) <- rownames(y2)
   colnames(dist.n) <- paste("N", sprintf("%02d", 1:k), sep = "")
   x.n <- t(matrix(x1[ind[n:(n + k - 1), , drop = FALSE]],
