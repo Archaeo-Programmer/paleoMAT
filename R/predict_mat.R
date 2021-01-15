@@ -33,7 +33,7 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
   }
 
   # n is the number of training sets. If there are rownames (ID numbers) that overlap, then there would
-  # be 2 training sets. If not, then there will just be 1 training set.
+  # be 2 training sets. If not, then there is 1 training set.
   if (nrow(y1) != nrow(y2)) {
     n = 1
   } else if (any(rownames(y1) == rownames(y2))) {
@@ -42,7 +42,7 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
     n = 1
   }
 
-  # x is the output from randomTF (i.e., proportion of variance in the fossil data explained by an environmental reconstruction).
+  # x is the environmental variable used in the model (i.e., gdd from the modern samples).
   x1 <- object$x
 
   # All row-wise dissimilarities between the two datasets (i.e., modern and fossil pollen).
