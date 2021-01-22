@@ -1,4 +1,4 @@
-# object is the mat model that was created from the modern pollen and modern climate.
+# object is the mat model that was created from the modern pollen and modern climate. This function is modified from rioja:::predict.MAT.
 predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
           nboot = 100, match.data = TRUE, verbose = TRUE, lean = TRUE,
           ...)
@@ -16,7 +16,7 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
     # Combine the modern pollen samples (as proportions) with the fossil pollen samples into
     # a list of 2 dataframes.
     d <- rioja:::Merge(object$y, newdata, split = TRUE)
-    #
+    # Take out the modern and fossil samples into individual matrices.
     y1 <- as.matrix(d[[1]])
     y2 <- as.matrix(d[[2]])
     rownames(y2) <- rownames(newdata)
