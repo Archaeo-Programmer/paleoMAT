@@ -32,6 +32,7 @@ extract_prism_normals <-
                       purrr::map(normal,
                                  function(x){
                                    ## Cast as VeloxRaster
+                                   ## Possibly do, exactextractr::exact_extract since velox is deprecated.
                                    vx <- velox::velox(x)
                                    sites %>%
                                      # dplyr::select(sample.id, geometry) %>%
