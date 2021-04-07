@@ -25,6 +25,8 @@ vignettes/data/US_reconst_gdd.rds/*
 # Session Data files
 .RData
 .RDataTmp
+.RDataTmp1
+.RDataTmp2
 yoursession.RData
 
 # RStudio files

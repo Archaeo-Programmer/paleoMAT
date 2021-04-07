@@ -54,8 +54,8 @@ predict_mat <- function (object, newdata = NULL, k = object$k, sse = FALSE,
   # Sort the dissimilarities in each column, then only keep the top k rows and drop any FALSE, then transpose.
   # original code for next 3 lines:  dist.n <- t(apply(diss, 2, sort)[n:(n + k - 1), , drop = FALSE])
   sor <- apply(diss, 2, sort)
-  sor2 <- do.call(rbind, sor)
-  dist.n <- t(sor2[n:(n + k - 1), , drop = FALSE])
+  sor2 <- do.call(cbind, sor)
+  dist.n <- sor2[n:(n + k - 1), , drop = FALSE]
 
 
   rownames(dist.n) <- rownames(y2)

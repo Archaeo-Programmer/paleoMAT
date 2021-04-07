@@ -1,3 +1,4 @@
+# This script creates the mat model using the modern pollen and modern climate data.
 model_mat <- function (y, x, dist.method = "sq.chord", k = 5, lean = TRUE)
 {
   call.fit <- as.call(list(quote(MAT), y = quote(y), x = quote(x),
