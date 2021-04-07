@@ -102,12 +102,17 @@ coreTops <-
 
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-CT_metadata_counts <- 
+if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
+  CT_metadata_counts <- 
   dplyr::left_join(coreTops,
                    NAfossil_metadata_counts,
                    by  = c("dataset.id", "site.id", "sample.id")) %>% 
   dplyr::mutate(type = "core top") %>% 
-  dplyr::arrange(dataset.id)
+  dplyr::arrange(dataset.id) %T>%
+    readr::write_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
+}
+CT_metadata_counts <- 
+  readr::read_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
 
 ```
 
