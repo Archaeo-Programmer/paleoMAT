@@ -114,6 +114,7 @@ if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
 CT_metadata_counts <- 
   readr::read_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
 
+
 ```
 
 The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, representing `r ncol(MP_counts)` different pollen taxa.
@@ -144,6 +145,7 @@ NAfossil_metadata_counts <-
                    coreTops, 
                    by = c("dataset.id", "site.id", "sample.id")) %>%
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
+
 
 NAfossil_final <-  
   NAfossil_metadata_counts %>%
