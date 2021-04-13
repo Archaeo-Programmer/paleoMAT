@@ -165,6 +165,11 @@ NAfossil_final <-
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
 
 ```{r extract_prism_normals, echo = FALSE, warning=FALSE}
+
+#Load prism data.
+filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
+lapply(filenames,load,.GlobalEnv)
+
 # Extract Prism Climate data for modern pollen.
 MPCT_climate <-
   MPCT_metadata_counts %>%
