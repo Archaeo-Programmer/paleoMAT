@@ -169,6 +169,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 #Load prism data.
 filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
 lapply(filenames,load,.GlobalEnv)
+#load(file = "data/prism_1.rda")
 
 # Extract Prism Climate data for modern pollen.
 MPCT_climate <-

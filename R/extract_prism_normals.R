@@ -26,29 +26,34 @@ extract_prism_normals <-
          prism_10,
          prism_11,
          prism_12) %>%
-      dplyr::bind_rows() %>%
-      dplyr::arrange(element, month) %>%
-      dplyr::mutate(extraction =
-                      purrr::map(normal,
-                                 function(z){
-                                  ## raster::extract(x = z, y = geometry, df = TRUE)
-                                   ## Cast as VeloxRaster
-                                   ## Possibly do, exactextractr::exact_extract since velox is deprecated.
-                                   #vx <- velox::velox(x)
-                                   #sites %>%
-                                     # # dplyr::select(sample.id, geometry) %>%
-                                     # dplyr::mutate(.,
-                                     #               extraction = as.numeric(vx$extract_points(.))) %>%
-                                     # sf::st_drop_geometry()
-
-                                     dplyr::mutate(.,
-                                                   extraction = as.numeric(raster::extract(x = z, y = sites$geometry))) #%>%
-                                     #sf::st_drop_geometry()
-                                 })) %>%
-      dplyr::select(element, month, extraction) %>%
-      dplyr::ungroup() %>%
-      dplyr::mutate(month = as.integer(month)) %>%
-      tidyr::unnest(extraction) %>%
+       prism_1 %>%
+       dplyr::bind_rows() %>%
+       dplyr::arrange(element, month) %>%
+       dplyr::rowwise() %>%
+       dplyr::mutate(extraction =
+                       list(raster::extract(x = normal,
+                                            y = sites))) %>%
+       # dplyr::mutate(extraction =
+       #                 purrr::map(normal,
+       #                            function(z){
+       #                             ## raster::extract(x = z, y = geometry, df = TRUE)
+       #                              ## Cast as VeloxRaster
+       #                              ## Possibly do, exactextractr::exact_extract since velox is deprecated.
+       #                              #vx <- velox::velox(x)
+       #                              #sites %>%
+       #                                # # dplyr::select(sample.id, geometry) %>%
+       #                                # dplyr::mutate(.,
+       #                                #               extraction = as.numeric(vx$extract_points(.))) %>%
+     #                                # sf::st_drop_geometry()
+     #
+     #                                dplyr::mutate(.,
+     #                                              extraction = as.numeric(raster::extract(x = z, y = sites$geometry))) #%>%
+     #                                #sf::st_drop_geometry()
+     #                            })) %>%
+     dplyr::select(element, month, extraction) %>%
+       dplyr::ungroup() %>%
+       dplyr::mutate(month = as.integer(month)) %>%
+       tidyr::unnest(extraction) %>%
       tidyr::pivot_wider(names_from = element,
                          values_from = extraction) %>%
       dplyr::left_join(month_days) %>%
