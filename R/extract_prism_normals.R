@@ -26,49 +26,39 @@ extract_prism_normals <-
          prism_10,
          prism_11,
          prism_12) %>%
-       prism_1 %>%
+       # This line is temporary as I'm just using prism_1 to test the script.
+       # ok <- prism_1 %>%
        dplyr::bind_rows() %>%
        dplyr::arrange(element, month) %>%
        dplyr::rowwise() %>%
+       #sf::st_transform(sites, crs = raster::projection(normal)) %>%
        dplyr::mutate(extraction =
                        list(raster::extract(x = normal,
                                             y = sites))) %>%
-       # dplyr::mutate(extraction =
-       #                 purrr::map(normal,
-       #                            function(z){
-       #                             ## raster::extract(x = z, y = geometry, df = TRUE)
-       #                              ## Cast as VeloxRaster
-       #                              ## Possibly do, exactextractr::exact_extract since velox is deprecated.
-       #                              #vx <- velox::velox(x)
-       #                              #sites %>%
-       #                                # # dplyr::select(sample.id, geometry) %>%
-       #                                # dplyr::mutate(.,
-       #                                #               extraction = as.numeric(vx$extract_points(.))) %>%
-     #                                # sf::st_drop_geometry()
-     #
-     #                                dplyr::mutate(.,
-     #                                              extraction = as.numeric(raster::extract(x = z, y = sites$geometry))) #%>%
-     #                                #sf::st_drop_geometry()
-     #                            })) %>%
-     dplyr::select(element, month, extraction) %>%
+       dplyr::select(element, month, extraction) %>%
        dplyr::ungroup() %>%
        dplyr::mutate(month = as.integer(month)) %>%
        tidyr::unnest(extraction) %>%
-      tidyr::pivot_wider(names_from = element,
-                         values_from = extraction) %>%
-      dplyr::left_join(month_days) %>%
-      dplyr::mutate(gdd = calc_gdd(tmin = tmin,
-                                   tmax = tmax,
-                                   t.base = 10,
-                                   t.cap = 30) * days)  %>%
-      na.omit() %>%
-      dplyr::select(-days) %>%
-      tidyr::nest(prism.normals = c(month,
-                                    ppt,
-                                    tmin,
-                                    tmax,
-                                    gdd)) %>%
-      dplyr::right_join(sites, .) %>%
-      sf::st_as_sf()
+       # PRISM extractions are all multiplied by 10 in order to store them as integers.
+       # Therefore, here, to get to mm for ppt, and deg_C for temperature, then I divide by 10.
+       dplyr::mutate(extraction = extraction / 10.00) %>%
+       tidyr::pivot_wider(names_from = element,
+                          values_from = extraction) %>%
+       dplyr::left_join(month_days) %>%
+       dplyr::mutate(gdd = calc_gdd(
+         tmin = tmin,
+         tmax = tmax,
+         t.base = 10,
+         t.cap = 30
+       ) * days)  %>%
+       na.omit() %>%
+       dplyr::select(-days) %>%
+       tidyr::nest(prism.normals = c(month,
+                                     ppt,
+                                     tmin,
+                                     tmax,
+                                     gdd)) %>%
+       dplyr::right_join(sites, .) %>%
+       sf::st_as_sf()
 
   }
