@@ -14,7 +14,7 @@ extract_prism_normals <-
       dplyr::group_by(month) %>%
       dplyr::summarise(`days` = mean(n))
 
-    list(prism_1,
+     list(prism_1,
          prism_2,
          prism_3,
          prism_4,
@@ -30,15 +30,20 @@ extract_prism_normals <-
       dplyr::arrange(element, month) %>%
       dplyr::mutate(extraction =
                       purrr::map(normal,
-                                 function(x){
+                                 function(z){
+                                  ## raster::extract(x = z, y = geometry, df = TRUE)
                                    ## Cast as VeloxRaster
                                    ## Possibly do, exactextractr::exact_extract since velox is deprecated.
-                                   vx <- velox::velox(x)
-                                   sites %>%
-                                     # dplyr::select(sample.id, geometry) %>%
+                                   #vx <- velox::velox(x)
+                                   #sites %>%
+                                     # # dplyr::select(sample.id, geometry) %>%
+                                     # dplyr::mutate(.,
+                                     #               extraction = as.numeric(vx$extract_points(.))) %>%
+                                     # sf::st_drop_geometry()
+
                                      dplyr::mutate(.,
-                                                   extraction = as.numeric(vx$extract_points(.))) %>%
-                                     sf::st_drop_geometry()
+                                                   extraction = as.numeric(raster::extract(x = z, y = sites$geometry))) #%>%
+                                     #sf::st_drop_geometry()
                                  })) %>%
       dplyr::select(element, month, extraction) %>%
       dplyr::ungroup() %>%
