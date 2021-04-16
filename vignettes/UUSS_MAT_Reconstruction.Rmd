@@ -135,9 +135,9 @@ MPCT_metadata_counts <-
   dplyr::filter(!is.na(long)) %>% 
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
-# Keep only modern sites in the United States
+# Keep only modern sites in the United States.
 # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of continental United States.
-states <- readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp", layer='statesp010g')
+states <- rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp", layer='statesp010g')
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
 states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
 # Filter out non-continental states and territories. 

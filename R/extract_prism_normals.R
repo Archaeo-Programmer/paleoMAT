@@ -14,7 +14,7 @@ extract_prism_normals <-
       dplyr::group_by(month) %>%
       dplyr::summarise(`days` = mean(n))
 
-     list(prism_1,
+    prism_extraction <- list(prism_1,
          prism_2,
          prism_3,
          prism_4,
@@ -26,8 +26,8 @@ extract_prism_normals <-
          prism_10,
          prism_11,
          prism_12) %>%
-       # This line is temporary as I'm just using prism_1 to test the script.
-       # ok <- prism_1 %>%
+       # This line is temporary as I'm using prism_1 and prism_2 to test the script.
+       # prism_extraction <- list(prism_1, prism_2) %>%
        dplyr::bind_rows() %>%
        dplyr::arrange(element, month) %>%
        dplyr::rowwise() %>%
@@ -54,14 +54,28 @@ extract_prism_normals <-
          t.cap = 30
        ) * days))  %>%
        #tidyr::unnest(c(ppt, tmax, tmin, gdd)) %>%
-       na.omit() %>%
-       dplyr::select(-days) %>%
+       dplyr::select(-days)
+
+     # Find any rows with NAs then remove record from the sites dataset.
+     NA_index <- which(is.na(prism_extraction$ppt[[1]]))
+     sites <- sites %>%
+       dplyr::slice(-NA_index)
+
+     # Drop any rows with NAs in the prism extraction.
+     prism_extraction <- prism_extraction %>%
+       na.omit()
+
+
+     prism_extraction %>%
+       # dplyr::bind_cols(sites, .) %>%
+       # sf::st_as_sf() %>%
+       # tidyr::nest(c(sample.id, ppt, tmax, tmin, gdd)) %>%
        tidyr::nest(prism.normals = c(month,
                                      ppt,
                                      tmin,
                                      tmax,
-                                     gdd)) %>% ok <-  ok %>%
-       dplyr::right_join(sites, .) %>%
-       sf::st_as_sf()
+                                     gdd)) #%>%
+     # dplyr::right_join(sites, .) %>%
+     # sf::st_as_sf()
 
   }
