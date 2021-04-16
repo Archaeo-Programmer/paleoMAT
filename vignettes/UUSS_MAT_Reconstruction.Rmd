@@ -145,7 +145,7 @@ continental.states <- subset(states, NAME != "Alaska" & NAME != "Hawaii" & NAME 
 # Convert sp to sf.
 continental.states <- sf::st_as_sf(continental.states, crs = 4326)
 # Update projection to CRS 4326, which is WGS 84.
-continental.states <- sf:st_transform(continental.states, 4326)
+continental.states <- sf::st_transform(continental.states, 4326)
 # Need to make the geometry valid for the states shapefile.
 continental.states <- sf::st_make_valid(continental.states)
 

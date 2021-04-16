@@ -45,19 +45,22 @@ extract_prism_normals <-
        tidyr::pivot_wider(names_from = element,
                           values_from = extraction) %>%
        dplyr::left_join(month_days) %>%
-       dplyr::mutate(gdd = calc_gdd(
+       #tidyr::unnest(c(ppt, tmax, tmin)) %>%
+       dplyr::rowwise() %>%
+       dplyr::mutate(gdd = list(calc_gdd(
          tmin = tmin,
          tmax = tmax,
          t.base = 10,
          t.cap = 30
-       ) * days)  %>%
+       ) * days))  %>%
+       #tidyr::unnest(c(ppt, tmax, tmin, gdd)) %>%
        na.omit() %>%
        dplyr::select(-days) %>%
        tidyr::nest(prism.normals = c(month,
                                      ppt,
                                      tmin,
                                      tmax,
-                                     gdd)) %>%
+                                     gdd)) %>% ok <-  ok %>%
        dplyr::right_join(sites, .) %>%
        sf::st_as_sf()
 
