@@ -26,9 +26,8 @@ extract_prism_normals <-
     #      prism_10,
     #      prism_11,
     #      prism_12) %>%
-       # This line is temporary as I'm using prism_1 and prism_2 to test the script. TEST
-      # prism_extraction <- prism_1 %>%
-      prism_extraction <- list(prism_1, prism_2) %>%
+      prism_extraction <- list(prism_1,
+                               prism_2) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(element, month) %>%
       dplyr::rowwise() %>%
@@ -40,48 +39,44 @@ extract_prism_normals <-
       dplyr::rowwise() %>%
       dplyr::mutate(sample.id =
                       list(sites$sample.id)) %>%
-       dplyr::mutate(month = as.integer(month)) %>%
-       tidyr::unnest(c(extraction, sample.id)) %>%
-       # PRISM extractions are all multiplied by 10 in order to store them as integers.
-       # Therefore, here, to get to mm for ppt, and deg_C for temperature, then divide by 10.
-       dplyr::mutate(extraction = extraction / 10.00) %>%
-       tidyr::pivot_wider(names_from = element,
-                          values_from = extraction) %>%
-       dplyr::left_join(month_days) %>%
-       #tidyr::unnest(c(ppt, tmax, tmin)) %>%
+      dplyr::mutate(month = as.integer(month)) %>%
+      tidyr::unnest(c(extraction, sample.id)) %>%
+      # PRISM extractions are all multiplied by 10 in order to store them as integers.
+      # Therefore, here, to get to mm for ppt, and deg_C for temperature, then divide by 10.
+      dplyr::mutate(extraction = extraction / 10.00) %>%
+      tidyr::pivot_wider(names_from = element,
+                         values_from = extraction) %>%
+      dplyr::left_join(month_days) %>%
       dplyr::rowwise() %>%
       dplyr::mutate(tavg =
                       (tmax + tmin) / 2)  %>%
-       dplyr::rowwise() %>%
-       dplyr::mutate(gdd = list(calc_gdd(
-         tmin = tmin,
-         tmax = tmax,
-         t.base = 10,
-         t.cap = 30
-       ) * days))  %>%
-       #tidyr::unnest(c(ppt, tmax, tmin, gdd)) %>%
-       dplyr::select(-days)
+      dplyr::rowwise() %>%
+      dplyr::mutate(gdd = (calc_gdd(
+        tmin = tmin,
+        tmax = tmax,
+        t.base = 10,
+        t.cap = 30
+      ) * days))  %>%
+      dplyr::select(-days)
 
     # Find any rows with NAs then remove record from the sites dataset.
     NA_index <- which(is.na(prism_extraction$ppt))
     NA_index <- unique(prism_extraction$sample.id[NA_index])
 
-    sites <- subset(sites, sample.id != NA_index)
+    if(NA_index != length(0)){
+      sites <- subset(sites, sample.id != NA_index)
+    }
 
-
-    # Drop any rows with NAs in the prism extraction.
-     prism_extraction <- prism_extraction %>%
-       na.omit()
-
-
-     prism_extraction %>%
-       tidyr::nest(prism.normals = c(month,
-                                     ppt,
-                                     tmin,
-                                     tmax,
-                                     tavg,
-                                     gdd)) %>%
-     dplyr::right_join(sites, .) %>%
-     sf::st_as_sf()
+    prism_extraction %>%
+      # Drop any rows with NAs in the prism extraction.
+      na.omit() %>%
+      tidyr::nest(prism.normals = c(month,
+                                    ppt,
+                                    tmin,
+                                    tmax,
+                                    tavg,
+                                    gdd)) %>%
+      dplyr::right_join(sites, .) %>%
+      sf::st_as_sf()
 
   }

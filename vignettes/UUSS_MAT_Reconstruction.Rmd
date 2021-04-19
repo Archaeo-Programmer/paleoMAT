@@ -186,8 +186,8 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 ```{r extract_prism_normals, echo = FALSE, warning=FALSE}
 
 #Load prism data.
-filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
-lapply(filenames,load,.GlobalEnv)
+# filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
+# lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
 
 # Extract Prism Climate data for modern pollen.
@@ -196,7 +196,7 @@ MPCT_climate <-
   dplyr::select(sample.id) %>% 
   extract_prism_normals() %>%
   sf::st_drop_geometry() %>%
-  dplyr::left_join(MPCT_metadata_counts_final) %>%
+  dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>% 
   dplyr::select(sample.id, 
                 prism.normals,
                 geometry,
@@ -222,6 +222,7 @@ MPCT_final <-
           x %>%
             dplyr::select(month,
                           ppt,
+                          tavg,
                           gdd) %>%
             tidyr::pivot_longer(ppt:gdd,
                                 names_to = "element") %>%
