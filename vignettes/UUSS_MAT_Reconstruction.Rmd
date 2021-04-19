@@ -192,7 +192,6 @@ lapply(filenames,load,.GlobalEnv)
 
 # Extract Prism Climate data for modern pollen.
 MPCT_climate <- 
-  # sites <- 
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>% 
   extract_prism_normals() %>%
