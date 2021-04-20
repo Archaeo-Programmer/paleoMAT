@@ -207,7 +207,7 @@ MPCT_climate <-
                 climate = prism.normals,
                 pollen = pollen.counts)
 
-# Get the data into the final format used by the palaeoSig and rioja packages
+# Get the data into the final format used by the palaeoSig and rioja packages.
 MPCT_final <- 
   MPCT_climate %>%
   dplyr::mutate(
