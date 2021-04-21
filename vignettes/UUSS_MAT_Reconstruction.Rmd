@@ -185,7 +185,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 
 ```{r extract_prism_normals, echo = FALSE, warning=FALSE}
 
-#Load prism data.
+#Load prism data. Note: This is only if having trouble installing/loading paleomat package.
 # filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
 # lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
@@ -369,7 +369,7 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
       rioja::MAT(
         y = dplyr::bind_rows(MPCT_final$pollen),
         x = dplyr::bind_rows(MPCT_final$climate)[[paste0("gdd_", j)]],
-        k = 7,
+        k = 5,
         dist.method = "sq.chord",
         lean = FALSE
       )

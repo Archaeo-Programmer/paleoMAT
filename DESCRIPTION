@@ -30,9 +30,6 @@ Imports:
     RColorBrewer,
     ggplot2,
     here,
-    velox (>= 0.2.0.9002),
     S4Vectors,
     lubridate,
     units
-Remotes: 
-    hunzikp/velox

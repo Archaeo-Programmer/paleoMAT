@@ -14,20 +14,20 @@ extract_prism_normals <-
       dplyr::group_by(month) %>%
       dplyr::summarise(`days` = mean(n))
 
-    # prism_extraction <- list(prism_1,
-    #      prism_2,
-    #      prism_3,
-    #      prism_4,
-    #      prism_5,
-    #      prism_6,
-    #      prism_7,
-    #      prism_8,
-    #      prism_9,
-    #      prism_10,
-    #      prism_11,
-    #      prism_12) %>%
-      prism_extraction <- list(prism_1,
-                               prism_2) %>%
+    prism_extraction <- list(prism_1,
+         prism_2,
+         prism_3,
+         prism_4,
+         prism_5,
+         prism_6,
+         prism_7,
+         prism_8,
+         prism_9,
+         prism_10,
+         prism_11,
+         prism_12) %>%
+      # prism_extraction <- list(prism_1,
+      #                          prism_2) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(element, month) %>%
       dplyr::rowwise() %>%
