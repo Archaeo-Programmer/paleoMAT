@@ -356,7 +356,51 @@ Once we have validated the methods, we re-run the analyses using MAT.
 # Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
 fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. The reconstructions are in one output file, which has the reconstructed tavg and associated error.
+# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. 
+# Average Temperature
+# The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error.
+
+# First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
+
+if (!file.exists("./vignettes/data/US_reconst_tavg.rds")) {
+  mat_models_temp <- purrr::map(
+    1:12,
+    .f = function(j) {
+      rioja::MAT(
+        y = dplyr::bind_rows(MPCT_final$pollen),
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", j)]],
+        k = 5,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
+    }
+  )
+  
+  US_reconst_tavg <- mat_models_temp %>%
+    purrr::map(
+      .f = function(the.model) {
+        # Create the MAT reconstruction.
+        predict(
+          object = the.model,
+          newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
+            as.data.frame() %>%
+            set_rownames(NAfossil_final$sample.id),
+          sse = TRUE
+        )
+      }
+    )
+  
+  readr::write_rds(US_reconst_tavg, "./vignettes/data/US_reconst_tavg.rds")
+  
+} else {
+  stop(
+    "The US reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the US directory."
+  )
+  
+}
+
+# GDD
+# The reconstructions are in one output file, which has the reconstructed gdd and associated error.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
