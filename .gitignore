@@ -15,6 +15,10 @@ vignettes/data/US_reconst_gdd.rds
 vignettes/data/US_reconst_gdd.rds/*
 vignettes/data/US_reconst_tavg.rds
 vignettes/data/US_reconst_tavg.rds/*
+vignettes/data/reconst_tavg.rds
+vignettes/data/reconst_tavg.rds/*
+vignettes/data/reconst_gdd.rds
+vignettes/data/reconst_gdd.rds/*
 
 # Mac trash files
 .DS_Store

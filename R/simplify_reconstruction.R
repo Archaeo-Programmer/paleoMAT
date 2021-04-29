@@ -1,7 +1,7 @@
 simplify_reconstruction <- function(reconstruction.data, fossil.metadata){
   # In function(x), the reconstructed data is selected (or x$fit and the MAT column), then transformed into a tibble.
   # Then, the metadata is bound to the reconstructed data, which is for every sample for each month (months 1 through 12).
-  # Then, the data is reorganized so that value (or the reconstructed GDD) is at the end.
+  # Then, the data is reorganized so that value (or the reconstructed tavg/GDD) is at the end.
   # The associated error of the climate reconstructions (or value) is added as an additional column.
   # map_dfr is used to bind all the rows together from the function being run on the 12 objects (or months of data).
   # .id is used to specify the month that the reconstruction and error belong to.

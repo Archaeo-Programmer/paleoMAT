@@ -159,15 +159,31 @@ MPCT_metadata_counts_final <- dplyr::select (sites_in_states,-c(NAME:PRIM_MILES)
 ## Remove Coretops data from the fossil pollen dataset
 ```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-NAfossil_metadata_counts <- 
+fossil_metadata_counts <- 
   dplyr::anti_join(NAfossil_metadata_counts, 
                    coreTops, 
                    by = c("dataset.id", "site.id", "sample.id")) %>%
   sf::st_as_sf(coords = c("long","lat"), crs = 4326)
 
+# # Do an intersection and keep only the sites that are within the continental United States.
+# fossil_sites_in_states <- sf::st_intersection(fossil_metadata_counts, continental.states)
+# # Drop the columns from the states shapefile.
+# fossil_metadata_counts_final <- dplyr::select (fossil_sites_in_states,-c(NAME:PRIM_MILES))
 
-NAfossil_final <-  
-  NAfossil_metadata_counts %>%
+# Limit fossil sites to just the Southwest for reconstruction.
+# First, create a bounding box for the upper united states southwest
+bb <- c("xmin" = -113, "xmax" = -105, "ymin" = 31.334, "ymax" = 38.09) %>% 
+  sf::st_bbox() %>% 
+  sf::st_as_sfc() %>% 
+  sf::st_as_sf(crs = 4326) %>% 
+  sf::st_transform(crs = 4326)
+
+# Do an intersection and keep only the sites that are within the continental United States.
+fossil_metadata_counts_final <- sf::st_intersection(fossil_metadata_counts, bb)
+
+
+fossil_final <-  
+  fossil_metadata_counts_final %>%
   dplyr::select(!c(dataset.id, site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>% 
   dplyr::mutate_all(tidyr::replace_na, 0) %>% 
@@ -305,7 +321,7 @@ palaeoSig::randomTF(spp =
                       tidyr::unnest(cols = c(climate)) %>%
                       tibble::column_to_rownames("sample.id"),
                     fos = 
-                      MPCT_final %>%
+                      fossil_final %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
                       tidyr::unnest(cols = c(pollen)) %>%
@@ -321,20 +337,20 @@ palaeoSig::randomTF(spp =
 
 # Old
 # This is an altered wrapper for the randomTF function.
-source('../R/sig_test2.R')
-
-MP_counts_noNAs <- MPCT_metadata_counts_final %>% 
-  dplyr::select(-site.id:-pub_year) %>% 
-  mutate_all(funs(ifelse(is.na(.), 0, .)))
-
-mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
-                       climate = Clim_noNAs[,13:24],
-                       func = MAT, col = 2, k = 10)
-
-mat_reconst[[1]]
+# source('../R/sig_test2.R')
+# 
+# MP_counts_noNAs <- MPCT_metadata_counts_final %>% 
+#   dplyr::select(-site.id:-pub_year) %>% 
+#   mutate_all(funs(ifelse(is.na(.), 0, .)))
+# 
+# mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
+#                        climate = Clim_noNAs[,13:24],
+#                        func = MAT, col = 2, k = 10)
+# 
+# mat_reconst[[1]]
 
 # Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
-# fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
+# fossil_sites <- unique(fossil_metadata_counts_final$dataset.id)
 
 # for (i in 1:length(fossil_sites)) {
 #   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
@@ -356,14 +372,14 @@ Once we have validated the methods, we re-run the analyses using MAT.
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. 
+# Now, we carry out the reconstruction for all fossil pollen sites in the southwest US study area. 
 
 # Average Temperature
 # The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error for each months.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./vignettes/data/US_reconst_tavg.rds")) {
+if (!file.exists("./vignettes/data/reconst_tavg.rds")) {
   mat_models_temp <- purrr::map(
     1:12,
     .f = function(j) {
@@ -377,21 +393,21 @@ if (!file.exists("./vignettes/data/US_reconst_tavg.rds")) {
     }
   )
   
-  US_reconst_tavg <- mat_models_temp %>%
+  reconst_tavg <- mat_models_temp %>%
     purrr::map(
       .f = function(the.model) {
         # Create the MAT reconstruction.
         predict(
           object = the.model,
-          newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
+          newdata = dplyr::bind_rows(fossil_final$pollen) %>%
             as.data.frame() %>%
-            set_rownames(NAfossil_final$sample.id),
+            set_rownames(fossil_final$sample.id),
           sse = TRUE
         )
       }
     )
   
-  readr::write_rds(US_reconst_tavg, "./vignettes/data/US_reconst_tavg.rds")
+  readr::write_rds(reconst_tavg, "./vignettes/data/reconst_tavg.rds")
   
 } else {
   stop(
@@ -405,7 +421,7 @@ if (!file.exists("./vignettes/data/US_reconst_tavg.rds")) {
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
+if (!file.exists("./vignettes/data/reconst_gdd.rds")) {
   mat_models_temp <- purrr::map(
     1:12,
     .f = function(j) {
@@ -419,21 +435,21 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
     }
   )
   
-  US_reconst_gdd <- mat_models_temp %>%
+  reconst_gdd <- mat_models_temp %>%
     purrr::map(
       .f = function(the.model) {
         # Create the MAT reconstruction.
         predict(
           object = the.model,
-          newdata = dplyr::bind_rows(NAfossil_final$pollen) %>%
+          newdata = dplyr::bind_rows(fossil_final$pollen) %>%
             as.data.frame() %>%
-            set_rownames(NAfossil_final$sample.id),
+            set_rownames(fossil_final$sample.id),
           sse = TRUE
         )
       }
     )
   
-  readr::write_rds(US_reconst_gdd, "./vignettes/data/US_reconst_gdd.rds")
+  readr::write_rds(reconst_gdd, "./vignettes/data/reconst_gdd.rds")
   
 } else {
   stop(
@@ -449,27 +465,27 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Simplify tavg
-if(!exists("US_reconst_tavg")) {
-  US_reconst_tavg <-
-    readr::read_rds(here::here("./vignettes/data/US_reconst_tavg.rds"))
+if(!exists("reconst_tavg")) {
+  reconst_tavg <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg.rds"))
 }
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts. 
-US_reconst_simple_tavg <-
-  simplify_reconstruction(reconstruction.data = US_reconst_tavg,
-                          fossil.metadata = NAfossil_metadata_counts)
+reconst_simple_tavg <-
+  simplify_reconstruction(reconstruction.data = reconst_tavg,
+                          fossil.metadata = fossil_metadata_counts_final)
 
 
 #Simplify GDD
-if(!exists("US_reconst_gdd")) {
-  US_reconst_gdd <-
-    readr::read_rds(here::here("./vignettes/data/US_reconst_gdd.rds"))
+if(!exists("reconst_gdd")) {
+  reconst_gdd <-
+    readr::read_rds(here::here("./vignettes/data/reconst_gdd.rds"))
 }
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts. 
-US_reconst_simple_gdd <-
-  simplify_reconstruction(reconstruction.data = US_reconst_gdd,
-                          fossil.metadata = NAfossil_metadata_counts)
+reconst_simple_gdd <-
+  simplify_reconstruction(reconstruction.data = reconst_gdd,
+                          fossil.metadata = fossil_metadata_counts_final)
     
 
 ```
