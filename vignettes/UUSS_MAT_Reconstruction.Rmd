@@ -333,6 +333,9 @@ mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data,
 
 mat_reconst[[1]]
 
+# Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
+# fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
+
 # for (i in 1:length(fossil_sites)) {
 #   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
 #   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
@@ -353,12 +356,10 @@ Once we have validated the methods, we re-run the analyses using MAT.
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
-fossil_sites <- unique(NAfossil_metadata_counts$dataset.id)
-
 # Now, we carry out the reconstruction for all fossil pollen sites in the continental United States. 
+
 # Average Temperature
-# The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error.
+# The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error for each months.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
@@ -447,13 +448,26 @@ if (!file.exists("./vignettes/data/US_reconst_gdd.rds")) {
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+# Simplify tavg
+if(!exists("US_reconst_tavg")) {
+  US_reconst_tavg <-
+    readr::read_rds(here::here("./vignettes/data/US_reconst_tavg.rds"))
+}
+
+# Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts. 
+US_reconst_simple_tavg <-
+  simplify_reconstruction(reconstruction.data = US_reconst_tavg,
+                          fossil.metadata = NAfossil_metadata_counts)
+
+
+#Simplify GDD
 if(!exists("US_reconst_gdd")) {
   US_reconst_gdd <-
     readr::read_rds(here::here("./vignettes/data/US_reconst_gdd.rds"))
 }
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts. 
-US_reconst_simple <-
+US_reconst_simple_gdd <-
   simplify_reconstruction(reconstruction.data = US_reconst_gdd,
                           fossil.metadata = NAfossil_metadata_counts)
     

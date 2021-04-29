@@ -30,6 +30,5 @@ Imports:
     RColorBrewer,
     ggplot2,
     here,
-    S4Vectors,
     lubridate,
     units
