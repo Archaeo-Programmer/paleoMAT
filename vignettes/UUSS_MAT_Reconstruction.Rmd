@@ -461,6 +461,15 @@ if (!file.exists("./vignettes/data/reconst_gdd.rds")) {
 
 ```
 
+```{r clim_threshold, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# Apply a threshold to the reconstruction, so that if an analgoue is too dissimilar that it will not be used in the reconstruction. Then, based on the remaining analgoues, the final reconstruction and associated error will be re-calculated. 
+
+reconst_tavg_final <- 
+
+  
+```
+
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
