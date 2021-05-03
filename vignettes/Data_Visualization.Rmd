@@ -116,6 +116,26 @@ UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
+UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS[1:50, ])), aes(x=midP, y=value_mean, label = value_n, label2 = value_unique_sites)) + 
+  #scale_color_gradient(low="blue", high="red") +
+  geom_ribbon(aes(x=midP, ymin = value_mean - error_mean,
+                  ymax = value_mean + error_mean,
+                  alpha = 0.2),
+              fill = "grey",
+              colour="dark grey", 
+              show.legend = F ) +
+  geom_line(colour="red", size = 3.0) +
+  xlab("Year BC/AD") +
+  ylab("Temperature °C") +
+  scale_x_continuous(breaks=seq(-3100,2100,200), minor_breaks = seq(-3000, 2000, 200)) +
+  scale_y_continuous(breaks=seq(6,19,1), limits = c(6, 19)) +
+  theme_bw() + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  labs(col = "Temperature (°C)")
+
+# Save the plot for GS.
+ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf", path = "./vignettes/figures", units="in", width=21, height=13)
 
 
 
