@@ -154,6 +154,28 @@ sites_in_states <- sf::st_intersection(MPCT_metadata_counts, continental.states)
 # Drop the columns from the states shapefile.
 MPCT_metadata_counts_final <- dplyr::select (sites_in_states,-c(NAME:PRIM_MILES))
 
+
+
+# # Keep only modern samples in specific ecoregions. This is if the reconstructions are limited by their level 1 ecoregions.
+# # Read in the Level 1 ecoregions shapefile (https://gaftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/na_cec_eco_l1.zip), which will be used to filter out modern pollen sites that are outside of the given ecoregions.
+# ecoregions <- readOGR("/Volumes/PUCK_HD/Users/andrew/Downloads/na_cec_eco_l1/NA_CEC_Eco_Level1.shp")
+# # Keep only ecoregions that there are fossil pollen sites in for the UUSS.
+# western.ecoregions <- subset(ecoregions, NA_L1CODE == 6 | NA_L1CODE == 10 | NA_L1CODE == 12 | NA_L1CODE == 13)
+# # Convert sp to sf.
+# western.ecoregions2 <- sf::st_as_sf(western.ecoregions, crs = 4326)
+# # Update projection to CRS 4326, which is WGS 84.
+# western.ecoregions2 <- sf::st_transform(western.ecoregions2, 4326)
+# # Need to make the geometry valid for the states shapefile.
+# western.ecoregions2 <- sf::st_make_valid(western.ecoregions2)
+# 
+# # Keep only ecoregion area that falls within the continental united states.
+# ecoregions_in_states <- sf::st_intersection(western.ecoregions2, continental.states)
+# 
+# # Do an intersection and keep only the sites that are within the selected western ecoregions.
+# sites_in_ecoregions <- sf::st_intersection(MPCT_metadata_counts, ecoregions_in_states)
+# # Drop the columns from the states shapefile.
+# sites_in_ecoregions_final <- dplyr::select (sites_in_ecoregions,-c(NAME:PRIM_MILES))
+
 ```
 
 ## Remove Coretops data from the fossil pollen dataset
@@ -527,8 +549,8 @@ if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
   reconst_tavg_final <-
     simplify_reconstruction(reconstruction.data = reconst_tavg_threshold,
                             fossil.metadata = fossil_metadata_counts_final) %>%
-    # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction).
-    drop_na(value)
+    # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
+    tidyr::drop_na(age, value)
   
   readr::write_rds(reconst_tavg_final,
                    "./vignettes/data/reconst_tavg_final.rds")
@@ -552,8 +574,8 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
   reconst_gdd_final <-
     simplify_reconstruction(reconstruction.data = reconst_gdd_threshold,
                             fossil.metadata = fossil_metadata_counts_final) %>%
-    # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction).
-    drop_na(value)
+    # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
+    tidyr::drop_na(age, value)
   
   readr::write_rds(reconst_gdd_final,
                    "./vignettes/data/reconst_gdd_final.rds")

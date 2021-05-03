@@ -32,4 +32,5 @@ Imports:
     here,
     lubridate,
     units,
-    reshape2
+    reshape2,
+    rcarbon
