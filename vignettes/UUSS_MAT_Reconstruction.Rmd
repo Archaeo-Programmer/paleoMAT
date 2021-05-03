@@ -468,7 +468,13 @@ if (!file.exists("./vignettes/data/reconst_gdd.rds")) {
 #tavg
 if (!file.exists("./vignettes/data/reconst_tavg_threshold.rds")) {
   reconst_tavg_threshold <-
-    purrr::map(.x = reconst_tavg, .f = apply_threshold)
+    reconst_tavg %>%
+    purrr::map(
+      .f = function(the.reconst) {
+        apply_threshold(x = the.reconst,
+                        qtile = .995)
+      }
+    )
   
   readr::write_rds(reconst_tavg_threshold,
                    "./vignettes/data/reconst_tavg_threshold.rds")
@@ -484,7 +490,14 @@ if (!file.exists("./vignettes/data/reconst_tavg_threshold.rds")) {
 #gdd
 if (!file.exists("./vignettes/data/reconst_gdd_threshold.rds")) {
   reconst_gdd_threshold <-
-    purrr::map(.x = reconst_gdd, .f = apply_threshold)
+    reconst_gdd %>%
+    purrr::map(
+      .f = function(the.reconst) {
+        apply_threshold(x = the.reconst,
+                        qtile = .995)
+      }
+    )
+  
   
   readr::write_rds(reconst_gdd_threshold,
                    "./vignettes/data/reconst_gdd_threshold.rds")

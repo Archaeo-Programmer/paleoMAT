@@ -1,11 +1,11 @@
 apply_threshold <-
-  function(x, k = x$k) {
+  function(x, qtile = .995, k = x$k) {
     # Calculate the cutoff value.
     # First, combine all analogues into 1 list.
     cutoff <- reshape2::melt(x$dist.n) %>%
       dplyr::select(value)
     # Next, get the cutoff for where 99.5% of the data falls within.
-    cutoff <-  quantile(cutoff$value, probs=.995)
+    cutoff <-  quantile(cutoff$value, probs=qtile)
     # For the dissimilarities of the k closest analogues, change the values that are greater than the threshold (i.e., cutoff) to NA.
     # x$dist.n has the distance for k analogues at each location and depth.
     x$dist.n[x$dist.n > cutoff] <- NA
@@ -43,8 +43,8 @@ apply_threshold <-
       ))))
     # When using min(), if there are only NAs, then Inf or -Inf will be returned. So, here, the Inf values are converted to NAs.
     x$diagnostics <-
-      x$diagnostics %>% mutate_if(is.numeric, list( ~ na_if(., Inf))) %>%
-      mutate_if(is.numeric, list( ~ na_if(.,-Inf)))
+      x$diagnostics %>% dplyr::mutate_if(is.numeric, list( ~ na_if(., Inf))) %>%
+      dplyr::mutate_if(is.numeric, list( ~ na_if(.,-Inf)))
 
     x
   }

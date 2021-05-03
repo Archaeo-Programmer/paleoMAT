@@ -1,0 +1,54 @@
+---
+title: "Data Visualization for Upland United States Southwest Pollen-based Climate Reconstruction"
+author: "Andrew Gillreath-Brown"
+date: "5/3/2021"
+mainfont: Calibri
+output:
+  html_document:
+    code_folding: show
+    keep_md: yes
+    number_sections: yes
+    theme: sandstone
+    toc: yes
+    toc_depth: 3
+    toc_float: yes
+  pdf_document:
+    toc: yes
+    toc_depth: '3'
+always_allow_html: yes
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# devtools::install()
+# devtools::load_all()
+library(paleomat)
+
+```
+
+# Load the final reconstruction data.
+
+```{r load_reconst, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+if(file.exists(here::here("vignettes/data/reconst_tavg_final.rds"))) {
+  reconst_tavg_final <-
+    readr::read_rds(here::here("vignettes/data/reconst_tavg_final.rds"))
+} else {
+  stop(
+    "The final output file for the reconstruction has not been made. Please return to the UUSS_MAT_Reconstruction.RMD to complete the reconstruction."
+  )
+  
+}
+
+```
+
+# Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
