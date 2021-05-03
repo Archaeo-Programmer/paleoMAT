@@ -135,7 +135,7 @@ UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS
   labs(col = "Temperature (°C)")
 
 # Save the plot for GS.
-ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf", path = "./vignettes/figures", units="in", width=21, height=13)
+ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf", path = "vignettes/figures", units="in", width=21, height=13)
 
 
 
