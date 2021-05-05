@@ -394,7 +394,7 @@ Once we have validated the methods, we re-run the analyses using MAT.
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the southwest US study area. 
+# Now, we carry out the reconstruction for all fossil pollen sites in the southwest US study area.
 
 # Average Temperature
 # The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error for each months.
@@ -430,6 +430,10 @@ if (!file.exists("./vignettes/data/reconst_tavg.rds")) {
     )
   
   readr::write_rds(reconst_tavg, "./vignettes/data/reconst_tavg.rds")
+  
+} else if (!exists("reconst_tavg")) {
+  reconst_tavg <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg.rds"))
   
 } else {
   stop(
@@ -473,6 +477,10 @@ if (!file.exists("./vignettes/data/reconst_gdd.rds")) {
   
   readr::write_rds(reconst_gdd, "./vignettes/data/reconst_gdd.rds")
   
+} else if (!exists("reconst_gdd")) {
+  reconst_gdd <-
+    readr::read_rds(here::here("./vignettes/data/reconst_gdd.rds"))
+  
 } else {
   stop(
     "The SWUS reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the directory."
@@ -501,6 +509,10 @@ if (!file.exists("./vignettes/data/reconst_tavg_threshold.rds")) {
   readr::write_rds(reconst_tavg_threshold,
                    "./vignettes/data/reconst_tavg_threshold.rds")
   
+} else if (!exists("reconst_tavg_threshold")) {
+  reconst_tavg_threshold <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_threshold.rds"))
+  
 } else {
   stop(
     "The SWUS reconstruction threshold has already been applied. If you would like to re-run the threshold, then delete the file from the directory."
@@ -520,15 +532,17 @@ if (!file.exists("./vignettes/data/reconst_gdd_threshold.rds")) {
       }
     )
   
-  
   readr::write_rds(reconst_gdd_threshold,
                    "./vignettes/data/reconst_gdd_threshold.rds")
+  
+} else if (!exists("reconst_gdd_threshold")) {
+  reconst_gdd_threshold <-
+    readr::read_rds(here::here("./vignettes/data/reconst_gdd_threshold.rds"))
   
 } else {
   stop(
     "The SWUS reconstruction threshold has already been applied. If you would like to re-run the threshold, then delete the file from the directory."
   )
-  
 }
   
 ```
@@ -536,13 +550,7 @@ if (!file.exists("./vignettes/data/reconst_gdd_threshold.rds")) {
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-
-
 # Simplify tavg
-if (!exists("reconst_tavg_threshold.rds")) {
-  reconst_tavg_threshold <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_threshold.rds"))
-}
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
@@ -555,7 +563,11 @@ if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
   readr::write_rds(reconst_tavg_final,
                    "./vignettes/data/reconst_tavg_final.rds")
   
-} else {
+} else if (!exists("reconst_tavg_final")) {
+  reconst_tavg_final <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final.rds"))
+  
+  } else {
   stop(
     "The SWUS reconstruction has already been simplified. If you would like to re-run the code, then delete the file from the directory."
   )
@@ -564,10 +576,6 @@ if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
 
 
 #Simplify GDD
-if (!exists("reconst_gdd_threshold")) {
-  reconst_gdd_threshold <-
-    readr::read_rds(here::here("./vignettes/data/reconst_gdd_threshold.rds"))
-}
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
@@ -580,7 +588,11 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
   readr::write_rds(reconst_gdd_final,
                    "./vignettes/data/reconst_gdd_final.rds")
   
-} else {
+} else if (!exists("reconst_gdd_final")) {
+  reconst_gdd_final <-
+    readr::read_rds(here::here("./vignettes/data/reconst_gdd_final.rds"))
+  
+  } else {
   stop(
     "The SWUS reconstruction has already been simplified. If you would like to re-run the code, then delete the file from the directory."
   )
