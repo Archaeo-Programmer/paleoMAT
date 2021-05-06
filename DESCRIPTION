@@ -10,8 +10,7 @@ LazyData: TRUE
 Suggests: testthat
 Depends: 
     magrittr,
-    R (>= 2.10)
-Imports: 
+    R (>= 2.10),
     neotoma,
     rioja,
     readr,
@@ -19,18 +18,19 @@ Imports:
     dplyr,
     tibble,
     tidyr,
-    rebus.numbers,
+    analogue,
+    palaeoSig,
     raster,
+    reshape2
+Imports: 
+    rebus.numbers,
     leaflet,
     sp,
     rgdal,
-    analogue,
-    palaeoSig,
     plotly,
     RColorBrewer,
     ggplot2,
     here,
     lubridate,
     units,
-    reshape2,
     rcarbon

@@ -138,6 +138,55 @@ UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS
 ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf", path = "vignettes/figures", units="in", width=21, height=13)
 
 
-
 ```
 
+
+# Temperature Anomaly
+
+```{r anomaly, fig.width=8, fig.height=9, echo=FALSE}
+
+# Limit modern sites to just the Southwest for mean temperature.
+# First, create a bounding box for the upper united states southwest
+bb <- c("xmin" = -113, "xmax" = -105, "ymin" = 31.334, "ymax" = 38.09) %>% 
+  sf::st_bbox() %>% 
+  sf::st_as_sfc() %>% 
+  sf::st_as_sf(crs = 4326) %>% 
+  sf::st_transform(crs = 4326)
+
+# Do an intersection and keep only the sites that are within the continental United States.
+UUSS_modern <- sf::st_intersection(MPCT_final, bb)
+UUSS_modern2 <- UUSS_modern[!duplicated(UUSS_modern$geometry),]
+UUSS_modern2 <- UUSS_modern2 %>% dplyr::select(-pollen)
+UUSS_modern2 <- as.data.frame(UUSS_modern2 %>% unnest_longer(climate))
+UUSS_modern2$climate <- UUSS_modern2$climate %>% dplyr::select(-dplyr::contains(c("ppt", "gdd")))
+UUSS_modern2$climate <- UUSS_modern2$climate %>% dplyr::select(-c(1:4, 10:12))
+
+# Get mean temperature for prism data for the July and for the growing season. 
+warmest.month <- as.list(UUSS_modern2$climate[3])
+warmest.month <- as.numeric(as.vector(warmest.month$tavg_7))
+warmest.month <- mean(warmest.month)
+
+July_anom <- UUSS_100yrAvgs_tavg_July %>% dplyr::mutate(anom = value_mean - warmest.month)
+
+UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[1:50, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
+  #scale_color_gradient(low="blue", high="red") +
+  # geom_ribbon(aes(x=midP, ymin = value_mean - error_mean,
+  #                 ymax = value_mean + error_mean,
+  #                 alpha = 0.2),
+  #             fill = "grey",
+  #             colour="dark grey", 
+  #             show.legend = F ) +
+  geom_line(colour="red", size = 3.0) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(breaks=seq(-3100,2100,200), minor_breaks = seq(-3000, 2000, 200)) +
+  scale_y_continuous(breaks=seq(-4,4,1), limits = c(-4, 4)) +
+  theme_bw() + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  labs(col = "Temperature (°C)")
+
+# Save the plot for GS.
+ggsave(UUSS_100yrAvgs_tavg_anom, file = "UUSS_100yrAvgs_tavg_anom.pdf", path = "vignettes/figures", units="in", width=21, height=13)
+
+```
