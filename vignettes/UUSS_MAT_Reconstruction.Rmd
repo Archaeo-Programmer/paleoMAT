@@ -390,7 +390,7 @@ Again, no significance for the model. This indicates that we are just not able t
 
 Once we have validated the methods, we re-run the analyses using MAT.
 
-### Model Summary and saving values to file.
+### Model Summary
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -491,6 +491,8 @@ if (!file.exists("./vignettes/data/reconst_gdd.rds")) {
 
 ```
 
+### Apply Threshold to Reconstruction
+
 ```{r clim_threshold, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Apply a threshold to the reconstruction, so that if an analogue is too dissimilar that it will not be used in the reconstruction. Then, based on the remaining analogues, the final reconstruction and associated error will be re-calculated.
@@ -547,11 +549,11 @@ if (!file.exists("./vignettes/data/reconst_gdd_threshold.rds")) {
   
 ```
 
+### Simplify Reconstruction Output
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Simplify tavg
-
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
   reconst_tavg_final <-
