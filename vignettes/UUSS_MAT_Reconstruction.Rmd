@@ -621,24 +621,55 @@ tavg <- tavg %>%
 # First, for testing and building the map. I will just use the warmest month (i.e., July), and will only pick 2 centuries to do (i.e., 601-700 and 1201-1300).
 #600-700 AD
 tavg_600 <- tavg %>% 
-     dplyr::filter(age < 1350 & age >= 1250 & month == 7) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = 650)
+     dplyr::filter(age < 1350 & age >= 1250 & month == 7) #%>% 
+     # dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
+     # dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
+     # dplyr::arrange(as.numeric(period)) %>% 
+     # dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
+     # dplyr::mutate(midP = 650)
+
+fit <- Tps(cbind(tavg_600$long, tavg_600$lat), tavg_600$value)
+surface (fit, nx=100, ny=100)
 
 #1200-1300 AD
 tavg_1200 <- tavg %>% 
-     dplyr::filter(age < 750 & age >= 650 & month == 7) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = 1250)
+     dplyr::filter(age < 750 & age >= 650 & month == 7) #%>% 
+     # dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
+     # dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
+     # dplyr::arrange(as.numeric(period)) %>% 
+     # dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
+     # dplyr::mutate(midP = 1250)
 
-fit <- Tps(cbind(tavg$long, tavg$lat), tavg$value, scale.type="unscaled")
-surface (fit, nx=100, ny=100)
+fit2 <- Tps(cbind(tavg_1200$long, tavg_1200$lat), tavg_1200$value, lon.lat = TRUE)
+surface (fit2, nx=100, ny=100)
+
+
+# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
+xys <- st_as_sf(reconst_tavg_final) %>% 
+  extent()
+
+# Create a bounding box for the extent of the sites.
+bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>% 
+  sf::st_bbox() %>% 
+  sf::st_as_sfc() %>% 
+  sf::st_as_sf(crs = 4326) %>% 
+  sf::st_transform(crs = 4326)
+
+#Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
+prism <- prism_7[2, ]$normal[[1]]
+#Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box).
+UUSS_prism <- raster::intersect(prism, bb2)
+#Convert raster layer to a dataframe to put into correct format for the fields package.
+UUSS_prism_df <- raster::as.data.frame(UUSS_prism,xy=TRUE)
+
+# The prediction locations must be formatted as a matrix, then the predict.Krig function can be called to do the prediction.
+UUSS_prism_df$coords <- matrix(c(UUSS_prism_df$x, UUSS_prism_df$y), byrow=F, ncol=2)
+surf.1.pred <- predict.Krig(fit2, UUSS_prism_df$coords)
+
+surf.1.pred.m <- matrix(surf.1.pred,
+ length(UUSS_prism_df$coords[,1]),
+ length(UUSS_prism_df$coords[,2]),
+ byrow=F)
 
 
 ```
