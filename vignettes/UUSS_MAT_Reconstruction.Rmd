@@ -609,21 +609,33 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 # Put lat and long into individual columns.
 tavg <- reconst_tavg_final %>%
-  unnest(geometry) %>%
-  group_by(sample.id, month) %>%
-  mutate(col = seq_along(sample.id)) %>% #add a column indicator
-  spread(key = col, value = geometry) %>%
+  tidyr::unnest(geometry) %>%
+  dplyr::group_by(sample.id, month) %>%
+  dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
+  tidyr::spread(key = col, value = geometry) %>%
   dplyr::rename(long = "1", lat = "2")
 
-# First, for testing and building the map. I will just use the warmest month (i.e., July), and will only pick 2 centuries to do (i.e., 600-700 and 1200-1300).
+tavg <- tavg %>% 
+  dplyr::mutate(date = paleomat::BPtoBCAD(age))
+
+# First, for testing and building the map. I will just use the warmest month (i.e., July), and will only pick 2 centuries to do (i.e., 601-700 and 1201-1300).
+#600-700 AD
 tavg_600 <- tavg %>% 
-     dplyr::filter(month == 5 & month <= 9) %>%
-     dplyr::filter(age <= 5000 & month <= 9) %>% 
+     dplyr::filter(age < 1350 & age >= 1250 & month == 7) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
      dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
      dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = seq(-3050, 2050, 100))
+     dplyr::mutate(midP = 650)
+
+#1200-1300 AD
+tavg_1200 <- tavg %>% 
+     dplyr::filter(age < 750 & age >= 650 & month == 7) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
+     dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
+     dplyr::arrange(as.numeric(period)) %>% 
+     dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
+     dplyr::mutate(midP = 1250)
 
 fit <- Tps(cbind(tavg$long, tavg$lat), tavg$value, scale.type="unscaled")
 surface (fit, nx=100, ny=100)
