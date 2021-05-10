@@ -629,7 +629,7 @@ tavg_600 <- tavg %>%
      # dplyr::mutate(midP = 650)
 
 fit <- Tps(cbind(tavg_600$long, tavg_600$lat), tavg_600$value)
-surface (fit, nx=100, ny=100)
+surface(fit, nx=100, ny=100)
 
 #1200-1300 AD
 tavg_1200 <- tavg %>% 
@@ -645,8 +645,8 @@ surface (fit2, nx=100, ny=100)
 
 
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
-xys <- st_as_sf(reconst_tavg_final) %>% 
-  extent()
+xys <- sf::st_as_sf(reconst_tavg_final) %>% 
+  raster::extent()
 
 # Create a bounding box for the extent of the sites.
 bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>% 
@@ -670,6 +670,5 @@ surf.1.pred.m <- matrix(surf.1.pred,
  length(UUSS_prism_df$coords[,1]),
  length(UUSS_prism_df$coords[,2]),
  byrow=F)
-
 
 ```
