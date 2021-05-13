@@ -641,12 +641,20 @@ tavg_1200 <- tavg %>%
      # dplyr::mutate(midP = 1250)
 
 fit2 <- Tps(cbind(tavg_1200$long, tavg_1200$lat), tavg_1200$value, lon.lat = TRUE)
-surface (fit2, nx=100, ny=100)
+surface(fit2, nx=100, ny=100)
 
 
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
 xys <- sf::st_as_sf(reconst_tavg_final) %>% 
   raster::extent()
+
+# Get extent of fossil pollen sites and make a polygon.
+pnts <- reconst_tavg_final %>%
+  sf::st_as_sf(crs = 4326)
+polygon <- concaveman(pnts) %>% 
+  sf::st_as_sf(crs = 4326) %>% 
+  sf::st_transform(crs = 4326) %>% 
+  sf:::as_Spatial()
 
 # Create a bounding box for the extent of the sites.
 bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>% 
@@ -658,7 +666,7 @@ bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
 #Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
 prism <- prism_7[2, ]$normal[[1]]
 #Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box).
-UUSS_prism <- raster::intersect(prism, bb2)
+UUSS_prism <- raster::mask(prism, polygon)
 #Convert raster layer to a dataframe to put into correct format for the fields package.
 UUSS_prism_df <- raster::as.data.frame(UUSS_prism,xy=TRUE)
 
@@ -670,5 +678,16 @@ surf.1.pred.m <- matrix(surf.1.pred,
  length(UUSS_prism_df$coords[,1]),
  length(UUSS_prism_df$coords[,2]),
  byrow=F)
+
+
+plot(UUSS_prism_df$coords, pch=20, asp=1,
+ cex=0.8*surf.1.pred/max(surf.1.pred),
+ xlab="E", ylab="N",
+ main="Temperature °C")
+
+plot(UUSS_prism_df$coords, pch=20, asp=1, cex=.6,
+ col=bpy.colors(256)[cut(surf.1.pred, 256)],
+ xlab="E", ylab="N",
+ main="Temperature °C")
 
 ```
