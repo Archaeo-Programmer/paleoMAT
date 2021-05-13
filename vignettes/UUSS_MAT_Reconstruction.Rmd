@@ -699,5 +699,5 @@ plot(v, plot.numbers=T, model=vmf,
 jura.grid.sp <- UUSS_prism_df
 coordinates(jura.grid.sp) <- ~x + y
 gridded(jura.grid.sp) <- TRUE
-k <- krige(Co ~ 1, loc=jura.pred.sp, newdata=jura.grid.sp, model=vmf)
+k <- krige(value ~ 1, loc=jura.pred.sp, newdata=jura.grid.sp, model=vmf)
 ```
