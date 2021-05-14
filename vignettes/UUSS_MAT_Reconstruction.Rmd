@@ -700,4 +700,15 @@ jura.grid.sp <- UUSS_prism_df
 coordinates(jura.grid.sp) <- ~x + y
 gridded(jura.grid.sp) <- TRUE
 k <- krige(value ~ 1, loc=jura.pred.sp, newdata=jura.grid.sp, model=vmf)
+ok <- k
+ok$tps.pred <- tavg_AD1200.pred
+
+zlim <- c(floor(min(ok$var1.pred, ok$tps.pred)),
+ ceiling(max(ok$var1.pred, ok$tps.pred)))
+ ats <- seq(zlim[1], zlim[2], length=256)
+ spplot(ok, zcol="var1.pred", col.regions=bpy.colors(256), at=ats,
+ main="Co concentration, mg kg-1", sub="OK")
+spplot(ok, zcol="tps.pred", col.regions=bpy.colors(256), at=ats,
+ main="Co concentration, mg kg-1", sub="TPS")
+
 ```
