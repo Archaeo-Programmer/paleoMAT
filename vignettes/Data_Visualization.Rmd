@@ -82,33 +82,84 @@ UUSS_GDD <- UUSS_GDD %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(UUSS_GDD$age))
 
 # Do 100 year average temperatures across growing season months (May through September).
-UUSS_100yrAvgs_tavg_GS <- reconst_tavg_final %>% 
-     dplyr::filter(month >= 5 & month <= 9) %>%
-     dplyr::filter(age < 5000) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), list(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = seq(-3050, 2050, 100))
+UUSS_100yrAvgs_tavg_GS <- reconst_tavg_final %>%
+  dplyr::filter(month >= 5 & month <= 9) %>%
+  dplyr::filter(age < 5950) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-4100, 2100, 100))) %>%
+  dplyr::summarise_at(
+    c("value", "error", "elev"),
+    dplyr::funs(
+      mean,
+      n = dplyr::n(),
+      unique_sites = dplyr::n_distinct(site.id),
+      unique_datasets = dplyr::n_distinct(dataset.id)
+    )
+  ) %>%
+  dplyr::arrange(as.numeric(period)) %>%
+  dplyr::select(
+    -c(
+      error_n,
+      elev_n,
+      error_unique_sites,
+      error_unique_datasets,
+      elev_unique_sites,
+      elev_unique_datasets
+    )
+  ) %>%
+  dplyr::mutate(midP = seq(-3950, 2050, 100))
 
 # Do 100 year average temperatures for the warmest month of the year, July.
-UUSS_100yrAvgs_tavg_July <- reconst_tavg_final %>% 
-     dplyr::filter(month == 7) %>% 
-     dplyr::filter(age < 5950) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-4100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), dplyr::funs(mean, n = dplyr::n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = seq(-3950, 2050, 100))
+UUSS_100yrAvgs_tavg_July <- reconst_tavg_final %>%
+  dplyr::filter(month == 7) %>%
+  dplyr::filter(age < 5950) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-4100, 2100, 100))) %>%
+  dplyr::summarise_at(
+    c("value", "error", "elev"),
+    dplyr::funs(
+      mean,
+      n = dplyr::n(),
+      unique_sites = dplyr::n_distinct(site.id),
+      unique_datasets = dplyr::n_distinct(dataset.id)
+    )
+  ) %>%
+  dplyr::arrange(as.numeric(period)) %>%
+  dplyr::select(
+    -c(
+      error_n,
+      elev_n,
+      error_unique_sites,
+      error_unique_datasets,
+      elev_unique_sites,
+      elev_unique_datasets
+    )
+  ) %>%
+  dplyr::mutate(midP = seq(-3950, 2050, 100))
 
 # Calculate GDD for the growing season (May through September).
-UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
-     dplyr::filter(age < 5000) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value_sum", "error_mean", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
-     dplyr::arrange(as.numeric(period)) %>% 
-     dplyr::select(-c(error_mean_n, elev_n, error_mean_unique_sites, error_mean_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = seq(-3050, 2050, 100))
+UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
+  dplyr::filter(age < 5000) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-3100, 2100, 100))) %>%
+  dplyr::summarise_at(
+    c("value_sum", "error_mean", "elev"),
+    funs(
+      mean,
+      n = n(),
+      unique_sites = dplyr::n_distinct(site.id),
+      unique_datasets = dplyr::n_distinct(dataset.id)
+    )
+  ) %>%
+  dplyr::arrange(as.numeric(period)) %>%
+  dplyr::select(
+    -c(
+      error_mean_n,
+      elev_n,
+      error_mean_unique_sites,
+      error_mean_unique_datasets,
+      elev_unique_sites,
+      elev_unique_datasets
+    )
+  ) %>%
+  dplyr::mutate(midP = seq(-3050, 2050, 100))
 
 ```
 
@@ -116,7 +167,7 @@ UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS[1:50, ])), aes(x=midP, y=value_mean, label = value_n, label2 = value_unique_sites)) + 
+UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS[44:60, ])), aes(x=midP, y=value_mean, label = value_n, label2 = value_unique_sites)) + 
   #scale_color_gradient(low="blue", high="red") +
   geom_ribbon(aes(x=midP, ymin = value_mean - error_mean,
                   ymax = value_mean + error_mean,
@@ -176,13 +227,13 @@ warmest.month <- mean(warmest.month)
 July_anom <- UUSS_100yrAvgs_tavg_July %>% 
   dplyr::mutate(anom =  value_mean - warmest.month)
 
-July.recon.mean <- mean(UUSS_100yrAvgs_tavg_July$value_mean)
-July_anom2 <- UUSS_100yrAvgs_tavg_July %>% 
-  dplyr::mutate(anom =  value_mean - July.recon.mean)
-July_anom3 <- reconst_tavg_final %>% 
-     dplyr::filter(month == 7) %>% 
-     dplyr::filter(age < 5950)
-July_anom3 <- mean(July_anom3$value)
+# July.recon.mean <- mean(UUSS_100yrAvgs_tavg_July$value_mean)
+# July_anom2 <- UUSS_100yrAvgs_tavg_July %>% 
+#   dplyr::mutate(anom =  value_mean - July.recon.mean)
+# July_anom3 <- reconst_tavg_final %>% 
+#      dplyr::filter(month == 7) %>% 
+#      dplyr::filter(age < 5950)
+# July_anom3 <- mean(July_anom3$value)
 
 UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[44:60, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
   geom_line(colour="red", size = 3.0) +
@@ -197,5 +248,25 @@ UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[44:60, ])), aes
 
 # Save the plot for GS.
 ggsave(UUSS_100yrAvgs_tavg_anom, file = "UUSS_100yrAvgs_tavg_anom.pdf", path = "vignettes/figures", units="in", width=21, height=13)
+
+# Temperature anomaly for growing season months.
+# Get mean temperature for prism data for the growing season (May to September).
+gs.months <- unlist(UUSS_modern2$climate, use.names = FALSE)
+gs.months <- mean(gs.months)
+
+gs_anom <- UUSS_100yrAvgs_tavg_GS %>% 
+  dplyr::mutate(anom =  value_mean - gs.months)
+
+UUSS_100yrAvgs_tgs_anom <- ggplot(data=(dplyr::filter(gs_anom[44:60, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
+  geom_line(colour="red", size = 3.0) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(breaks=seq(300,2100,200), minor_breaks = seq(400, 2000, 200)) +
+  scale_y_continuous(breaks=seq(-4,4,1), limits = c(-4, 4)) +
+  theme_bw() + 
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
+        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  labs(col = "Temperature (°C)")
+
 
 ```
