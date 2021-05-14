@@ -86,7 +86,7 @@ UUSS_100yrAvgs_tavg_GS <- reconst_tavg_final %>%
      dplyr::filter(month >= 5 & month <= 9) %>%
      dplyr::filter(age < 5000) %>% 
      dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
+     dplyr::summarise_at(c("value", "error", "elev"), list(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
      dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
      dplyr::mutate(midP = seq(-3050, 2050, 100))
@@ -94,12 +94,12 @@ UUSS_100yrAvgs_tavg_GS <- reconst_tavg_final %>%
 # Do 100 year average temperatures for the warmest month of the year, July.
 UUSS_100yrAvgs_tavg_July <- reconst_tavg_final %>% 
      dplyr::filter(month == 7) %>% 
-     dplyr::filter(age < 5000) %>% 
-     dplyr::group_by(period=cut(date, breaks=seq(-3100,2100,100))) %>% 
-     dplyr::summarise_at(c("value", "error", "elev"), funs(mean, n = n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
+     dplyr::filter(age < 5950) %>% 
+     dplyr::group_by(period=cut(date, breaks=seq(-4100,2100,100))) %>% 
+     dplyr::summarise_at(c("value", "error", "elev"), dplyr::funs(mean, n = dplyr::n(), unique_sites = dplyr::n_distinct(site.id), unique_datasets = dplyr::n_distinct(dataset.id))) %>%
      dplyr::arrange(as.numeric(period)) %>% 
      dplyr::select(-c(error_n, elev_n, error_unique_sites, error_unique_datasets, elev_unique_sites, elev_unique_datasets)) %>% 
-     dplyr::mutate(midP = seq(-3050, 2050, 100))
+     dplyr::mutate(midP = seq(-3950, 2050, 100))
 
 # Calculate GDD for the growing season (May through September).
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>% 
@@ -153,34 +153,72 @@ bb <- c("xmin" = -113, "xmax" = -105, "ymin" = 31.334, "ymax" = 38.09) %>%
   sf::st_as_sf(crs = 4326) %>% 
   sf::st_transform(crs = 4326)
 
+#-------------------------
+
+# Get extent of fossil pollen sites and make a polygon.
+fossilpnts <- reconst_tavg_final %>%
+  sf::st_as_sf(crs = 4326)
+fossilpolygon <- concaveman::concaveman(fossilpnts) %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326) %>%
+  sf:::as_Spatial()
+
+# Get prism grid for July, then subset to the tmax and tmin raster layers. 
+ok <- prism_7$normal
+ok <- ok[2:3]
+# Create a raster stack for tmax and tmin.
+ok2 <- raster::stack(ok[[1]], ok[[2]])
+# Change layer names to tmax and tmin.
+names(ok2) <- c('tmax', 'tmin')
+# Sum the tmax and tmin raster layers in order to get average temperature (tmax + tmin / 2).
+ok3 <- calc(ok2, fun = sum)
+# Then divide every cell by 2 to get the mean temperature. Finally, PRISM extractions are all multiplied by 10 in order to store them as integers. Therefore, to get to deg_C for temperature, divide by 10.
+fun_conv <- function(x) { (x / 2)/10 }
+July_mean <- calc(ok3, fun_conv)
+
+# Do intersection to get just the spatial extent of the fossil pollen sites.
+UUSS_prism <- raster::mask(July_mean, fossilpolygon)
+
+#Get mean for all pixels in the defined study area.
+UUSS_prism_mean <- raster::cellStats(UUSS_prism, mean, na.rm = TRUE)
+
+#-------------------------
+# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
+xys <- sf::st_as_sf(reconst_tavg_final) %>% 
+  raster::extent()
+
+# Create a bounding box for the extent of the sites.
+bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
 # Do an intersection and keep only the sites that are within the continental United States.
-UUSS_modern <- sf::st_intersection(MPCT_final, bb)
-UUSS_modern2 <- UUSS_modern[!duplicated(UUSS_modern$geometry),]
-UUSS_modern2 <- UUSS_modern2 %>% dplyr::select(-pollen)
-UUSS_modern2 <- as.data.frame(UUSS_modern2 %>% unnest_longer(climate))
-UUSS_modern2$climate <- UUSS_modern2$climate %>% dplyr::select(-dplyr::contains(c("ppt", "gdd")))
-UUSS_modern2$climate <- UUSS_modern2$climate %>% dplyr::select(-c(1:4, 10:12))
+UUSS_modern <- sf::st_intersection(MPCT_final, bb2)
+UUSS_modern2 <- UUSS_modern[!duplicated(UUSS_modern$geometry),] %>% 
+  dplyr::select(-pollen) %>% 
+  tidyr::unnest_longer(climate) %>% 
+  as.data.frame()
+UUSS_modern2$climate <- UUSS_modern2$climate %>% 
+  dplyr::select(-dplyr::contains(c("ppt", "gdd")))
+UUSS_modern2$climate <- UUSS_modern2$climate %>% 
+  dplyr::select(-c(1:4, 10:12))
 
 # Get mean temperature for prism data for the July and for the growing season. 
 warmest.month <- as.list(UUSS_modern2$climate[3])
 warmest.month <- as.numeric(as.vector(warmest.month$tavg_7))
 warmest.month <- mean(warmest.month)
 
-July_anom <- UUSS_100yrAvgs_tavg_July %>% dplyr::mutate(anom = value_mean - warmest.month)
+July_anom <- UUSS_100yrAvgs_tavg_July %>% 
+  dplyr::mutate(anom =  value_mean - UUSS_prism_mean)
 
-UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[1:50, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
-  #scale_color_gradient(low="blue", high="red") +
-  # geom_ribbon(aes(x=midP, ymin = value_mean - error_mean,
-  #                 ymax = value_mean + error_mean,
-  #                 alpha = 0.2),
-  #             fill = "grey",
-  #             colour="dark grey", 
-  #             show.legend = F ) +
+UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[44:60, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
   geom_line(colour="red", size = 3.0) +
   xlab("Year BC/AD") +
   ylab("Temperature Anomaly") +
-  scale_x_continuous(breaks=seq(-3100,2100,200), minor_breaks = seq(-3000, 2000, 200)) +
-  scale_y_continuous(breaks=seq(-4,4,1), limits = c(-4, 4)) +
+  scale_x_continuous(breaks=seq(300,2100,200), minor_breaks = seq(400, 2000, 200)) +
+  scale_y_continuous(breaks=seq(-10,4,1), limits = c(-10, 4)) +
   theme_bw() + 
   theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
         panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +

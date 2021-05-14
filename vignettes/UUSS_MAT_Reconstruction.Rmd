@@ -603,7 +603,7 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```
 
-### Mapping via Thin Plate Spline
+### Thin Plate Spline Regression and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -660,7 +660,7 @@ fossilpolygon <- concaveman(fossilpnts) %>%
 #   sf::st_as_sf(crs = 4326) %>% 
 #   sf::st_transform(crs = 4326)
 
-#G et prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
+# Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
 prism <- prism_7[2, ]$normal[[1]]
 # Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box or polygon).
 UUSS_prism <- raster::mask(prism, fossilpolygon)
@@ -685,30 +685,5 @@ UUSS_prism_df <- UUSS_prism_df %>%
 #  main="Temperature °C")
 # 
 # ggplot(data = UUSS_prism_df, aes(x, y)) + geom_raster(aes(fill=pred))
-
-
-# Ordinary Kriging
-jura.pred.sp <- tavg_1200
-coordinates(jura.pred.sp) <- ~long + lat
-v <- variogram(value ~ 1, loc=jura.pred.sp, cutoff = 12)
-vmf <- fit.variogram(v, vgm("Sph"))
-plot(v, plot.numbers=T, model=vmf,
-     main="Fitted variogram model, Jura Co",
-     xlab="Separation (km)")
-
-jura.grid.sp <- UUSS_prism_df
-coordinates(jura.grid.sp) <- ~x + y
-gridded(jura.grid.sp) <- TRUE
-k <- krige(value ~ 1, loc=jura.pred.sp, newdata=jura.grid.sp, model=vmf)
-ok <- k
-ok$tps.pred <- tavg_AD1200.pred
-
-zlim <- c(floor(min(ok$var1.pred, ok$tps.pred)),
- ceiling(max(ok$var1.pred, ok$tps.pred)))
- ats <- seq(zlim[1], zlim[2], length=256)
- spplot(ok, zcol="var1.pred", col.regions=bpy.colors(256), at=ats,
- main="Co concentration, mg kg-1", sub="OK")
-spplot(ok, zcol="tps.pred", col.regions=bpy.colors(256), at=ats,
- main="Co concentration, mg kg-1", sub="TPS")
 
 ```
