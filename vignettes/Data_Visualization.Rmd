@@ -34,7 +34,7 @@ library(paleomat)
 ```{r load_data, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Load tavg data.
-if(file.exists(here::here("vignettes/data/reconst_tavg_final.rds"))) {
+if (file.exists(here::here("vignettes/data/reconst_tavg_final.rds"))) {
   reconst_tavg_final <-
     readr::read_rds(here::here("vignettes/data/reconst_tavg_final.rds"))
 } else {
@@ -45,7 +45,7 @@ if(file.exists(here::here("vignettes/data/reconst_tavg_final.rds"))) {
 }
 
 # Load GDD data.
-if(file.exists(here::here("vignettes/data/reconst_gdd_final.rds"))) {
+if (file.exists(here::here("vignettes/data/reconst_gdd_final.rds"))) {
   reconst_gdd_final <-
     readr::read_rds(here::here("vignettes/data/reconst_gdd_final.rds"))
 } else {
@@ -56,17 +56,20 @@ if(file.exists(here::here("vignettes/data/reconst_gdd_final.rds"))) {
 }
 
 # Now, extract out the maize growing season months for GDD.
-reconst_GDD_total <- reconst_gdd_final %>% 
-  dplyr::filter(month >= 5 & month <= 9) %>% 
-  dplyr::group_by(dataset.id, sample.id, depth) %>% 
-  dplyr::summarise_at(c("value", "error"), tibble::lst(sum, mean)) %>% 
+reconst_GDD_total <- reconst_gdd_final %>%
+  dplyr::filter(month >= 5 & month <= 9) %>%
+  dplyr::group_by(dataset.id, sample.id, depth) %>%
+  dplyr::summarise_at(c("value", "error"), tibble::lst(sum, mean)) %>%
   dplyr::select(dataset.id, sample.id, depth, value_sum, error_mean)
 
-reconst_GDD_total_meta <- reconst_gdd_final %>% 
+reconst_GDD_total_meta <- reconst_gdd_final %>%
   dplyr::filter(month == 5) %>%
   dplyr::select(-c(value, error, month))
 
-UUSS_GDD <- left_join(reconst_GDD_total_meta, reconst_GDD_total, by = c("dataset.id", "sample.id", "depth"))
+UUSS_GDD <-
+  dplyr::left_join(reconst_GDD_total_meta,
+                   reconst_GDD_total,
+                   by = c("dataset.id", "sample.id", "depth"))
 
 ```
 
@@ -135,10 +138,13 @@ UUSS_100yrAvgs_tavg_July <- reconst_tavg_final %>%
   ) %>%
   dplyr::mutate(midP = seq(-3950, 2050, 100))
 
+#We can also visualize how the number of samples changes through time.
+ggplot(UUSS_100yrAvgs_tavg_July,aes(x=midP,y=value_n))+geom_bar(stat="identity")
+
 # Calculate GDD for the growing season (May through September).
 UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
-  dplyr::filter(age < 5000) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-3100, 2100, 100))) %>%
+  dplyr::filter(age < 5950) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-4100, 2100, 100))) %>%
   dplyr::summarise_at(
     c("value_sum", "error_mean", "elev"),
     funs(
@@ -159,7 +165,7 @@ UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
       elev_unique_datasets
     )
   ) %>%
-  dplyr::mutate(midP = seq(-3050, 2050, 100))
+  dplyr::mutate(midP = seq(-3950, 2050, 100))
 
 ```
 
@@ -167,26 +173,80 @@ UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
 
 ```{r plot_reconst, fig.width=8, fig.height=9, echo=FALSE}
 
-UUSS_100yrAvgs_tavg_GS_plot <- ggplot(data=(dplyr::filter(UUSS_100yrAvgs_tavg_GS[44:60, ])), aes(x=midP, y=value_mean, label = value_n, label2 = value_unique_sites)) + 
+#Here, we plot temperature for the warmest month, July, through time.
+UUSS_100yrAvgs_tavg_GS_plot <-
+  ggplot(
+    data = (dplyr::filter(UUSS_100yrAvgs_tavg_July[1:60,])),
+    aes(
+      x = midP,
+      y = value_mean,
+      label = value_n,
+      label2 = value_unique_sites
+    )
+  ) +
   #scale_color_gradient(low="blue", high="red") +
-  geom_ribbon(aes(x=midP, ymin = value_mean - error_mean,
-                  ymax = value_mean + error_mean,
-                  alpha = 0.2),
-              fill = "grey",
-              colour="dark grey", 
-              show.legend = F ) +
-  geom_line(colour="red", size = 3.0) +
+  geom_ribbon(
+    aes(
+      x = midP,
+      ymin = value_mean - error_mean,
+      ymax = value_mean + error_mean,
+      alpha = 0.2
+    ),
+    fill = "grey",
+    colour = "dark grey",
+    show.legend = F
+  ) +
+  geom_line(colour = "red", size = 3.0) +
   xlab("Year BC/AD") +
   ylab("Temperature °C") +
-  scale_x_continuous(breaks=seq(-3100,2100,200), minor_breaks = seq(-3000, 2000, 200)) +
-  scale_y_continuous(breaks=seq(6,19,1), limits = c(6, 19)) +
-  theme_bw() + 
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
-        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  scale_x_continuous(breaks = seq(-5100, 2100, 200),
+                     minor_breaks = seq(-5000, 2000, 200)) +
+  scale_y_continuous(breaks = seq(9, 20, 1), limits = c(9, 20)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 18,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  ) +
   labs(col = "Temperature (°C)")
 
 # Save the plot for GS.
-ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf", path = "vignettes/figures", units="in", width=21, height=13)
+ggsave(
+  UUSS_100yrAvgs_tavg_GS_plot,
+  file = "UUSS_100yrAvg_GrowingSeason_Temperature.pdf",
+  path = "vignettes/figures",
+  units = "in",
+  width = 21,
+  height = 13
+)
 
 
 ```
@@ -197,12 +257,18 @@ ggsave(UUSS_100yrAvgs_tavg_GS_plot, file = "UUSS_100yrAvg_GrowingSeason_Temperat
 ```{r anomaly, fig.width=8, fig.height=9, echo=FALSE}
 
 # Limit modern sites to a limited area of the UUSS for mean temperature.
-# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
-xys <- sf::st_as_sf(reconst_tavg_final) %>% 
+# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
+xys <- sf::st_as_sf(reconst_tavg_final) %>%
   raster::extent()
 
 # Create a bounding box for the extent of the fossil pollen sites.
-bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
+bb2 <-
+  c(
+    "xmin" = xys[1],
+    "xmax" = xys[2],
+    "ymin" = xys[3],
+    "ymax" = xys[4]
+  ) %>%
   sf::st_bbox() %>%
   sf::st_as_sfc() %>%
   sf::st_as_sf(crs = 4326) %>%
@@ -210,62 +276,153 @@ bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
 
 # Do an intersection and keep only the modern sites that are within the extent of the fossil pollen sites.
 UUSS_modern <- sf::st_intersection(MPCT_final, bb2)
-UUSS_modern2 <- UUSS_modern[!duplicated(UUSS_modern$geometry),] %>% 
-  dplyr::select(-pollen) %>% 
-  tidyr::unnest_longer(climate) %>% 
+UUSS_modern2 <- UUSS_modern[!duplicated(UUSS_modern$geometry),] %>%
+  dplyr::select(-pollen) %>%
+  tidyr::unnest_longer(climate) %>%
   as.data.frame()
-UUSS_modern2$climate <- UUSS_modern2$climate %>% 
+UUSS_modern2$climate <- UUSS_modern2$climate %>%
   dplyr::select(-dplyr::contains(c("ppt", "gdd")))
-UUSS_modern2$climate <- UUSS_modern2$climate %>% 
+UUSS_modern2$climate <- UUSS_modern2$climate %>%
   dplyr::select(-c(1:4, 10:12))
 
-# Get mean temperature for prism data for the July. 
+# Get mean temperature for prism data for the July.
 warmest.month <- as.list(UUSS_modern2$climate[3])
 warmest.month <- as.numeric(as.vector(warmest.month$tavg_7))
 warmest.month <- mean(warmest.month)
 
-July_anom <- UUSS_100yrAvgs_tavg_July %>% 
+July_anom <- UUSS_100yrAvgs_tavg_July %>%
   dplyr::mutate(anom =  value_mean - warmest.month)
 
 # July.recon.mean <- mean(UUSS_100yrAvgs_tavg_July$value_mean)
-# July_anom2 <- UUSS_100yrAvgs_tavg_July %>% 
+# July_anom2 <- UUSS_100yrAvgs_tavg_July %>%
 #   dplyr::mutate(anom =  value_mean - July.recon.mean)
-# July_anom3 <- reconst_tavg_final %>% 
-#      dplyr::filter(month == 7) %>% 
+# July_anom3 <- reconst_tavg_final %>%
+#      dplyr::filter(month == 7) %>%
 #      dplyr::filter(age < 5950)
 # July_anom3 <- mean(July_anom3$value)
 
-UUSS_100yrAvgs_tavg_anom <- ggplot(data=(dplyr::filter(July_anom[44:60, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
-  geom_line(colour="red", size = 3.0) +
+UUSS_100yrAvgs_tavg_anom <-
+  ggplot(
+    data = (dplyr::filter(July_anom[1:60,])),
+    aes(
+      x = midP,
+      y = anom,
+      label = value_n,
+      label2 = value_unique_sites
+    )
+  ) +
+  geom_line(colour = "red", size = 3.0) +
   xlab("Year BC/AD") +
   ylab("Temperature Anomaly") +
-  scale_x_continuous(breaks=seq(300,2100,200), minor_breaks = seq(400, 2000, 200)) +
-  scale_y_continuous(breaks=seq(-4,4,1), limits = c(-4, 4)) +
-  theme_bw() + 
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
-        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  scale_x_continuous(breaks = seq(-5100, 2100, 200),
+                     minor_breaks = seq(-5000, 2000, 200)) +
+  scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4)) +
+  #geom_smooth() +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 18,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  ) +
   labs(col = "Temperature (°C)")
 
 # Save the plot for GS.
-ggsave(UUSS_100yrAvgs_tavg_anom, file = "UUSS_100yrAvgs_tavg_anom.pdf", path = "vignettes/figures", units="in", width=21, height=13)
+ggsave(
+  UUSS_100yrAvgs_tavg_anom,
+  file = "UUSS_100yrAvgs_tavg_anom.pdf",
+  path = "vignettes/figures",
+  units = "in",
+  width = 21,
+  height = 13
+)
+
 
 # Temperature anomaly for growing season months.
 # Get mean temperature for prism data for the growing season (May to September).
 gs.months <- unlist(UUSS_modern2$climate, use.names = FALSE)
 gs.months <- mean(gs.months)
 
-gs_anom <- UUSS_100yrAvgs_tavg_GS %>% 
+gs_anom <- UUSS_100yrAvgs_tavg_GS %>%
   dplyr::mutate(anom =  value_mean - gs.months)
 
-UUSS_100yrAvgs_tgs_anom <- ggplot(data=(dplyr::filter(gs_anom[44:60, ])), aes(x=midP, y=anom, label = value_n, label2 = value_unique_sites)) + 
-  geom_line(colour="red", size = 3.0) +
+UUSS_100yrAvgs_tgs_anom <-
+  ggplot(
+    data = (dplyr::filter(gs_anom[44:60,])),
+    aes(
+      x = midP,
+      y = anom,
+      label = value_n,
+      label2 = value_unique_sites
+    )
+  ) +
+  geom_line(colour = "red", size = 3.0) +
   xlab("Year BC/AD") +
   ylab("Temperature Anomaly") +
-  scale_x_continuous(breaks=seq(300,2100,200), minor_breaks = seq(400, 2000, 200)) +
-  scale_y_continuous(breaks=seq(-4,4,1), limits = c(-4, 4)) +
-  theme_bw() + 
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=18, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 28, family = "Helvetica", margin = margin(t = 10, r = 20, b = 10, l = 10)), axis.title.x = element_text(size = 28, family = "Helvetica", margin = margin(t = 20, r = 10, b = 10, l = 10)),
-        panel.grid.minor = element_line(colour = "light grey"), axis.line = element_line(colour = "black"), legend.text = element_text(size = 18, family = "Helvetica"), legend.title = element_text(size = 22, family = "Helvetica")) +
+  scale_x_continuous(breaks = seq(300, 2100, 200),
+                     minor_breaks = seq(400, 2000, 200)) +
+  scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 18,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  ) +
   labs(col = "Temperature (°C)")
 
 

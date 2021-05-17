@@ -43,56 +43,56 @@ This program allows you to reconstruct the climate for multiple locations across
 
 # Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
 
-# Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs. 
-gpids <- 
-  neotoma::get_table(table.name='GeoPoliticalUnits')
+# Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs.
+gpids <-
+  neotoma::get_table(table.name = 'GeoPoliticalUnits')
 
-NAID <-  
+NAID <-
   gpids %>%
-  dplyr::filter(GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
-                GeoPoliticalUnit == 'country') %$%
+  dplyr::filter(
+    GeoPoliticalName %in% c('United States', 'Canada', 'Mexico'),
+    GeoPoliticalUnit == 'country'
+  ) %$%
   GeoPoliticalID
 
 # BEGIN TESTING for MP_metadata_counts
-# AZID <-  
+# AZID <-
 #   gpids %>%
 #   dplyr::filter(GeoPoliticalName %in% c('Arizona'),
 #                 GeoPoliticalUnit == 'state') %$%
 #   GeoPoliticalID
-# 
+#
 # if(!file.exists(here::here("vignettes/data/AZ_metadata_counts.rds"))){
-#   AZ_metadata_counts <- 
+#   AZ_metadata_counts <-
 #   get_modern_pollen(gpid = AZID) %T>%
 #   readr::write_rds(here::here("vignettes/data/AZ_metadata_counts.rds"))
 # }
-# AZ_metadata_counts <- 
+# AZ_metadata_counts <-
 #   readr::read_rds(here::here("vignettes/data/AZ_metadata_counts.rds"))
 
 # END TESTING.
 
-if(!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))){
-  MP_metadata_counts <- 
+if (!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))) {
+  MP_metadata_counts <-
     get_modern_pollen(gpid = NAID) %T>%
     readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 }
-MP_metadata_counts <- 
+MP_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 
-if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
-  NAfossil_metadata_counts <- 
+if (!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))) {
+  NAfossil_metadata_counts <-
     get_fossil_pollen(gpid = NAID) %T>%
     readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
 }
-NAfossil_metadata_counts <- 
+NAfossil_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
 
-coreTops <- 
-  paleomat::get_coreTops() %>% 
-  dplyr::rename(
-    dataset.id = DatasetID,
-    site.id = SiteID, 
-    sample.id = SampleID
-  )
+coreTops <-
+  paleomat::get_coreTops() %>%
+  dplyr::rename(dataset.id = DatasetID,
+                site.id = SiteID,
+                sample.id = SampleID)
 
 ```
 
@@ -102,16 +102,16 @@ coreTops <-
 
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))){
-  CT_metadata_counts <- 
-  dplyr::left_join(coreTops,
-                   NAfossil_metadata_counts,
-                   by  = c("dataset.id", "site.id", "sample.id")) %>% 
-  dplyr::mutate(type = "core top") %>% 
-  dplyr::arrange(dataset.id) %T>%
+if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))) {
+  CT_metadata_counts <-
+    dplyr::left_join(coreTops,
+                     NAfossil_metadata_counts,
+                     by  = c("dataset.id", "site.id", "sample.id")) %>%
+    dplyr::mutate(type = "core top") %>%
+    dplyr::arrange(dataset.id) %T>%
     readr::write_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
 }
-CT_metadata_counts <- 
+CT_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
 
 
@@ -124,24 +124,36 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, represe
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
-MPCT_metadata_counts <- 
+MPCT_metadata_counts <-
   dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
   dplyr::arrange(dataset.id) %>%
   dplyr::mutate_at(.vars = dplyr::vars(-dataset.id:-pub_year),
                    .funs = tidyr::replace_na,
                    0) %>%
-  dplyr::select(dataset.id:pub_year, 
+  dplyr::select(dataset.id:pub_year,
                 sort(tidyselect::peek_vars())) %>%
-  dplyr::filter(!is.na(long)) %>% 
-  sf::st_as_sf(coords = c("long","lat"), crs = 4326)
+  dplyr::filter(!is.na(long)) %>%
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
 # Keep only modern sites in the United States.
 # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of continental United States.
-states <- rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp", layer='statesp010g')
+states <-
+  rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp",
+                 layer = 'statesp010g')
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
-states <- sp::spTransform(states, sp::CRS("+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"))
-# Filter out non-continental states and territories. 
-continental.states <- subset(states, NAME != "Alaska" & NAME != "Hawaii" & NAME != "Puerto Rico" & NAME != "U.S. Virgin Islands")
+states <-
+  sp::spTransform(states,
+                  sp::CRS(
+                    "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
+                  ))
+# Filter out non-continental states and territories.
+continental.states <-
+  subset(
+    states,
+    NAME != "Alaska" &
+      NAME != "Hawaii" &
+      NAME != "Puerto Rico" & NAME != "U.S. Virgin Islands"
+  )
 # Convert sp to sf.
 continental.states <- sf::st_as_sf(continental.states, crs = 4326)
 # Update projection to CRS 4326, which is WGS 84.
@@ -150,9 +162,11 @@ continental.states <- sf::st_transform(continental.states, 4326)
 continental.states <- sf::st_make_valid(continental.states)
 
 # Do an intersection and keep only the sites that are within the continental United States.
-sites_in_states <- sf::st_intersection(MPCT_metadata_counts, continental.states)
+sites_in_states <-
+  sf::st_intersection(MPCT_metadata_counts, continental.states)
 # Drop the columns from the states shapefile.
-MPCT_metadata_counts_final <- dplyr::select (sites_in_states,-c(NAME:PRIM_MILES))
+MPCT_metadata_counts_final <-
+  dplyr::select (sites_in_states, -c(NAME:PRIM_MILES))
 
 
 
@@ -167,10 +181,10 @@ MPCT_metadata_counts_final <- dplyr::select (sites_in_states,-c(NAME:PRIM_MILES)
 # western.ecoregions2 <- sf::st_transform(western.ecoregions2, 4326)
 # # Need to make the geometry valid for the states shapefile.
 # western.ecoregions2 <- sf::st_make_valid(western.ecoregions2)
-# 
+#
 # # Keep only ecoregion area that falls within the continental united states.
 # ecoregions_in_states <- sf::st_intersection(western.ecoregions2, continental.states)
-# 
+#
 # # Do an intersection and keep only the sites that are within the selected western ecoregions.
 # sites_in_ecoregions <- sf::st_intersection(MPCT_metadata_counts, ecoregions_in_states)
 # # Drop the columns from the states shapefile.
@@ -181,11 +195,11 @@ MPCT_metadata_counts_final <- dplyr::select (sites_in_states,-c(NAME:PRIM_MILES)
 ## Remove Coretops data from the fossil pollen dataset
 ```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-fossil_metadata_counts <- 
-  dplyr::anti_join(NAfossil_metadata_counts, 
-                   coreTops, 
+fossil_metadata_counts <-
+  dplyr::anti_join(NAfossil_metadata_counts,
+                   coreTops,
                    by = c("dataset.id", "site.id", "sample.id")) %>%
-  sf::st_as_sf(coords = c("long","lat"), crs = 4326)
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
 # # Do an intersection and keep only the sites that are within the continental United States.
 # fossil_sites_in_states <- sf::st_intersection(fossil_metadata_counts, continental.states)
@@ -194,23 +208,30 @@ fossil_metadata_counts <-
 
 # Limit fossil sites to just the Southwest for reconstruction.
 # First, create a bounding box for the upper united states southwest
-bb <- c("xmin" = -113, "xmax" = -105, "ymin" = 31.334, "ymax" = 38.09) %>% 
-  sf::st_bbox() %>% 
-  sf::st_as_sfc() %>% 
-  sf::st_as_sf(crs = 4326) %>% 
+bb <-
+  c(
+    "xmin" = -113,
+    "xmax" = -105,
+    "ymin" = 31.334,
+    "ymax" = 38.09
+  ) %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
   sf::st_transform(crs = 4326)
 
 # Do an intersection and keep only the sites that are within the continental United States.
-fossil_metadata_counts_final <- sf::st_intersection(fossil_metadata_counts, bb)
+fossil_metadata_counts_final <-
+  sf::st_intersection(fossil_metadata_counts, bb)
 
 
-fossil_final <-  
+fossil_final <-
   fossil_metadata_counts_final %>%
   dplyr::select(!c(dataset.id, site.id, site.name:pub_year)) %>%
-  tibble::as_tibble() %>% 
-  dplyr::mutate_all(tidyr::replace_na, 0) %>% 
-  dplyr::mutate(dplyr::across(!c(sample.id, geometry), ~ifelse(.x < 0, 0, .x))) %>%
-  tidyr::nest(pollen.counts = c(-sample.id, -geometry)) %>%
+  tibble::as_tibble() %>%
+  dplyr::mutate_all(tidyr::replace_na, 0) %>%
+  dplyr::mutate(dplyr::across(!c(sample.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
+  tidyr::nest(pollen.counts = c(-sample.id,-geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(sample.id,
                 pollen = pollen.counts)
@@ -229,47 +250,45 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 #load(file = "data/prism_1.rda")
 
 # Extract Prism Climate data for modern pollen.
-MPCT_climate <- 
+MPCT_climate <-
   MPCT_metadata_counts_final %>%
-  dplyr::select(sample.id) %>% 
+  dplyr::select(sample.id) %>%
   extract_prism_normals() %>%
   sf::st_drop_geometry() %>%
-  dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>% 
-  dplyr::select(sample.id, 
+  dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>%
+  dplyr::select(sample.id,
                 prism.normals,
                 geometry,
                 ABIES:XANTHIUM) %>%
-  tidyr::nest(pollen.counts = c(-sample.id, -prism.normals, -geometry)) %>%
+  tidyr::nest(pollen.counts = c(-sample.id,-prism.normals,-geometry)) %>%
   sf::st_as_sf() %>%
-  dplyr::select(sample.id, 
+  dplyr::select(sample.id,
                 climate = prism.normals,
                 pollen = pollen.counts)
 
 # Get the data into the final format used by the palaeoSig and rioja packages.
-MPCT_final <- 
+MPCT_final <-
   MPCT_climate %>%
-  dplyr::mutate(
-    # Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
-    # pollen = 
+  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
+    # pollen =
     #   purrr::map(pollen,
     #     function(x){
     #       x/rowSums(x)
     #     }),
-    climate = 
+    climate =
       purrr::map(climate,
-        function(x){
-          x %>%
-            dplyr::select(month,
-                          ppt,
-                          tavg,
-                          gdd) %>%
-            tidyr::pivot_longer(ppt:gdd,
-                                names_to = "element") %>%
-            tidyr::unite("element_month", element, month) %>%
-            tidyr::pivot_wider(names_from = element_month,
-                               values_from = value)
-        })
-  )
+                 function(x) {
+                   x %>%
+                     dplyr::select(month,
+                                   ppt,
+                                   tavg,
+                                   gdd) %>%
+                     tidyr::pivot_longer(ppt:gdd,
+                                         names_to = "element") %>%
+                     tidyr::unite("element_month", element, month) %>%
+                     tidyr::pivot_wider(names_from = element_month,
+                                        values_from = value)
+                 }))
 
 
 ```
@@ -569,7 +588,7 @@ if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
   reconst_tavg_final <-
     readr::read_rds(here::here("./vignettes/data/reconst_tavg_final.rds"))
   
-  } else {
+} else {
   stop(
     "The SWUS reconstruction has already been simplified. If you would like to re-run the code, then delete the file from the directory."
   )
@@ -594,7 +613,7 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
   reconst_gdd_final <-
     readr::read_rds(here::here("./vignettes/data/reconst_gdd_final.rds"))
   
-  } else {
+} else {
   stop(
     "The SWUS reconstruction has already been simplified. If you would like to re-run the code, then delete the file from the directory."
   )
@@ -621,14 +640,14 @@ warmest.month = 15.6182926829268
 tavg <- tavg %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
   #dplyr::filter(age < 5950 & age >= 150 & month >= 5 & month <= 9) %>%
-  dplyr::filter(age < 5950 & age >= 150 & month == 7) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-4000, 1900, 100))) %>%
+  dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
   dplyr::mutate(anom = value - warmest.month)
 
-tavg$coords <- matrix(c(tavg$long, tavg$lat), byrow=F, ncol=2)
+tavg$coords <- matrix(c(tavg$long, tavg$lat), byrow = F, ncol = 2)
 
 # First, for testing and building the map. I will just use the warmest month (i.e., July), and will only pick 2 centuries to do (i.e., 601-700 and 1201-1300).
-# tavg_BC4000 <- tavg %>% 
+# tavg_BC4000 <- tavg %>%
 #      dplyr::filter(period == "(-4e+03,-3.9e+03]")
 
 #600-700 AD
@@ -642,11 +661,11 @@ fields::surface(tavg_AD600, nx = 100, ny = 100)
 tavg_AD1200 <- tavg %>%
   dplyr::filter(period == "(1.2e+03,1.3e+03]")
 
-tavg_AD1200 <- fields::Tps(tavg_AD1200$coords, tavg_AD1200$value)
+tavg_AD1200 <- fields::Tps(tavg_AD1200$coords, tavg_AD1200$anom)
 fields::surface(tavg_AD1200)
 
-# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites. 
-xys <- sf::st_as_sf(reconst_tavg_final) %>% 
+# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
+xys <- sf::st_as_sf(reconst_tavg_final) %>%
   raster::extent()
 
 # Get extent of fossil pollen sites and make a polygon.
@@ -658,36 +677,44 @@ fossilpolygon <- concaveman(fossilpnts) %>%
   sf:::as_Spatial()
 
 # Create a bounding box for the extent of the sites.
-# bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>% 
-#   sf::st_bbox() %>% 
-#   sf::st_as_sfc() %>% 
-#   sf::st_as_sf(crs = 4326) %>% 
+# bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
+#   sf::st_bbox() %>%
+#   sf::st_as_sfc() %>%
+#   sf::st_as_sf(crs = 4326) %>%
 #   sf::st_transform(crs = 4326)
 
 # Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
-prism <- prism_7[2, ]$normal[[1]]
+prism <- prism_7[2,]$normal[[1]]
 # Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box or polygon).
 UUSS_prism <- raster::mask(prism, fossilpolygon)
 # Convert raster layer to a dataframe to put into correct format for the fields package.
-UUSS_prism_df <- raster::as.data.frame(UUSS_prism,xy=TRUE) %>% 
+UUSS_prism_df <- raster::as.data.frame(UUSS_prism, xy = TRUE) %>%
   dplyr::select(x, y)
 
 # The prediction locations must be formatted as a matrix, then the predict.Krig function can be called to do the prediction.
-UUSS_prism_df$coords <- matrix(c(UUSS_prism_df$x, UUSS_prism_df$y), byrow=F, ncol=2)
+UUSS_prism_df$coords <-
+  matrix(c(UUSS_prism_df$x, UUSS_prism_df$y),
+         byrow = F,
+         ncol = 2)
 
 # Make predictions onto prism grid (which is limited to the extent of the fossil pollen sites via polygon).
-tavg_AD1200.pred <- predict.Krig(tavg_AD1200, UUSS_prism_df$coords)
+tavg_AD1200.pred <- fields::predict.Krig(tavg_AD1200, UUSS_prism_df$coords)
+# grid <-  fields.convert.grid(UUSS_prism_df$coords)
+# grid <- make.surface.grid(grid)
+# out.p<- as.surface(grid, tavg_AD1200.pred)
 
-# Add the predictions (i.e., tavg_AD1200.pred) to the prism grid (i.e., UUSS_prism_df). 
-UUSS_prism_df <- UUSS_prism_df %>% 
-  dplyr::mutate(pred = tavg_AD1200.pred)
+# Add the predictions (i.e., tavg_AD1200.pred) to the prism grid (i.e., UUSS_prism_df).
+UUSS_prism_df <- UUSS_prism_df %>%
+  dplyr::mutate(pred = tavg_AD1200.pred) %>% 
+  dplyr::select(-coords)
 
 
 # plot(UUSS_prism_df$coords, pch=20, asp=1,
 #  cex=0.8*tavg_AD1200.pred/max(tavg_AD1200.pred),
 #  xlab="E", ylab="N",
 #  main="Temperature °C")
-# 
+#
 # ggplot(data = UUSS_prism_df, aes(x, y)) + geom_raster(aes(fill=pred))
+# raster::rasterFromXYZ(UUSS_prism_df, crs = 4326)
 
 ```
