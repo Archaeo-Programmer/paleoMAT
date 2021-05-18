@@ -303,7 +303,7 @@ July_anom <- UUSS_100yrAvgs_tavg_July %>%
 
 UUSS_100yrAvgs_tavg_anom <-
   ggplot(
-    data = (dplyr::filter(July_anom[1:60,])),
+    data = (dplyr::filter(July_anom[44:60,])),
     aes(
       x = midP,
       y = anom,
@@ -314,8 +314,8 @@ UUSS_100yrAvgs_tavg_anom <-
   geom_line(colour = "red", size = 3.0) +
   xlab("Year BC/AD") +
   ylab("Temperature Anomaly") +
-  scale_x_continuous(breaks = seq(-5100, 2100, 200),
-                     minor_breaks = seq(-5000, 2000, 200)) +
+  scale_x_continuous(breaks = seq(-3100, 2100, 200),
+                     minor_breaks = seq(-3000, 2000, 200)) +
   scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4)) +
   #geom_smooth() +
   theme_bw() +

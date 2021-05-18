@@ -622,6 +622,32 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```
 
+### Temporal Interpolation
+
+```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+
+beef.pasture <- tavg %>% 
+  dplyr::filter(site.id == 246) %>% 
+  dplyr::group_by(age) %>% 
+  dplyr::mutate(value = mean(value))
+x <- beef.pasture$age
+y <- beef.pasture$anom
+
+out <- Tps(x,y)
+xgrid<- seq(  min( out$x), max( out$x),,5950)
+fhat<- predict( out,xgrid)
+plot(x,y)
+title('Tps')
+lines( xgrid, fhat,)
+SE<- predictSE( out, xgrid)
+lines( xgrid,fhat + 1.96* SE, col="red", lty=2)
+lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
+
+
+
+```
+
 ### Thin Plate Spline Regression and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
@@ -721,7 +747,7 @@ UUSS_prism_df <- UUSS_prism_df %>%
 #Other things
 # You can quickly plot the values by using quilt.plot. This will also average the samples that fall within the same grid box.
 x <- cbind(tavg_AD1200$long, tavg_AD1200$lat)
-y <- tavg_AD1200$value
+y <- tavg_AD1200$anom
 quilt.plot(x,y)
 US(add=TRUE)
 
