@@ -661,8 +661,8 @@ fields::surface(tavg_AD600, nx = 100, ny = 100)
 tavg_AD1200 <- tavg %>%
   dplyr::filter(period == "(1.2e+03,1.3e+03]")
 
-tavg_AD1200 <- fields::Tps(tavg_AD1200$coords, tavg_AD1200$anom)
-fields::surface(tavg_AD1200)
+tavg_AD1200tps <- fields::Tps(tavg_AD1200$coords, tavg_AD1200$anom)
+fields::surface(tavg_AD1200tps)
 
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
 xys <- sf::st_as_sf(reconst_tavg_final) %>%
@@ -716,5 +716,19 @@ UUSS_prism_df <- UUSS_prism_df %>%
 #
 # ggplot(data = UUSS_prism_df, aes(x, y)) + geom_raster(aes(fill=pred))
 # raster::rasterFromXYZ(UUSS_prism_df, crs = 4326)
+
+
+#Other things
+# You can quickly plot the values by using quilt.plot. This will also average the samples that fall within the same grid box.
+x <- cbind(tavg_AD1200$long, tavg_AD1200$lat)
+y <- tavg_AD1200$value
+quilt.plot(x,y)
+US(add=TRUE)
+
+#Temperature Anomalies through Time
+matplot( x = tavg$age, y = tavg$anom, 
+         ylab="Temperature Anomaly", xlab="Years BP", pch=16)
+title("Temperature Anomalies through Time")
+
 
 ```
