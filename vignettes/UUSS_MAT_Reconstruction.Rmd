@@ -630,20 +630,59 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 beef.pasture <- tavg %>% 
   dplyr::filter(site.id == 246) %>% 
   dplyr::group_by(age) %>% 
-  dplyr::mutate(value = mean(value))
+  dplyr::mutate(value = mean(value)) %>% 
+  dplyr::distinct(age, .keep_all = TRUE)
 x <- beef.pasture$age
 y <- beef.pasture$anom
 
+beef.pasture.old <- tavg %>% 
+  dplyr::filter(dataset.id == 250)
+
+beef.pasture.new <- tavg %>% 
+  dplyr::filter(dataset.id == 25551 & age < 2004)
+
+x <- beef.pasture.old$age
+y <- beef.pasture.old$anom
+
+x1 <- beef.pasture.new$age
+y1 <- beef.pasture.new$anom
+
+
+fit <- smooth.spline(x, y, tol = 60)
+plot(x,y)
+lines(fit)
+xgrid <- seq(min(fit$x), max(fit$x),,2000)
+plot(predict(fit, xgrid))
+
+
+fit1 <- spline(x1, y1)
+xgrid1 <- seq(min(fit1$x), max(fit1$x),,2000)
+plot(predict(fit1, xgrid1))
+
+
+
+
+
 out <- Tps(x,y)
-xgrid<- seq(  min( out$x), max( out$x),,5950)
-fhat<- predict( out,xgrid)
+xgrid<- seq(  min(out$x), max(out$x),,5950)
+fhat<- predict(out,xgrid)
 plot(x,y)
 title('Tps')
-lines( xgrid, fhat,)
-SE<- predictSE( out, xgrid)
-lines( xgrid,fhat + 1.96* SE, col="red", lty=2)
+lines(xgrid, fhat,)
+SE<- predictSE(out, xgrid)
+lines(xgrid,fhat + 1.96* SE, col="red", lty=2)
 lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
 
+# Another way to run this is to use a generalized additive models with integrated smoothness estimation.
+library(mgcv)
+fit <- mgcv::gam(y ~ s(x, bs = "cr", k = 20))
+summary(fit)
+gam.check(fit)
+plot(fit)
+
+plot(y ~ x, col = "dark red", pch = 16)
+curve(predict(fit, newdata = data.frame(x = x)), add = TRUE, 
+      from = min(x), to = max(x), n = 1e3, lwd = 2)
 
 
 ```
