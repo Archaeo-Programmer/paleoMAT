@@ -626,32 +626,94 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+ok <- reconst_tavg_final %>% 
+  dplyr::filter(age < -12 & month == 7)
+  
+
 
 beef.pasture <- tavg %>% 
-  dplyr::filter(site.id == 246) %>% 
+  dplyr::filter(site.id == 246 & age < 2004) %>% 
   dplyr::group_by(age) %>% 
   dplyr::mutate(value = mean(value)) %>% 
-  dplyr::distinct(age, .keep_all = TRUE)
+  dplyr::distinct(age, .keep_all = TRUE) %>% 
+  dplyr::arrange(age)
 x <- beef.pasture$age
 y <- beef.pasture$anom
 
 beef.pasture.old <- tavg %>% 
-  dplyr::filter(dataset.id == 250)
+  dplyr::filter(dataset.id == 250 & age < 2004)
 
 beef.pasture.new <- tavg %>% 
   dplyr::filter(dataset.id == 25551 & age < 2004)
 
-x <- beef.pasture.old$age
-y <- beef.pasture.old$anom
+x1 <- beef.pasture.old$age
+y1 <- beef.pasture.old$anom
 
-x1 <- beef.pasture.new$age
-y1 <- beef.pasture.new$anom
+x2 <- beef.pasture.new$age
+y2 <- beef.pasture.new$anom
 
-fit <- spline(eliminated$age, eliminated$anom)
+fit1 <- spline(x1,y1)
+fit1a <- smooth.spline(x1,y1)
+plot(x1,y1, ylim=c(-5, 5))
+lines(fit1)
+xgrid1 <- seq(min(fit1$x), max(fit1$x),,2000)
+plot(predict(fit1, xgrid1))
+
+#Natural cubic spline versus b-spline.
+cr_fit1 <- mgcv::gam(y1 ~ s(x1, bs = 'cr'))
+cr_knots1 <- cr_fit1$smooth[[1]]$xp  ## extract knots locations
+
+bs_fit1 <- mgcv::gam(y1 ~ s(x1, bs = 'bs'))
+bs_knots1 <- bs_fit1$smooth[[1]]$knots  ## extract knots locations
+
+
+fit <- spline(x,y)
+fita <- smooth.spline(x,y, df = 20)
 plot(x,y, ylim=c(-5, 5))
 lines(fit)
-xgrid <- seq(min(fit$x), max(fit$x),,2000)
-plot(predict(fit, xgrid))
+#Natural cubic spline versus b-spline.
+cr_fit <- mgcv::gam(y ~ s(x, bs = 'bs', k = 10))
+cr_knots <- cr_fit$smooth[[1]]$xp  ## extract knots locations
+
+bs_fit <- mgcv::gam(y ~ s(x, bs = 'bs'))
+bs_knots <- bs_fit$smooth[[1]]$knots  ## extract knots locations
+
+par(mfrow = c(3,4))
+#Beef Pasture all
+plot(x, y, col= "grey", main = "natural cubic spline");
+lines(x, cr_fit$linear.predictors, col = 2, lwd = 2)
+abline(v = cr_knots, lty = 2)
+plot(x, y, col= "grey", main = "B-spline");
+lines(x, bs_fit$linear.predictors, col = 2, lwd = 2)
+abline(v = bs_knots, lty = 2)
+plot(x, y, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+lines(fit)
+plot(x, y, col= "grey", main = "Smoothed Spline");
+lines(fita)
+#Beef pasture old
+plot(x1, y1, col= "grey", main = "natural cubic spline");
+lines(x1, cr_fit1$linear.predictors, col = 2, lwd = 2)
+abline(v = cr_knots1, lty = 2)
+plot(x1, y1, col= "grey", main = "B-spline");
+lines(x1, bs_fit1$linear.predictors, col = 2, lwd = 2)
+abline(v = bs_knots1, lty = 2)
+plot(x1, y1, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+lines(fit1)
+plot(x1, y1, col= "grey", main = "Smoothed Spline");
+lines(fit1a)
+#Beef pasture new
+plot(x2, y2, col= "grey", main = "natural cubic spline");
+lines(x2, cr_fit2$linear.predictors, col = 2, lwd = 2)
+abline(v = cr_knots1, lty = 2)
+plot(x2, y2, col= "grey", main = "B-spline");
+lines(x2, bs_fit2$linear.predictors, col = 2, lwd = 2)
+abline(v = bs_knots1, lty = 2)
+plot(x2, y2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+lines(fit2)
+plot(x2, y2, col= "grey", main = "Smoothed Spline");
+lines(fit2a)
+mtext("Beef Pasture All", outer = TRUE)
+
 
 # Visualize outliers.
 boxplot(beef.pasture$anom)$out
@@ -666,19 +728,30 @@ low<- Q[1]-1.5*iqr # Lower Range
 eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
 ggbetweenstats(eliminated, site.id, anom, outlier.tagging = TRUE)
 
+fit <- spline(eliminated$age, eliminated$anom)
+plot(eliminated$age, eliminated$anom, ylim=c(-5, 5))
+lines(fit)
 
 
 
-fit1 <- spline(x1, y1)
-xgrid1 <- seq(min(fit1$x), max(fit1$x),,2000)
-plot(predict(fit1, xgrid1))
+fit2 <- spline(x2, y2)
+fit2a <- smooth.spline(x2,y2)
+plot(x2,y2, ylim=c(-5, 5))
+lines(fit2)
+xgrid2 <- seq(min(fit2$x), max(fit2$x),,2000)
+plot(predict(fit2, xgrid2))
+
+#Natural cubic spline versus b-spline.
+cr_fit2 <- mgcv::gam(y2 ~ s(x2, bs = 'cr'))
+cr_knots2 <- cr_fit2$smooth[[1]]$xp  ## extract knots locations
+
+bs_fit2 <- mgcv::gam(y2 ~ s(x2, bs = 'bs'))
+bs_knots2 <- bs_fit2$smooth[[1]]$knots  ## extract knots locations
 
 
 
-
-
-out <- Tps(x,y)
-xgrid<- seq(  min(out$x), max(out$x),,5950)
+out <- fields::Tps(x,y)
+xgrid<- seq(  min(out$x), max(out$x),,2000)
 fhat<- predict(out,xgrid)
 plot(x,y)
 title('Tps')
@@ -698,6 +771,114 @@ plot(y ~ x, col = "dark red", pch = 16)
 curve(predict(fit, newdata = data.frame(x = x)), add = TRUE, 
       from = min(x), to = max(x), n = 1e3, lwd = 2)
 
+
+
+
+# Test smooth.spline with different degrees of freedom. 
+#Beef Pasture all
+fita <- smooth.spline(x,y, df = length(x)*0.10)
+fitb <- smooth.spline(x,y, df = length(x)*0.20)
+fitc <- smooth.spline(x,y, df = length(x)*0.30)
+fitd <- smooth.spline(x,y, df = length(x)*0.40)
+fite <- smooth.spline(x,y, df = length(x)*0.50)
+fitf <- smooth.spline(x,y, df = length(x)*0.60)
+fitg <- smooth.spline(x,y, df = length(x)*0.70)
+fith <- smooth.spline(x,y, df = length(x)*0.80)
+fiti <- smooth.spline(x,y, df = length(x)*0.90)
+fitj <- smooth.spline(x,y, df = length(x)*1.00)
+#Beef Pasture old
+fit1a <- smooth.spline(x1,y1, df = length(x1)*0.10)
+fit1b <- smooth.spline(x1,y1, df = length(x1)*0.20)
+fit1c <- smooth.spline(x1,y1, df = length(x1)*0.30)
+fit1d <- smooth.spline(x1,y1, df = length(x1)*0.40)
+fit1e <- smooth.spline(x1,y1, df = length(x1)*0.50)
+fit1f <- smooth.spline(x1,y1, df = length(x1)*0.60)
+fit1g <- smooth.spline(x1,y1, df = length(x1)*0.70)
+fit1h <- smooth.spline(x1,y1, df = length(x1)*0.80)
+fit1i <- smooth.spline(x1,y1, df = length(x1)*0.90)
+fit1j <- smooth.spline(x1,y1, df = length(x1)*1.00)
+#Beef Pasture new
+fit2a <- smooth.spline(x2,y2, df = length(x2)*0.10)
+fit2b <- smooth.spline(x2,y2, df = length(x2)*0.20)
+fit2c <- smooth.spline(x2,y2, df = length(x2)*0.30)
+fit2d <- smooth.spline(x2,y2, df = length(x2)*0.40)
+fit2e <- smooth.spline(x2,y2, df = length(x2)*0.50)
+fit2f <- smooth.spline(x2,y2, df = length(x2)*0.60)
+fit2g <- smooth.spline(x2,y2, df = length(x2)*0.70)
+fit2h <- smooth.spline(x2,y2, df = length(x2)*0.80)
+fit2i <- smooth.spline(x2,y2, df = length(x2)*0.90)
+fit2j <- smooth.spline(x2,y2, df = length(x2)*1.00)
+
+
+par(mfrow = c(3,5))
+#Beef Pasture all
+plot(x, y, col= "grey", main = "BP All df: 10%");
+lines(fita)
+plot(x, y, col= "grey", main = "BP All df: 20%");
+lines(fitb)
+plot(x, y, col= "grey", main = "BP All df: 30%");
+lines(fitc)
+plot(x, y, col= "grey", main = "BP All df: 40%");
+lines(fitd)
+plot(x, y, col= "grey", main = "BP All df: 50%");
+lines(fite)
+#Beef pasture old
+plot(x1,y1, col= "grey", main = "BP Old df: 10%");
+lines(fit1a)
+plot(x1,y1, col= "grey", main = "BP Old df: 20%");
+lines(fit1b)
+plot(x1,y1, col= "grey", main = "BP Old df: 30%");
+lines(fit1c)
+plot(x1,y1, col= "grey", main = "BP Old df: 40%");
+lines(fit1d)
+plot(x1,y1, col= "grey", main = "BP Old df: 50%");
+lines(fit1e)
+#Beef pasture new
+plot(x2,y2, col= "grey", main = "BP New df: 10%");
+lines(fit2a)
+plot(x2,y2, col= "grey", main = "BP New df: 20%");
+lines(fit2b)
+plot(x2,y2, col= "grey", main = "BP New df: 30%");
+lines(fit2c)
+plot(x2,y2, col= "grey", main = "BP New df: 40%");
+lines(fit2d)
+plot(x2,y2, col= "grey", main = "BP New df: 50%");
+lines(fit2e)
+
+
+
+
+par(mfrow = c(3,5))
+plot(x, y, col= "grey", main = "BP All df: 60%");
+lines(fitf)
+plot(x, y, col= "grey", main = "BP All df: 70%");
+lines(fitg)
+plot(x, y, col= "grey", main = "BP All df: 80%");
+lines(fith)
+plot(x, y, col= "grey", main = "BP All df: 90%");
+lines(fiti)
+plot(x, y, col= "grey", main = "BP All df: 100%");
+lines(fitj)
+plot(x1,y1, col= "grey", main = "BP Old df: 60%");
+lines(fit1f)
+plot(x1,y1, col= "grey", main = "BP Old df: 70%");
+lines(fit1g)
+plot(x1,y1, col= "grey", main = "BP Old df: 80%");
+lines(fit1h)
+plot(x1,y1, col= "grey", main = "BP Old df: 90%");
+lines(fit1i)
+plot(x1,y1, col= "grey", main = "BP Old df: 100%");
+lines(fit1j)
+plot(x2,y2, col= "grey", main = "BP New df: 60%");
+lines(fit2f)
+plot(x2,y2, col= "grey", main = "BP New df: 70%");
+lines(fit2g)
+plot(x2,y2, col= "grey", main = "BP New df: 80%");
+lines(fit2h)
+plot(x2,y2, col= "grey", main = "BP New df: 90%");
+lines(fit2i)
+plot(x2,y2, col= "grey", main = "BP New df: 100%");
+lines(fit2j)
 
 ```
 
