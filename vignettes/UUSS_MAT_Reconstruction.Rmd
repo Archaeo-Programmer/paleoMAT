@@ -647,12 +647,26 @@ y <- beef.pasture.old$anom
 x1 <- beef.pasture.new$age
 y1 <- beef.pasture.new$anom
 
-
-fit <- smooth.spline(x, y, tol = 60)
-plot(x,y)
+fit <- spline(eliminated$age, eliminated$anom)
+plot(x,y, ylim=c(-5, 5))
 lines(fit)
 xgrid <- seq(min(fit$x), max(fit$x),,2000)
 plot(predict(fit, xgrid))
+
+# Visualize outliers.
+boxplot(beef.pasture$anom)$out
+ggbetweenstats(data = beef.pasture,
+                x = site.id, y = anom, outlier.tagging = TRUE)
+
+#Remove outliers via quantile.
+Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(beef.pasture$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+ggbetweenstats(eliminated, site.id, anom, outlier.tagging = TRUE)
+
+
 
 
 fit1 <- spline(x1, y1)
