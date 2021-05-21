@@ -632,11 +632,17 @@ ok <- reconst_tavg_final %>%
 
 
 beef.pasture <- tavg %>% 
-  dplyr::filter(site.id == 246 & age < 2004) %>% 
+  dplyr::filter(site.id == 246) %>% 
   dplyr::group_by(age) %>% 
   dplyr::mutate(value = mean(value)) %>% 
   dplyr::distinct(age, .keep_all = TRUE) %>% 
   dplyr::arrange(age)
+
+beef.pasture %>% 
+  dplyr::filter((dataset.id == 25551)) %>% 
+  dplyr::select(age) %>% 
+  max()
+
 x <- beef.pasture$date
 y <- beef.pasture$anom
 
@@ -916,8 +922,11 @@ spars[which.min(ss2)]
 
 fita <- smooth.spline(x,y, df = length(x)*0.10)
 fit1a <- smooth.spline(x1,y1, df = length(x1)*0.10)
-fit2a <- smooth.spline(x2,y2, spar = 0.1015)
-par(mfrow = c(1,3))
+fit2a <- smooth.spline(x2,y2)
+
+
+
+plot(predict(fit2a, 0:2000))
 
 
 ```
