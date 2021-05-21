@@ -637,7 +637,7 @@ beef.pasture <- tavg %>%
   dplyr::mutate(value = mean(value)) %>% 
   dplyr::distinct(age, .keep_all = TRUE) %>% 
   dplyr::arrange(age)
-x <- beef.pasture$age
+x <- beef.pasture$date
 y <- beef.pasture$anom
 
 beef.pasture.old <- tavg %>% 
@@ -646,10 +646,10 @@ beef.pasture.old <- tavg %>%
 beef.pasture.new <- tavg %>% 
   dplyr::filter(dataset.id == 25551 & age < 2004)
 
-x1 <- beef.pasture.old$age
+x1 <- beef.pasture.old$date
 y1 <- beef.pasture.old$anom
 
-x2 <- beef.pasture.new$age
+x2 <- beef.pasture.new$date
 y2 <- beef.pasture.new$anom
 
 fit1 <- spline(x1,y1)
@@ -879,6 +879,46 @@ plot(x2,y2, col= "grey", main = "BP New df: 90%");
 lines(fit2i)
 plot(x2,y2, col= "grey", main = "BP New df: 100%");
 lines(fit2j)
+
+
+# Find out what spar value has the lowest residual sum of squares.
+splineres <- function(x, y, spar){
+  res <- rep(0, length(x))
+  for (i in 1:length(x)){
+    mod <- smooth.spline(x[-i], y[-i], spar = spar)
+    res[i] <- predict(mod, x[i])$y - y[i]
+  }
+  return(sum(res^2))
+}
+
+spars <- seq(0, 1.5, by = 0.001)
+#BP all
+ss <- rep(0, length(spars))
+for (i in 1:length(spars)){
+  ss[i] <- splineres(x, y, spars[i])
+}
+#plot(spars, ss, 'l', xlab = 'spar', ylab = 'Cross Validation Residual Sum of Squares' , main = 'CV RSS vs Spar')
+spars[which.min(ss)]
+#BP Old
+ss1 <- rep(0, length(spars))
+for (i in 1:length(spars)){
+  ss1[i] <- splineres(x1, y1, spars[i])
+}
+plot(spars, ss1, 'l', xlab = 'spar', ylab = 'Cross Validation Residual Sum of Squares' , main = 'CV RSS vs Spar')
+spars[which.min(ss1)]
+#BP New
+ss2 <- rep(0, length(spars))
+for (i in 1:length(spars)){
+  ss2[i] <- splineres(x2, y2, spars[i])
+}
+plot(spars, ss2, 'l', xlab = 'spar', ylab = 'Cross Validation Residual Sum of Squares' , main = 'CV RSS vs Spar')
+spars[which.min(ss2)]
+
+fita <- smooth.spline(x,y, df = length(x)*0.10)
+fit1a <- smooth.spline(x1,y1, df = length(x1)*0.10)
+fit2a <- smooth.spline(x2,y2, spar = 0.1015)
+par(mfrow = c(1,3))
+
 
 ```
 
