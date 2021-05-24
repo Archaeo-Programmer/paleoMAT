@@ -293,6 +293,12 @@ warmest.month <- mean(warmest.month)
 July_anom <- UUSS_100yrAvgs_tavg_July %>%
   dplyr::mutate(anom =  value_mean - warmest.month)
 
+# Get the top of the fossil cores reconstructed values that fall within 1961-1990. This is for a potential anomaly baseline adjustment. Would take same sites modern samples and see how the average differs from the reconstructed samples. 
+# reconst_tavg_final %>% 
+#   dplyr::filter(age < -12 & month == 7 & sample.id %in% c(192202, 347871, 186185, 136827, 192408, 132358, 142897, 154412)) %>% 
+#   dplyr::select(value) %>% 
+#   colMeans()
+
 # July.recon.mean <- mean(UUSS_100yrAvgs_tavg_July$value_mean)
 # July_anom2 <- UUSS_100yrAvgs_tavg_July %>%
 #   dplyr::mutate(anom =  value_mean - July.recon.mean)

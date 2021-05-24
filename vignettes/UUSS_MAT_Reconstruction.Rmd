@@ -626,10 +626,17 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-ok <- reconst_tavg_final %>% 
-  dplyr::filter(age < -12 & month == 7)
-  
+beef.pasture <- tavg %>% 
+  dplyr::filter(site.id == 246 & month == 7 & date >= -4000 & date <= 2000) %>% 
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) #%>% 
+  #dplyr::filter(date >= 0 & date <= 2000)
+x <- beef.pasture$date
+y <- beef.pasture$anom
 
+interval <- seq(0, 1, 0.01)
+fit <- smooth.spline(x,y, all.knots = TRUE)
+plot(x,y, xlim = c(-3500, 2000), ylim = c(-4, 5))
+lines(fit)
 
 beef.pasture <- tavg %>% 
   dplyr::filter(site.id == 246) %>% 
@@ -639,12 +646,9 @@ beef.pasture <- tavg %>%
   dplyr::arrange(age)
 
 beef.pasture %>% 
-  dplyr::filter((dataset.id == 25551)) %>% 
-  dplyr::select(age) %>% 
-  max()
-
-x <- beef.pasture$date
-y <- beef.pasture$anom
+  #dplyr::filter((dataset.id == 25551)) %>% 
+  dplyr::pull(anom) %>% 
+  mean()
 
 beef.pasture.old <- tavg %>% 
   dplyr::filter(dataset.id == 250 & age < 2004)
