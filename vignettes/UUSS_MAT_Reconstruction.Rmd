@@ -662,11 +662,13 @@ spacing <- totalyrs/75
 interval <- seq(-1050, 1800, length.out=spacing)
 interval <- seq(0, 1, length.out=spacing)
 #interval <- interval[2:(length(interval)-1)]
-fit <- smooth.spline(x,y, all.knots = TRUE)
+fit <- smooth.spline(x,y, df = (length(y)/2))
 fit <- npreg::ss(x, y, method = "GCV", m =3, knots = interval)
 plot(x,y, xlim = c(-1051, 1800), ylim = c(-4, 4))
 lines(fit)
 abline(v=interval)
+
+plot(predict(fit, -1000:1800), ylim = c(-4, 4))
 
 #abline(v = c(600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400), lty = 2)
 
