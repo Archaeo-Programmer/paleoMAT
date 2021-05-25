@@ -626,17 +626,49 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-beef.pasture <- tavg %>% 
-  dplyr::filter(site.id == 246 & month == 7 & date >= -4000 & date <= 2000) %>% 
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) #%>% 
-  #dplyr::filter(date >= 0 & date <= 2000)
-x <- beef.pasture$date
-y <- beef.pasture$anom
+# Determine what sites have multiple datasets.
+unique_datasets <- unique(tavg[c("dataset.id", "site.name")])
+duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>% 
+  unique()
 
-interval <- seq(0, 1, 0.01)
+# After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
+
+tavg_filtered <- tavg %>% 
+  dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>% 
+  dplyr::filter(!(dataset.id == 250 & date >= 0))
+
+
+beef.pasture <- tavg_filtered %>% 
+  dplyr::filter(site.id == 9814) %>% 
+  dplyr::group_by(age) %>%
+  dplyr::mutate(value = mean(value)) %>%
+  dplyr::distinct(age, .keep_all = TRUE) %>%
+  dplyr::arrange(age) #%>% 
+  #dplyr::filter(date >= 0 & date <= 2000)
+
+boxplot(beef.pasture$anom)$out
+Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(beef.pasture$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+x <- eliminated$date
+y <- eliminated$anom
+
+bpmax <- max(eliminated$date)
+bpmin <- min(eliminated$date)
+totalyrs <- bpmax - bpmin
+spacing <- totalyrs/75
+interval <- seq(-1050, 1800, length.out=spacing)
+interval <- seq(0, 1, length.out=spacing)
+#interval <- interval[2:(length(interval)-1)]
 fit <- smooth.spline(x,y, all.knots = TRUE)
-plot(x,y, xlim = c(-3500, 2000), ylim = c(-4, 5))
+fit <- npreg::ss(x, y, method = "GCV", m =3, knots = interval)
+plot(x,y, xlim = c(-1051, 1800), ylim = c(-4, 4))
 lines(fit)
+abline(v=interval)
+
+#abline(v = c(600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400), lty = 2)
 
 beef.pasture <- tavg %>% 
   dplyr::filter(site.id == 246) %>% 
@@ -723,24 +755,6 @@ lines(fit2)
 plot(x2, y2, col= "grey", main = "Smoothed Spline");
 lines(fit2a)
 mtext("Beef Pasture All", outer = TRUE)
-
-
-# Visualize outliers.
-boxplot(beef.pasture$anom)$out
-ggbetweenstats(data = beef.pasture,
-                x = site.id, y = anom, outlier.tagging = TRUE)
-
-#Remove outliers via quantile.
-Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
-iqr <- IQR(beef.pasture$anom)
-up <-  Q[2]+1.5*iqr # Upper Range  
-low<- Q[1]-1.5*iqr # Lower Range
-eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
-ggbetweenstats(eliminated, site.id, anom, outlier.tagging = TRUE)
-
-fit <- spline(eliminated$age, eliminated$anom)
-plot(eliminated$age, eliminated$anom, ylim=c(-5, 5))
-lines(fit)
 
 
 
@@ -931,6 +945,24 @@ fit2a <- smooth.spline(x2,y2)
 
 
 plot(predict(fit2a, 0:2000))
+
+
+# Visualize outliers.
+boxplot(beef.pasture$anom)$out
+ggstatsplot::ggbetweenstats(data = beef.pasture,
+                x = site.id, y = anom, outlier.tagging = TRUE)
+
+#Remove outliers via quantile.
+Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(beef.pasture$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+ggstatsplot::ggbetweenstats(eliminated, site.id, anom, outlier.tagging = TRUE)
+
+fit <- spline(eliminated$age, eliminated$anom)
+plot(eliminated$age, eliminated$anom, ylim=c(-5, 5))
+lines(fit)
 
 
 ```
