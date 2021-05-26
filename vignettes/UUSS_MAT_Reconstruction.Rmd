@@ -639,12 +639,11 @@ tavg_filtered <- tavg %>%
 
 
 beef.pasture <- tavg_filtered %>% 
-  dplyr::filter(site.id == 9814) %>% 
+  dplyr::filter(site.id == 1906) %>% 
   dplyr::group_by(age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age) #%>% 
-  #dplyr::filter(date >= 0 & date <= 2000)
+  dplyr::arrange(age)
 
 boxplot(beef.pasture$anom)$out
 Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
@@ -655,20 +654,59 @@ eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pa
 x <- eliminated$date
 y <- eliminated$anom
 
+fit <- spline(x,y, method = "natural")
+plot(x,y, xlim = c(-1051, 1800), ylim = c(-4, 8))
+lines(fit)
+fit <- as.data.frame(fit)
+
+boxplot(fit$y)$out
+Q <- quantile(fit$y, probs=c(.25, .75), na.rm = FALSE)
+iqr <- IQR(fit$y)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(fit, fit$y > (Q[1] - 1.5*iqr) & fit$y < (Q[2]+1.5*iqr))
+
+fit <- smooth.spline(eliminated, all.knots = TRUE)
+plot(eliminated$x, eliminated$y, xlim = c(-1051, 1800), ylim = c(-4, 8))
+lines(fit)
+
+agemax <- max(eliminated$x)
+agemax_rounded <- agemax %>% 
+  DescTools::RoundTo(multiple = 100, FUN = ceiling)
+agemin <- min(eliminated$x)
+agemin_rounded <- agemin %>% 
+  DescTools::RoundTo(multiple = 100, FUN = floor)
+
+
+midpoints <- seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100)
+fit <- as.data.frame(predict(fit, agemin:agemax)) %>% 
+  dplyr::filter(x >= -1000 & x <= 1799) %>% 
+  group_by(mean = (row_number() -1) %/% 100) %>%
+  mutate(mean = mean(y)) %>% 
+  dplyr::filter(x %in% midpoints)
+plot(eliminated$x, eliminated$y, xlim = c(min(fit$x), max(fit$x)))
+lines(fit$x, fit$mean)
+boxplot(fit$mean)$out
+
+
+
+
+
 bpmax <- max(eliminated$date)
 bpmin <- min(eliminated$date)
 totalyrs <- bpmax - bpmin
 spacing <- totalyrs/75
-interval <- seq(-1050, 1800, length.out=spacing)
+#interval <- seq(-1050, 1800, length.out=spacing)
 interval <- seq(0, 1, length.out=spacing)
 #interval <- interval[2:(length(interval)-1)]
 fit <- smooth.spline(x,y, df = (length(y)/2))
-fit <- npreg::ss(x, y, method = "GCV", m =3, knots = interval)
-plot(x,y, xlim = c(-1051, 1800), ylim = c(-4, 4))
+#fit <- npreg::ss(x, y, method = "GCV", m =3, knots = interval)
+plot(x,y, xlim = c(min(fit$x), max(fit$x)))
 lines(fit)
 abline(v=interval)
 
-plot(predict(fit, -1000:1800), ylim = c(-4, 4))
+plot(predict(fit, -1050:1800), ylim = c(-4, 4))
+
 
 #abline(v = c(600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400), lty = 2)
 
