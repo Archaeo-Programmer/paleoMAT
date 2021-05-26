@@ -630,6 +630,7 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 unique_datasets <- unique(tavg[c("dataset.id", "site.name")])
 duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>% 
   unique()
+#list1[!list1 %in% list2]
 
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
 
@@ -637,15 +638,22 @@ tavg_filtered <- tavg %>%
   dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0))
 
+#unique(tavg_filtered$site.name)
+
+for (i in 1:length(unique(tavg_filtered$site.id))){
+    
+  
+  return(sum(res^2))
+}
 
 beef.pasture <- tavg_filtered %>% 
-  dplyr::filter(site.id == 1906) %>% 
+  dplyr::filter(site.id == 246) %>% 
   dplyr::group_by(age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
   dplyr::arrange(age)
 
-boxplot(beef.pasture$anom)$out
+#boxplot(beef.pasture$anom)$out
 Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
 iqr <- IQR(beef.pasture$anom)
 up <-  Q[2]+1.5*iqr # Upper Range  
@@ -655,11 +663,11 @@ x <- eliminated$date
 y <- eliminated$anom
 
 fit <- spline(x,y, method = "natural")
-plot(x,y, xlim = c(-1051, 1800), ylim = c(-4, 8))
-lines(fit)
+# plot(x,y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+# lines(fit)
 fit <- as.data.frame(fit)
 
-boxplot(fit$y)$out
+#boxplot(fit$y)$out
 Q <- quantile(fit$y, probs=c(.25, .75), na.rm = FALSE)
 iqr <- IQR(fit$y)
 up <-  Q[2]+1.5*iqr # Upper Range  
@@ -667,8 +675,8 @@ low<- Q[1]-1.5*iqr # Lower Range
 eliminated<- subset(fit, fit$y > (Q[1] - 1.5*iqr) & fit$y < (Q[2]+1.5*iqr))
 
 fit <- smooth.spline(eliminated, all.knots = TRUE)
-plot(eliminated$x, eliminated$y, xlim = c(-1051, 1800), ylim = c(-4, 8))
-lines(fit)
+# plot(eliminated$x, eliminated$y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+# lines(fit)
 
 agemax <- max(eliminated$x)
 agemax_rounded <- agemax %>% 
@@ -677,16 +685,14 @@ agemin <- min(eliminated$x)
 agemin_rounded <- agemin %>% 
   DescTools::RoundTo(multiple = 100, FUN = floor)
 
-
 midpoints <- seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100)
 fit <- as.data.frame(predict(fit, agemin:agemax)) %>% 
   dplyr::filter(x >= -1000 & x <= 1799) %>% 
   group_by(mean = (row_number() -1) %/% 100) %>%
   mutate(mean = mean(y)) %>% 
   dplyr::filter(x %in% midpoints)
-plot(eliminated$x, eliminated$y, xlim = c(min(fit$x), max(fit$x)))
-lines(fit$x, fit$mean)
-boxplot(fit$mean)$out
+# plot(fit$x, fit$mean, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+# lines(fit$x, fit$mean)
 
 
 
