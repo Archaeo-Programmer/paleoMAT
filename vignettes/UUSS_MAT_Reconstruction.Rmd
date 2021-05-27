@@ -632,26 +632,41 @@ duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.na
   unique()
 #list1[!list1 %in% list2]
 
+# for (i in 1:length(unique(tavg_filtered$site.id))){
+#   return()
+# }
+
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
 
-tavg_filtered <- tavg %>% 
-  dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>% 
-  dplyr::filter(!(dataset.id == 250 & date >= 0))
-
-#unique(tavg_filtered$site.name)
-
-for (i in 1:length(unique(tavg_filtered$site.id))){
-    
-  
-  return(sum(res^2))
-}
-
-beef.pasture <- tavg_filtered %>% 
-  dplyr::filter(site.id == 246) %>% 
-  dplyr::group_by(age) %>%
+tavg_filtered <- tavg %>%
+  dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age)
+  dplyr::arrange(age) %>% 
+  tidyr::nest(site.data = c(-site.id, -site.name, -elev, -long, -lat)) %>%
+  sf::st_as_sf(coords = c("long", "lat"),
+                 crs = 4326) %>% 
+  dplyr::mutate(mean_100yrs = map(site.data, interpolate_time)) %>% 
+  dplyr::select(-site.data)
+
+
+# (tavg %>% dplyr::ungroup() %>% dplyr::select(dataset.id, site.name) %>% dplyr::distinct(dataset.id, site.name))
+
+# write.c((tavg %>% dplyr::ungroup() %>% dplyr::select(dataset.id, site.name) %>% dplyr::distinct(dataset.id, site.name)), "/Users/andrew/Desktop/okay.csv", row.names = FALSE)
+# =SUBSTITUTE(MID(SUBSTITUTE("/" & E2&REPT(" ",6),"/",REPT(",",255)),2*255,255),",","")
+
+
+
+beef.pasture <- tavg %>%
+  dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::group_by(site.id, age) %>%
+  dplyr::mutate(value = mean(value)) %>%
+  dplyr::distinct(age, .keep_all = TRUE) %>%
+  dplyr::arrange(age) %>% 
+  dplyr::filter(site.id == 246)
 
 #boxplot(beef.pasture$anom)$out
 Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
