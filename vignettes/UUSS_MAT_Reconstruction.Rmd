@@ -573,13 +573,26 @@ if (!file.exists("./vignettes/data/reconst_gdd_threshold.rds")) {
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Simplify tavg
+
+# First, need to update 12 fossil pollen sites age models that have been done using Bacon. Here, we read in the updated age models from individual .csv files.
+setwd("/Volumes/VILLAGE/paleomat/vignettes/data/updated_age_models")
+file_names <- dir()
+updated_age_models <- do.call(rbind,lapply(file_names,read.csv))
+setwd("/Volumes/VILLAGE/paleomat")
+  
+
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_tavg_final.rds")) {
   reconst_tavg_final <-
     simplify_reconstruction(reconstruction.data = reconst_tavg_threshold,
                             fossil.metadata = fossil_metadata_counts_final) %>%
     # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
-    tidyr::drop_na(age, value)
+    tidyr::drop_na(age, value) %>% 
+    # Update age models for multiple fossil pollen sites.
+    dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>% 
+    dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>% 
+    dplyr::select(-age.y, -age.x) %>% 
+    dplyr::mutate(age = round(age))
   
   readr::write_rds(reconst_tavg_final,
                    "./vignettes/data/reconst_tavg_final.rds")
@@ -632,14 +645,30 @@ duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.na
   unique()
 #list1[!list1 %in% list2]
 
-# for (i in 1:length(unique(tavg_filtered$site.id))){
-#   return()
-# }
+# Put lat and long into individual columns.
+tavg <- reconst_tavg_final %>%
+  tidyr::unnest(geometry) %>%
+  dplyr::group_by(sample.id, month) %>%
+  dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
+  tidyr::spread(key = col, value = geometry) %>%
+  dplyr::rename(long = "1", lat = "2")
+
+#Just temporary as this number is actually calculated in the Data_visualization.rmd
+warmest.month = 15.6182926829268
+
+tavg <- tavg %>%
+  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
+  #dplyr::filter(age < 5950 & age >= 150 & month >= 5 & month <= 9) %>%
+  dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
+  dplyr::mutate(anom = value - warmest.month)
+  
 
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
 
 tavg_filtered <- tavg %>%
   dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
+  
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
@@ -661,15 +690,15 @@ tavg_filtered <- tavg %>%
 
 beef.pasture <- tavg %>%
   dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::filter(dataset.id == 25551) %>% 
+  #dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age) %>% 
-  dplyr::filter(site.id == 246)
+  dplyr::arrange(age)
 
-#boxplot(beef.pasture$anom)$out
-Q <- quantile(beef.pasture$anom, probs=c(.25, .75), na.rm = FALSE)
+boxplot(beef.pasture$anom)$out
+Q <- quantile(beef.pasture$anom, probs=c(.10, .90), na.rm = FALSE)
 iqr <- IQR(beef.pasture$anom)
 up <-  Q[2]+1.5*iqr # Upper Range  
 low<- Q[1]-1.5*iqr # Lower Range
@@ -678,11 +707,11 @@ x <- eliminated$date
 y <- eliminated$anom
 
 fit <- spline(x,y, method = "natural")
-# plot(x,y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
-# lines(fit)
+plot(x,y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+lines(fit)
 fit <- as.data.frame(fit)
 
-#boxplot(fit$y)$out
+boxplot(fit$y)$out
 Q <- quantile(fit$y, probs=c(.25, .75), na.rm = FALSE)
 iqr <- IQR(fit$y)
 up <-  Q[2]+1.5*iqr # Upper Range  
@@ -690,8 +719,8 @@ low<- Q[1]-1.5*iqr # Lower Range
 eliminated<- subset(fit, fit$y > (Q[1] - 1.5*iqr) & fit$y < (Q[2]+1.5*iqr))
 
 fit <- smooth.spline(eliminated, all.knots = TRUE)
-# plot(eliminated$x, eliminated$y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
-# lines(fit)
+plot(eliminated$x, eliminated$y, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+lines(fit)
 
 agemax <- max(eliminated$x)
 agemax_rounded <- agemax %>% 
@@ -706,9 +735,8 @@ fit <- as.data.frame(predict(fit, agemin:agemax)) %>%
   group_by(mean = (row_number() -1) %/% 100) %>%
   mutate(mean = mean(y)) %>% 
   dplyr::filter(x %in% midpoints)
-# plot(fit$x, fit$mean, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
-# lines(fit$x, fit$mean)
-
+plot(fit$x, fit$mean, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
+lines(fit$x, fit$mean)
 
 
 
@@ -1031,24 +1059,6 @@ lines(fit)
 ### Thin Plate Spline Regression and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-# Put lat and long into individual columns.
-tavg <- reconst_tavg_final %>%
-  tidyr::unnest(geometry) %>%
-  dplyr::group_by(sample.id, month) %>%
-  dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
-  tidyr::spread(key = col, value = geometry) %>%
-  dplyr::rename(long = "1", lat = "2")
-
-#Just temporary as this number is actually calculated in the Data_visualization.rmd
-warmest.month = 15.6182926829268
-
-tavg <- tavg %>%
-  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  #dplyr::filter(age < 5950 & age >= 150 & month >= 5 & month <= 9) %>%
-  dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
-  dplyr::mutate(anom = value - warmest.month)
 
 tavg$coords <- matrix(c(tavg$long, tavg$lat), byrow = F, ncol = 2)
 
