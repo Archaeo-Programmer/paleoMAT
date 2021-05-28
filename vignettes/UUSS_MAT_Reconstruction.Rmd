@@ -668,7 +668,6 @@ tavg <- tavg %>%
 
 tavg_filtered <- tavg %>%
   dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
-  
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
@@ -690,8 +689,8 @@ tavg_filtered <- tavg %>%
 
 beef.pasture <- tavg %>%
   dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
-  dplyr::filter(dataset.id == 25551) %>% 
-  #dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::filter(site.id == 246) %>% 
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
@@ -759,107 +758,188 @@ plot(predict(fit, -1050:1800), ylim = c(-4, 4))
 
 #abline(v = c(600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400), lty = 2)
 
+
+
 beef.pasture <- tavg %>% 
-  dplyr::filter(site.id == 246) %>% 
+  #dplyr::filter(site.id == 246) %>% 
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% 
+  dplyr::filter(date >= 600 & date <= 700) %>% 
   dplyr::group_by(age) %>% 
   dplyr::mutate(value = mean(value)) %>% 
   dplyr::distinct(age, .keep_all = TRUE) %>% 
   dplyr::arrange(age)
 
-beef.pasture %>% 
-  #dplyr::filter((dataset.id == 25551)) %>% 
-  dplyr::pull(anom) %>% 
-  mean()
+beef.pasture <- beef.pasture[-c(8, 9, 18), ]
+c1 <- beef.pasture$date
+c2 <- beef.pasture$anom
 
-beef.pasture.old <- tavg %>% 
-  dplyr::filter(dataset.id == 250 & age < 2004)
+beef.pasture.limited <- beef.pasture %>% 
+  dplyr::filter(!(dataset.id == 250 & date >= 0))
+d1 <- beef.pasture.limited$date
+d2 <- beef.pasture.limited$anom
+# beef.pasture %>% 
+#   #dplyr::filter((dataset.id == 25551)) %>% 
+#   dplyr::pull(anom) %>% 
+#   mean()
 
-beef.pasture.new <- tavg %>% 
-  dplyr::filter(dataset.id == 25551 & age < 2004)
+beef.pasture.old <- beef.pasture %>% 
+  dplyr::filter(dataset.id == 250)
+a1 <- beef.pasture.old$date
+a2 <- beef.pasture.old$anom
 
-x1 <- beef.pasture.old$date
-y1 <- beef.pasture.old$anom
+beef.pasture.new <- beef.pasture %>% 
+  dplyr::filter(dataset.id == 25551)
+b1 <- beef.pasture.new$date
+b2 <- beef.pasture.new$anom
 
-x2 <- beef.pasture.new$date
-y2 <- beef.pasture.new$anom
+#Beef Pasture all
+par(mfrow = c(1,1))
+boxplot(beef.pasture$anom)$out
+Q <- quantile(beef.pasture$anom, probs=c(.01, .99), na.rm = FALSE)
+iqr <- IQR(beef.pasture$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+c1 <- eliminated$date
+c2 <- eliminated$anom
+lat <- eliminated$lat
+long <- eliminated$long
 
-fit1 <- spline(x1,y1)
-fit1a <- smooth.spline(x1,y1)
-plot(x1,y1, ylim=c(-5, 5))
-lines(fit1)
-xgrid1 <- seq(min(fit1$x), max(fit1$x),,2000)
-plot(predict(fit1, xgrid1))
+fit <- spline(c1,c2)
+fita <- smooth.spline(c1,c2, df = 41)
+plot(c1,c2, ylim=c(min(fita$y), max(fita$y)))
+lines(fita)
 
 #Natural cubic spline versus b-spline.
-cr_fit1 <- mgcv::gam(y1 ~ s(x1, bs = 'cr'))
+cr_fit <- mgcv::gam(c2 ~ s(c1, bs = 'cs', k = 41))
+cr_knots <- cr_fit$smooth[[1]]$xp  ## extract knots locations
+
+bs_fit <- mgcv::gam(c2 ~ s(c1, bs = 'bs'))
+bs_knots <- bs_fit$smooth[[1]]$knots  ## extract knots locations
+
+#Beef Pasture limited
+Q <- quantile(beef.pasture.limited$anom, probs=c(.10, .90), na.rm = FALSE)
+iqr <- IQR(beef.pasture.limited$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated<- subset(beef.pasture.limited, beef.pasture.limited$anom > (Q[1] - 1.5*iqr) & beef.pasture.limited$anom < (Q[2]+1.5*iqr))
+d1 <- eliminated$date
+d2 <- eliminated$anom
+
+fit3 <- spline(d1,d2)
+fit3a <- smooth.spline(d1,d2)
+# plot(d1,d2, ylim=c(-5, 5))
+# lines(fit3)
+#Natural cubic spline versus b-spline.
+cr_fit3 <- mgcv::gam(d2 ~ s(d1, bs = 'cs'))
+cr_knots3 <- cr_fit3$smooth[[1]]$xp  ## extract knots locations
+
+bs_fit3 <- mgcv::gam(d2 ~ s(d1, bs = 'bs'))
+bs_knots3 <- bs_fit3$smooth[[1]]$knots  ## extract knots locations
+
+#Beef Pasture old
+Q <- quantile(beef.pasture.old$anom, probs=c(.10, .90), na.rm = FALSE)
+iqr <- IQR(beef.pasture.old$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated <- subset(beef.pasture.old, beef.pasture.old$anom > (Q[1] - 1.5*iqr) & beef.pasture.old$anom < (Q[2]+1.5*iqr))
+a1 <- eliminated$date
+a2 <- eliminated$anom
+
+fit1 <- spline(a1,a2)
+fit1a <- smooth.spline(a1,a2)
+# plot(a1,a2, ylim=c(-5, 5))
+# lines(fit1)
+# xgrid1 <- seq(min(fit1$x), max(fit1$x),,2000)
+# plot(predict(fit1a, xgrid1))
+
+#Natural cubic spline versus b-spline.
+cr_fit1 <- mgcv::gam(a2 ~ s(a1, bs = 'cs'))
 cr_knots1 <- cr_fit1$smooth[[1]]$xp  ## extract knots locations
 
-bs_fit1 <- mgcv::gam(y1 ~ s(x1, bs = 'bs'))
+bs_fit1 <- mgcv::gam(a2 ~ s(a1, bs = 'bs'))
 bs_knots1 <- bs_fit1$smooth[[1]]$knots  ## extract knots locations
 
 
-fit <- spline(x,y)
-fita <- smooth.spline(x,y, df = 20)
-plot(x,y, ylim=c(-5, 5))
-lines(fit)
+# Beef Pasture new
+Q <- quantile(beef.pasture.new$anom, probs=c(.10, .90), na.rm = FALSE)
+iqr <- IQR(beef.pasture.new$anom)
+up <-  Q[2]+1.5*iqr # Upper Range  
+low<- Q[1]-1.5*iqr # Lower Range
+eliminated <- subset(beef.pasture.new, beef.pasture.new$anom > (Q[1] - 1.5*iqr) & beef.pasture.new$anom < (Q[2]+1.5*iqr))
+b1 <- eliminated$date
+b2 <- eliminated$anom
+
+fit2 <- spline(b1, b2)
+fit2a <- smooth.spline(b1, b2)
+plot(b1, b2, ylim=c(-5, 5))
+lines(fit2a)
+# xgrid2 <- seq(min(fit2a$x), max(fit2a$x),,2000)
+# plot(predict(fit2a, xgrid2))
+
 #Natural cubic spline versus b-spline.
-cr_fit <- mgcv::gam(y ~ s(x, bs = 'bs', k = 10))
-cr_knots <- cr_fit$smooth[[1]]$xp  ## extract knots locations
+cr_fit2 <- mgcv::gam(b2 ~ s(b1, bs = 'cs'))
+cr_knots2 <- cr_fit2$smooth[[1]]$xp  ## extract knots locations
 
-bs_fit <- mgcv::gam(y ~ s(x, bs = 'bs'))
-bs_knots <- bs_fit$smooth[[1]]$knots  ## extract knots locations
+bs_fit2 <- mgcv::gam(b2 ~ s(b1, bs = 'bs'))
+bs_knots2 <- bs_fit2$smooth[[1]]$knots  ## extract knots locations
 
-par(mfrow = c(3,4))
+
+par(mfrow = c(4,4))
 #Beef Pasture all
-plot(x, y, col= "grey", main = "natural cubic spline");
-lines(x, cr_fit$linear.predictors, col = 2, lwd = 2)
+par(mfrow = c(1,2))
+plot(c1, c2, col= "grey", main = "natural cubic spline");
+lines(c1, cr_fit$linear.predictors, col = 2, lwd = 2)
 abline(v = cr_knots, lty = 2)
-plot(x, y, col= "grey", main = "B-spline");
-lines(x, bs_fit$linear.predictors, col = 2, lwd = 2)
+plot(c1, c2, col= "grey", main = "B-spline");
+lines(c1, bs_fit$linear.predictors, col = 2, lwd = 2)
 abline(v = bs_knots, lty = 2)
-plot(x, y, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+plot(c1, c2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
 lines(fit)
-plot(x, y, col= "grey", main = "Smoothed Spline");
+plot(c1, c2, col= "grey", main = "Smoothed Spline");
 lines(fita)
+#Beef pasture limited
+plot(d1, d2, col= "grey", main = "natural cubic spline");
+lines(d1, cr_fit3$linear.predictors, col = 2, lwd = 2)
+abline(v = cr_knots3, lty = 2)
+plot(d1, d2, col= "grey", main = "B-spline");
+lines(d1, bs_fit3$linear.predictors, col = 2, lwd = 2)
+abline(v = bs_knots3, lty = 2)
+plot(d1, d2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+lines(fit3)
+plot(d1, d2, col= "grey", main = "Smoothed Spline");
+lines(fit3a)
 #Beef pasture old
-plot(x1, y1, col= "grey", main = "natural cubic spline");
-lines(x1, cr_fit1$linear.predictors, col = 2, lwd = 2)
+plot(a1, a2, col= "grey", main = "natural cubic spline");
+lines(a1, cr_fit1$linear.predictors, col = 2, lwd = 2)
 abline(v = cr_knots1, lty = 2)
-plot(x1, y1, col= "grey", main = "B-spline");
-lines(x1, bs_fit1$linear.predictors, col = 2, lwd = 2)
+plot(a1, a2, col= "grey", main = "B-spline");
+lines(a1, bs_fit1$linear.predictors, col = 2, lwd = 2)
 abline(v = bs_knots1, lty = 2)
-plot(x1, y1, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+plot(a1, a2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
 lines(fit1)
-plot(x1, y1, col= "grey", main = "Smoothed Spline");
+plot(a1, a2, col= "grey", main = "Smoothed Spline");
 lines(fit1a)
 #Beef pasture new
-plot(x2, y2, col= "grey", main = "natural cubic spline");
-lines(x2, cr_fit2$linear.predictors, col = 2, lwd = 2)
-abline(v = cr_knots1, lty = 2)
-plot(x2, y2, col= "grey", main = "B-spline");
-lines(x2, bs_fit2$linear.predictors, col = 2, lwd = 2)
-abline(v = bs_knots1, lty = 2)
-plot(x2, y2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
+plot(b1, b2, col= "grey", main = "natural cubic spline");
+lines(b1, cr_fit2$linear.predictors, col = 2, lwd = 2)
+abline(v = cr_knots2, lty = 2)
+plot(b1, b2, col= "grey", main = "B-spline");
+lines(b1, bs_fit2$linear.predictors, col = 2, lwd = 2)
+abline(v = bs_knots2, lty = 2)
+plot(b1, b2, col= "grey", main = "Forsythe, Malcolm and Moler cubic spline");
 lines(fit2)
-plot(x2, y2, col= "grey", main = "Smoothed Spline");
+plot(b1, b2, col= "grey", main = "Smoothed Spline");
 lines(fit2a)
 mtext("Beef Pasture All", outer = TRUE)
 
 
+par(mfrow = c(1,1))
+b <- gam(anom~s(date),data=eliminated)
+plot(c1, c2, col= "grey", main = "spline")
+lines(c1, b$linear.predictors, col = 2, lwd = 2)
+summary(b)
 
-fit2 <- spline(x2, y2)
-fit2a <- smooth.spline(x2,y2)
-plot(x2,y2, ylim=c(-5, 5))
-lines(fit2)
-xgrid2 <- seq(min(fit2$x), max(fit2$x),,2000)
-plot(predict(fit2, xgrid2))
-
-#Natural cubic spline versus b-spline.
-cr_fit2 <- mgcv::gam(y2 ~ s(x2, bs = 'cr'))
-cr_knots2 <- cr_fit2$smooth[[1]]$xp  ## extract knots locations
-
-bs_fit2 <- mgcv::gam(y2 ~ s(x2, bs = 'bs'))
-bs_knots2 <- bs_fit2$smooth[[1]]$knots  ## extract knots locations
 
 
 
