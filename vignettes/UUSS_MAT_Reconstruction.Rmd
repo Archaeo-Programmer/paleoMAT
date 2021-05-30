@@ -694,10 +694,7 @@ beef.pasture <- tavg %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age) %>% 
-  # Keep just top row of each site (just for testing).
-  group_by(site.name) %>% 
-  do(head(.,1))
+  dplyr::arrange(age)
 
 
 boxplot(beef.pasture$anom)$out
@@ -765,13 +762,16 @@ plot(predict(fit, -1050:1800), ylim = c(-4, 4))
 
 
 beef.pasture <- tavg %>% 
-  dplyr::filter(site.id == 246) %>% 
+  #dplyr::filter(site.id == 246) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% 
   dplyr::filter(date >= -1400 & date <= 2000) %>% 
   dplyr::group_by(age) %>% 
   dplyr::mutate(value = mean(value)) %>% 
   dplyr::distinct(age, .keep_all = TRUE) %>% 
-  dplyr::arrange(age)
+  dplyr::arrange(age) %>% 
+  # Keep just top row of each site (just for testing).
+  dplyr::group_by(site.name) %>% 
+  dplyr::do(head(.,1))
 
 beef.pasture <- beef.pasture[-c(8, 9, 18), ]
 c1 <- beef.pasture$date
@@ -850,9 +850,38 @@ site_means2 <- beef.pasture %>%
 
 beef.pasture$sitef <- factor(beef.pasture$site.id)
 beef.pasture <- beef.pasture %>% dplyr::arrange(sitef)
-m1 <- gam(anom ~ s(date, bs = 'cs'),
-          data = beef.pasture)
-visreg(m1)
+m1 <- gam(anom ~ s(long, lat),
+          data = beef.pasture, method = "REML")
+m <- getViz(m1)
+o <- plot( sm(m, 1) )
+o + l_fitLine(colour = "red") + l_rug(mapping = aes(x=x, y=y), alpha = 0.8) +
+    l_ciLine(mul = 5, colour = "blue", linetype = 2) + 
+    l_points(shape = 19, size = 1, alpha = 0.1) + theme_classic()
+plot(sm(m, 1)) + l_fitRaster() + l_fitContour() + l_points()
+
+
+m_int <- gam(anom ~s(long, lat), data = beef.pasture)
+plot(m_int)
+rsst2 <- aggregate(UUSS_prism, 2)
+icell <- 1:ncell(UUSS_prism)
+pred <- data.frame(value = rsst2[icell],
+                       cells = icell,
+                       x = xFromCell(rsst2, icell),
+                      y = yFromCell(rsst2, icell))
+pred <- na.omit(pred)
+pred <- pred %>% 
+  dplyr::mutate(value = value / 10.00)
+names(pred)[3:4] <- c("long", "lat")
+pred$anom_pred <- predict(m_int, newdata = pred, type = "response")
+head(pred)
+
+rpred <- raster(rsst2)
+rpred[pred$cells] <- pred$richness_pred
+rpred_cropped <- crop(x = rpred, y = bb2)
+
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
+plot(rpred_cropped, col=colors)
+
 
 rzeros <- UUSS_prism
 rzeros[] <- 0
