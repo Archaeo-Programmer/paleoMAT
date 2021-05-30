@@ -689,12 +689,16 @@ tavg_filtered <- tavg %>%
 
 beef.pasture <- tavg %>%
   dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
-  dplyr::filter(site.id == 246) %>% 
+  #dplyr::filter(site.id == 246) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
   dplyr::mutate(value = mean(value)) %>%
   dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age)
+  dplyr::arrange(age) %>% 
+  # Keep just top row of each site (just for testing).
+  group_by(site.name) %>% 
+  do(head(.,1))
+
 
 boxplot(beef.pasture$anom)$out
 Q <- quantile(beef.pasture$anom, probs=c(.10, .90), na.rm = FALSE)
@@ -839,8 +843,21 @@ plot(predict.points$date,FinalData$predict.anom)
 lines(predict.points$date,FinalData$predict.anom)
 
 
+# gam mapping
+site_means2 <- beef.pasture %>%
+  dplyr::mutate(z = rnorm(1, sd = 1),
+         yhat = value + z)
 
+beef.pasture$sitef <- factor(beef.pasture$site.id)
+beef.pasture <- beef.pasture %>% dplyr::arrange(sitef)
+m1 <- gam(anom ~ s(date, bs = 'cs'),
+          data = beef.pasture)
+visreg(m1)
 
+rzeros <- UUSS_prism
+rzeros[] <- 0
+names(rzeros) <- c("date")
+rpred <- predict(rzeros, m1)
 
 
 #Natural cubic spline versus b-spline.
