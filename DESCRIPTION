@@ -21,7 +21,8 @@ Depends:
     analogue,
     palaeoSig,
     raster,
-    reshape2
+    reshape2, 
+    mgcv
 Imports: 
     rebus.numbers,
     leaflet,

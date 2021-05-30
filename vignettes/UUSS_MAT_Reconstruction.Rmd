@@ -761,9 +761,9 @@ plot(predict(fit, -1050:1800), ylim = c(-4, 4))
 
 
 beef.pasture <- tavg %>% 
-  #dplyr::filter(site.id == 246) %>% 
+  dplyr::filter(site.id == 246) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% 
-  dplyr::filter(date >= 600 & date <= 700) %>% 
+  dplyr::filter(date >= -1400 & date <= 2000) %>% 
   dplyr::group_by(age) %>% 
   dplyr::mutate(value = mean(value)) %>% 
   dplyr::distinct(age, .keep_all = TRUE) %>% 
@@ -799,16 +799,46 @@ Q <- quantile(beef.pasture$anom, probs=c(.01, .99), na.rm = FALSE)
 iqr <- IQR(beef.pasture$anom)
 up <-  Q[2]+1.5*iqr # Upper Range  
 low<- Q[1]-1.5*iqr # Lower Range
-eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+eliminated <- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
 c1 <- eliminated$date
 c2 <- eliminated$anom
-lat <- eliminated$lat
-long <- eliminated$long
+latc <- eliminated$lat
+longc <- eliminated$long
 
 fit <- spline(c1,c2)
 fita <- smooth.spline(c1,c2, df = 41)
 plot(c1,c2, ylim=c(min(fita$y), max(fita$y)))
 lines(fita)
+
+# GAM and prediction
+#attach(eliminated)
+gam_fit <- mgcv::gam(anom ~ s(date, bs = 'cs', k = (length(eliminated$anom)/2)), data = eliminated, family=gaussian())
+#detach("eliminated")
+gam_knots <- gam_fit$smooth[[1]]$xp  ## extract knots locations
+
+plot(eliminated$date,fitted(gam_fit))
+lines(eliminated$date,fitted(gam_fit))
+plot(eliminated$date, eliminated$anom, col= "grey", main = "cubic spline");
+lines(eliminated$date, gam_fit$linear.predictors, col = 2, lwd = 2)
+abline(v = gam_knots, lty = 2)
+
+agemax <- max(eliminated$date)
+agemax_rounded <- agemax %>% 
+  DescTools::RoundTo(multiple = 100, FUN = ceiling)
+agemin <- min(eliminated$date)
+agemin_rounded <- agemin %>% 
+  DescTools::RoundTo(multiple = 100, FUN = floor)
+
+predict.points <- as.data.frame(seq(agemin_rounded, agemax_rounded, by = 100))
+#predict.points <- as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
+names(predict.points)[1] <- "date"
+
+predict.anom <- mgcv::predict.gam(gam_fit,predict.points,type='response')
+FinalData <- data.frame(predict.points,predict.anom)
+plot(predict.points$date,FinalData$predict.anom)
+lines(predict.points$date,FinalData$predict.anom)
+
+
 
 #Natural cubic spline versus b-spline.
 cr_fit <- mgcv::gam(c2 ~ s(c1, bs = 'cs', k = 41))
