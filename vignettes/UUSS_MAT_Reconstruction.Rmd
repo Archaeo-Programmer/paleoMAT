@@ -688,7 +688,7 @@ tavg_filtered <- tavg %>%
 
 
 beef.pasture <- tavg %>%
-  dplyr::filter(month == 7 & date >= -1051 & date <= 1800) %>%
+  dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
   dplyr::filter(site.id == 246) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, age) %>%
@@ -701,7 +701,7 @@ Q <- quantile(beef.pasture$anom, probs=c(.10, .90), na.rm = FALSE)
 iqr <- IQR(beef.pasture$anom)
 up <-  Q[2]+1.5*iqr # Upper Range  
 low<- Q[1]-1.5*iqr # Lower Range
-eliminated<- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
+eliminated <- subset(beef.pasture, beef.pasture$anom > (Q[1] - 1.5*iqr) & beef.pasture$anom < (Q[2]+1.5*iqr))
 x <- eliminated$date
 y <- eliminated$anom
 
@@ -837,6 +837,9 @@ predict.anom <- mgcv::predict.gam(gam_fit,predict.points,type='response')
 FinalData <- data.frame(predict.points,predict.anom)
 plot(predict.points$date,FinalData$predict.anom)
 lines(predict.points$date,FinalData$predict.anom)
+
+
+
 
 
 
@@ -1197,22 +1200,22 @@ xys <- sf::st_as_sf(reconst_tavg_final) %>%
 # Get extent of fossil pollen sites and make a polygon.
 fossilpnts <- reconst_tavg_final %>%
   sf::st_as_sf(crs = 4326)
-fossilpolygon <- concaveman(fossilpnts) %>%
+fossilpolygon <- concaveman::concaveman(fossilpnts) %>%
   sf::st_as_sf(crs = 4326) %>%
   sf::st_transform(crs = 4326) %>%
   sf:::as_Spatial()
 
 # Create a bounding box for the extent of the sites.
-# bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
-#   sf::st_bbox() %>%
-#   sf::st_as_sfc() %>%
-#   sf::st_as_sf(crs = 4326) %>%
-#   sf::st_transform(crs = 4326)
+bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
 
 # Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
 prism <- prism_7[2,]$normal[[1]]
 # Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box or polygon).
-UUSS_prism <- raster::mask(prism, fossilpolygon)
+UUSS_prism <- raster::mask(prism, bb2)
 # Convert raster layer to a dataframe to put into correct format for the fields package.
 UUSS_prism_df <- raster::as.data.frame(UUSS_prism, xy = TRUE) %>%
   dplyr::select(x, y)
