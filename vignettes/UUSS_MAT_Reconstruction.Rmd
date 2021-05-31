@@ -1247,7 +1247,8 @@ tavg_100yrs <- tavg_predicted %>%
   tidyr::unnest(mean_100yrs) %>% 
   dplyr::filter(date >= -1000 & date <= 1800) %>% 
   dplyr::group_by(date) %>% 
-  tidyr::nest()
+  tidyr::nest() %>% 
+  dplyr::rename(site.predictions = data)
   
 
 m_int <- mgcv::gam(anom ~s(long, lat), data = beef.pasture)
