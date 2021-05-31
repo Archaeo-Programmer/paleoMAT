@@ -645,41 +645,46 @@ duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.na
   unique()
 #list1[!list1 %in% list2]
 
+#Just temporary as this number is actually calculated in the Data_visualization.rmd
+warmest.month = 15.6182926829268
+
 # Put lat and long into individual columns.
 tavg <- reconst_tavg_final %>%
   tidyr::unnest(geometry) %>%
   dplyr::group_by(sample.id, month) %>%
   dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
   tidyr::spread(key = col, value = geometry) %>%
-  dplyr::rename(long = "1", lat = "2")
-
-#Just temporary as this number is actually calculated in the Data_visualization.rmd
-warmest.month = 15.6182926829268
-
-tavg <- tavg %>%
+  dplyr::rename(long = "1", lat = "2") %>% 
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  #dplyr::filter(age < 5950 & age >= 150 & month >= 5 & month <= 9) %>%
   dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
   dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
   dplyr::mutate(anom = value - warmest.month)
   
 
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
-
-tavg_filtered <- tavg %>%
+tavg_predicted <- tavg %>%
   dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-  # dplyr::group_by(site.id, age) %>%
-  # dplyr::mutate(value = mean(value)) %>%
-  # dplyr::distinct(age, .keep_all = TRUE) %>%
-  # dplyr::arrange(age) %>% 
-  tibble::as_tibble() %>%
-  dplyr::select(month:anom) %>% 
-  tidyr::nest(site.data = c(-site.id, -site.name, -elev, -long, -lat)) %>%
+  dplyr::group_by(site.id, site.name, elev, long, lat) %>%
+  tidyr::nest() %>%
+  dplyr::rename(site.data = data) %>%
+  dplyr::mutate(site.data = purrr::map(site.data,
+                                       function(x) {
+                                         x %>%
+                                           dplyr::group_by(age) %>%
+                                           dplyr::mutate(
+                                             value = mean(value),
+                                             error = mean(error),
+                                             anom = mean(anom)
+                                           ) %>%
+                                           dplyr::distinct(age, .keep_all = TRUE) %>%
+                                           dplyr::arrange(age)
+                                       })) %>%
   # sf::st_as_sf(coords = c("long", "lat"),
   #                crs = 4326) %>%
-  dplyr::mutate(mean_100yrs = map(site.data, interpolate_time)) %>% 
-  dplyr::select(-site.data)
+  dplyr::mutate(mean_100yrs = purrr::map(site.data, interpolate_time)) %>%
+  dplyr::select(-site.data) %>%
+  dplyr::arrange(site.id)
 
 
 # For testing,
@@ -862,12 +867,13 @@ lines(predict.points$date,FinalData$predict.anom)
 
 
 # gam mapping
-site_means2 <- beef.pasture %>%
-  dplyr::mutate(z = rnorm(1, sd = 1),
-         yhat = value + z)
+# site_means2 <- beef.pasture %>%
+#   dplyr::mutate(z = rnorm(1, sd = 1),
+#          yhat = value + z)
+# 
+# beef.pasture$sitef <- factor(beef.pasture$site.id)
+# beef.pasture <- beef.pasture %>% dplyr::arrange(sitef)
 
-beef.pasture$sitef <- factor(beef.pasture$site.id)
-beef.pasture <- beef.pasture %>% dplyr::arrange(sitef)
 m1 <- gam(anom ~ s(long, lat),
           data = beef.pasture, method = "REML")
 m <- getViz(m1)
@@ -877,7 +883,7 @@ o + l_fitLine(colour = "red") + l_rug(mapping = aes(x=x, y=y), alpha = 0.8) +
     l_points(shape = 19, size = 1, alpha = 0.1) + theme_classic()
 plot(sm(m, 1)) + l_fitRaster() + l_fitContour() + l_points()
 
-
+#USE THIS CODE!!
 m_int <- gam(anom ~s(long, lat), data = beef.pasture)
 plot(m_int)
 rsst2 <- aggregate(UUSS_prism, 2)
@@ -1233,9 +1239,41 @@ lines(fit)
 
 ```
 
-### Thin Plate Spline Regression and Mapping
+### Generalized Additive Model (GAM) and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+tavg_100yrs <- tavg_predicted %>% 
+  tidyr::unnest(mean_100yrs) %>% 
+  dplyr::filter(date >= -1000 & date <= 1800) %>% 
+  dplyr::group_by(date) %>% 
+  tidyr::nest()
+  
+
+m_int <- mgcv::gam(anom ~s(long, lat), data = beef.pasture)
+plot(m_int)
+rsst2 <- aggregate(UUSS_prism, 2)
+icell <- 1:ncell(UUSS_prism)
+pred <- data.frame(value = rsst2[icell],
+                       cells = icell,
+                       x = xFromCell(rsst2, icell),
+                      y = yFromCell(rsst2, icell))
+pred <- na.omit(pred)
+pred <- pred %>% 
+  dplyr::mutate(value = value / 10.00)
+names(pred)[3:4] <- c("long", "lat")
+pred$anom_pred <- predict(m_int, newdata = pred, type = "response")
+head(pred)
+
+rpred <- raster(rsst2)
+rpred[pred$cells] <- pred$richness_pred
+rpred_cropped <- crop(x = rpred, y = bb2)
+
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
+plot(rpred_cropped, col=colors)
+
+
+
 
 tavg$coords <- matrix(c(tavg$long, tavg$lat), byrow = F, ncol = 2)
 
