@@ -1243,6 +1243,38 @@ lines(fit)
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+#First, prepare the raster grid that will be used to do predictions over. In this case, it is the PRISM grid that covers the study area (via the extents done by bounding box).
+# Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
+xys <- sf::st_as_sf(reconst_tavg_final) %>%
+  raster::extent()
+
+# Get extent of fossil pollen sites and make a polygon.
+fossilpnts <- reconst_tavg_final %>%
+  sf::st_as_sf(crs = 4326)
+fossilpolygon <- concaveman::concaveman(fossilpnts) %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326) %>%
+  sf:::as_Spatial()
+
+# Next, apply a 25 mile (or 40233.6 meters) buffer from the extent of the sites (to be the edge of extrapolation from the sites). Here, the projection is changed as gBuffer (or GEOS) expects planar coordinates. Then, these are converted back in order to use mask to clip the raster below.
+fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"))
+fossilpolygon <- rgeos::gBuffer(fossilpolygon, width = 40233.6)
+fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+init=epsg:4326"))
+
+# Create a bounding box for the extent of the sites.
+# bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
+#   sf::st_bbox() %>%
+#   sf::st_as_sfc() %>%
+#   sf::st_as_sf(crs = 4326) %>%
+#   sf::st_transform(crs = 4326)
+
+# Get prism grid. First, just need one raster layer, which here is just the tmax values for month 7.
+prism <- prism_7[2,]$normal[[1]]
+# Do intersection to get just the spatial extent of the fossil pollen sites (via a bounding box or polygon).
+UUSS_prism <- raster::mask(prism, fossilpolygon)
+
+
+# Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
 tavg_100yrs <- tavg_predicted %>% 
   tidyr::unnest(mean_100yrs) %>% 
   dplyr::filter(date >= -1000 & date <= 1800) %>% 
@@ -1250,8 +1282,25 @@ tavg_100yrs <- tavg_predicted %>%
   tidyr::nest() %>% 
   dplyr::rename(site.predictions = data)
   
+test <- tavg_100yrs[23,]
+site.preds = test$site.predictions
+site.preds <- as.data.frame(site.preds)
+prism.raster = UUSS_prism
+preds.extent = fossilpolygon
 
-m_int <- mgcv::gam(anom ~s(long, lat), data = beef.pasture)
+tavg_preds <- tavg_100yrs %>% 
+  dplyr::mutate(raster.preds = purrr::map(site.predictions, map_predictions(prism.raster = UUSS_prism, preds.extent = fossilpolygon)))
+
+# purrr::map(
+#       .f = function(the.reconst) {
+#         apply_threshold(x = the.reconst,
+#                         qtile = .995)
+#       }
+#     )
+
+ok5 <- beef.pasture[1:32, ]
+
+m_int <- mgcv::gam(anom ~s(long, lat, k = 29), data = ok5)
 plot(m_int)
 rsst2 <- aggregate(UUSS_prism, 2)
 icell <- 1:ncell(UUSS_prism)
