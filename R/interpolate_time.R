@@ -52,7 +52,7 @@ interpolate_time <-
         smooth.dim <- 3
 
       } else {
-        smooth.dim <- ceiling(length(eliminated$anom) / 2)
+        smooth.dim <- ceiling(length(eliminated$anom) *0.6)
 
       }
 
@@ -60,6 +60,7 @@ interpolate_time <-
         mgcv::gam(anom ~ s(date, bs = 'cs', k = smooth.dim),
                   data = eliminated,
                   family = gaussian())
+      #plot(gam_fit)
       gam_knots <-
         gam_fit$smooth[[1]]$xp  ## extract knots locations
       # Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.

@@ -684,25 +684,92 @@ tavg_predicted <- tavg %>%
   #                crs = 4326) %>%
   dplyr::mutate(mean_100yrs = purrr::map(site.data, interpolate_time)) %>%
   dplyr::select(-site.data) %>%
-  dplyr::arrange(site.id) %>%
+  dplyr::arrange(site.name) %>%
   unnest_wider(mean_100yrs) %>%
   dplyr::rename(mean_100yrs = 6, gam_fit = 7)
 
-# For TESTING
 
+# Get number of samples for each site.
+ok2 <- ok %>% 
+  dplyr::mutate(no.samples = purrr::map(site.data, ))
+
+# Plot all sites GAM
+longlake <- tavg_predicted %>% 
+  dplyr::filter(site.name == "Long Lake")
+
+
+# Currently just using base plot to make these quickly. All of the figures can't fit into one screen, so have to divide them up for now. 
+tavg_predicted.nolm <- tavg_predicted %>% 
+  dplyr::filter(!site.name == "Long Lake")
+tavg_predicted.nolm <- tavg_predicted.nolm[1:20, ]
+par(mfrow = c(4,5), oma = c(1.1,1,1,1))
+
+purrr::map(
+    1:length(tavg_predicted.nolm$site.id),
+    .f = function(j) {
+      plot(
+        tavg_predicted.nolm$gam_fit[[j]],
+        xlab = "Date (Years BC/AD)", 
+        ylab = "Temperature Anamoly", 
+        main = tavg_predicted.nolm$site.name[j]
+      )
+    }
+  )
+
+tavg_predicted.nolm <- tavg_predicted %>% 
+  dplyr::filter(!site.name == "Long Lake")
+tavg_predicted.nolm <- tavg_predicted.nolm[21:34, ]
+par(mfrow = c(3,5), oma = c(1.1,1,1,1))
+
+purrr::map(
+    1:length(tavg_predicted.nolm$site.id),
+    .f = function(j) {
+      plot(
+        tavg_predicted.nolm$gam_fit[[j]],
+        xlab = "Date (Years BC/AD)", 
+        ylab = "Temperature Anamoly", 
+        main = tavg_predicted.nolm$site.name[j]
+      )
+    }
+  )
+
+
+# For TESTING
+ 
  temp_data <- tavg %>%
-  dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
-  dplyr::filter(site.id == 246) %>% 
-  dplyr::filter(sample.id == 264381 | sample.id == 264428 | sample.id == 264447) %>% 
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-  dplyr::group_by(site.id, age) %>%
-  dplyr::mutate(value = mean(value)) %>%
-  dplyr::distinct(age, .keep_all = TRUE) %>%
-  dplyr::arrange(age) %>% 
-  tidyr::nest(site.data = c(-site.id, -site.name, -elev, -long, -lat)) %>%
-  sf::st_as_sf(coords = c("long", "lat"),
-                 crs = 4326) #%>%
-    temp_data <- temp_data$site.data
+   dplyr::filter(date >= -1400 & date <= 2000) %>%
+   dplyr::filter(site.id == 486) %>%
+   # dplyr::filter(sample.id == 264381 |
+   #                 sample.id == 264428 | sample.id == 264447) %>%
+   #dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
+   tidyr::nest() %>%
+   dplyr::rename(site.data = data) %>%
+   dplyr::mutate(site.data = purrr::map(site.data,
+                                        function(x) {
+                                          x %>%
+                                            dplyr::group_by(age) %>%
+                                            dplyr::mutate(
+                                              value = mean(value),
+                                              error = mean(error),
+                                              anom = mean(anom)
+                                            ) %>%
+                                            dplyr::distinct(age, .keep_all = TRUE) %>%
+                                            dplyr::arrange(age)
+                                        }))
+    temp_data <- as.data.frame(temp_data$site.data)
+    
+    
+    fita <- smooth.spline(temp_data$date, temp_data$anom, df = 15)
+    plot(temp_data$date, temp_data$anom)
+    lines(fita)
+    
+    names(fit) <- c("x", "y", "se.fit")
+    plot(fit$x,
+         fit$y,
+         xlim = c(min(fit$x), max(fit$x)),
+         ylim = c(min(fit$y), max(fit$y)))
+    lines(fit$x, fit$y)
 
 # (tavg %>% dplyr::ungroup() %>% dplyr::select(dataset.id, site.name) %>% dplyr::distinct(dataset.id, site.name))
 
@@ -759,6 +826,8 @@ fit <- as.data.frame(predict(fit, agemin:agemax)) %>%
   group_by(mean = (row_number() -1) %/% 100) %>%
   mutate(mean = mean(y)) %>% 
   dplyr::filter(x %in% midpoints)
+
+names(fit) <- c("x", "mean", "se.fit")
 plot(fit$x, fit$mean, xlim = c(min(fit$x), max(fit$x)), ylim = c(min(fit$y), max(fit$y)))
 lines(fit$x, fit$mean)
 
