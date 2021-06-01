@@ -43,7 +43,7 @@ interpolate_time <-
 
       fit <- cbind(predict.points, predict.anom)
 
-      return(fit)
+      return(list(fit, gam_fit))
 
     } else {
       # If there are at least 3 samples, then run the mgcv::gam model. First, get the smoothing dimension, which is generally n/2.
@@ -88,6 +88,6 @@ interpolate_time <-
         dplyr::rename(anom = 1)
       fit <- cbind(predict.points, predict.anom)
 
-      return(fit)
+      return(list(fit, gam_fit))
     }
   }

@@ -663,7 +663,7 @@ tavg <- reconst_tavg_final %>%
 
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
 tavg_predicted <- tavg %>%
-  dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
+  dplyr::filter(date >= -1400 & date <= 2000) %>%
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
   tidyr::nest() %>%
@@ -684,10 +684,11 @@ tavg_predicted <- tavg %>%
   #                crs = 4326) %>%
   dplyr::mutate(mean_100yrs = purrr::map(site.data, interpolate_time)) %>%
   dplyr::select(-site.data) %>%
-  dplyr::arrange(site.id)
+  dplyr::arrange(site.id) %>%
+  unnest_wider(mean_100yrs) %>%
+  dplyr::rename(mean_100yrs = 6, gam_fit = 7)
 
-
-# For testing,
+# For TESTING
 
  temp_data <- tavg %>%
   dplyr::filter(month == 7 & date >= -1400 & date <= 2000) %>%
