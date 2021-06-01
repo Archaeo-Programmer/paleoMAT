@@ -1240,6 +1240,18 @@ lines(fit)
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
 ### Generalized Additive Model (GAM) and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
@@ -1277,20 +1289,42 @@ UUSS_prism <- raster::mask(prism, fossilpolygon)
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
 tavg_100yrs <- tavg_predicted %>% 
+  dplyr::select(-gam_fit) %>% 
   tidyr::unnest(mean_100yrs) %>% 
   dplyr::filter(date >= -1000 & date <= 1800) %>% 
   dplyr::group_by(date) %>% 
   tidyr::nest() %>% 
   dplyr::rename(site.predictions = data)
   
-test <- tavg_100yrs[23,]
+
+# FOR TESTING
+test <- tavg_100yrs[18:20,]
 site.preds = test$site.predictions
 site.preds <- as.data.frame(site.preds)
 prism.raster = UUSS_prism
 preds.extent = fossilpolygon
 
-tavg_preds <- tavg_100yrs %>% 
-  dplyr::mutate(raster.preds = purrr::map(site.predictions, map_predictions(prism.raster = UUSS_prism, preds.extent = fossilpolygon)))
+
+tavg_preds <- tavg_100yrs %>%
+  dplyr::mutate(raster.preds = purrr::map(
+    site.predictions,
+    .f = function(x) {
+      map_predictions(
+        site.preds = x,
+        prism.raster = UUSS_prism,
+        preds.extent = fossilpolygon
+      )
+    }
+  ))
+
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
+plot(rpred_cropped, col=colors)
+
+
+
+
+
+
 
 # purrr::map(
 #       .f = function(the.reconst) {
