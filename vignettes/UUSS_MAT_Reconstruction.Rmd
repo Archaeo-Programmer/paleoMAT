@@ -690,9 +690,15 @@ tavg_predicted <- tavg %>%
 
 
 # Get number of samples for each site.
-ok2 <- ok %>% 
-  dplyr::mutate(no.samples = purrr::map(site.data, ))
-
+# ok2 <- ok %>% 
+#   dplyr::mutate(no.samples = purrr::map(site.data, ))
+# ok2 <- ok %>%
+#     dplyr::mutate(mean.anom = purrr::map(
+#     site.data,
+#     .f = function(x) {
+#       nrow(x)
+#     }
+#   )) 
 # Plot all sites GAM
 longlake <- tavg_predicted %>% 
   dplyr::filter(site.name == "Long Lake")
@@ -1367,7 +1373,7 @@ tavg_100yrs <- tavg_predicted %>%
   
 
 # FOR TESTING
-test <- tavg_100yrs[18:20,]
+test <- tavg_100yrs[29,]
 site.preds = test$site.predictions
 site.preds <- as.data.frame(site.preds)
 prism.raster = UUSS_prism
@@ -1390,8 +1396,97 @@ colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
 plot(rpred_cropped, col=colors)
 
 
+ok <- tavg_100yrs[19,]$site.predictions %>% 
+  as.data.frame() %>% 
+  dplyr::rename(x = long, y = lat)
 
+# New options using Sören Wilke's post: https://swilke-geoscience.net/post/spatial_interpolation/
+# First make a grid.
+bbox <- c(
+  "xmin" = min(ok$x),
+  "ymin" = min(ok$y),
+  "xmax" = max(ok$x),
+  "ymax" = max(ok$y)
+)
 
+grd_template <- expand.grid(
+  x = seq(from = bbox["xmin"], to = bbox["xmax"], by = 0.5),
+  y = seq(from = bbox["ymin"], to = bbox["ymax"], by = 0.5) # in degrees resolution
+)
+#Or use sf to make the grid instead.
+sf_NH4 <- st_as_sf(ok, coords = c("x", "y"), crs = 4326)
+
+alt_grd_template_sf <- sf_NH4 %>% 
+  st_bbox() %>% 
+  st_as_sfc() %>% 
+  st_make_grid(
+  cellsize = c(0.5, 0.5),
+  what = "centers"
+  ) %>%
+  st_as_sf() %>%
+  cbind(., st_coordinates(.)) %>% 
+  st_drop_geometry() %>% 
+  mutate(Z = 0)
+
+#Rasterize the grid. If using 
+crs_raster_format <- "+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"
+
+grd_template_raster <- grd_template %>% 
+  dplyr::mutate(Z = 0) %>% 
+  raster::rasterFromXYZ( 
+    crs = crs_raster_format)
+
+alt_grd_template_raster <- alt_grd_template_sf %>% 
+  raster::rasterFromXYZ(
+     crs = crs_raster_format
+  )
+
+# Fit the model as the first step in the process.
+# Thin Plate Spline Regression
+fit_TPS <- fields::Tps( # using {fields}
+  x = as.matrix(ok[, c("x", "y")]), # accepts points but expects them as matrix
+  Y = ok$anom,  # the dependent variable
+  miles = TRUE, 
+  df = 20
+)
+
+interp_TPS <- interpolate(grd_template_raster, fit_TPS)
+crs(interp_TPS) <- CRS('+init=EPSG:4326')
+mapview::mapview(interp_TPS)
+
+# Generalized Additive Model
+fit_GAM <- mgcv::gam( # using {mgcv}
+  anom ~ s(x, y, k = 23),      # here come our X/Y/Z data - straightforward enough
+  data = ok      # specify in which object the data is stored
+)
+
+interp_GAM <- grd_template %>% 
+  mutate(Z = predict(fit_GAM, .)) %>% 
+  rasterFromXYZ(crs = crs_raster_format)
+crs(interp_GAM) <- CRS('+init=EPSG:4326')
+mapview::mapview(interp_GAM)
+
+# Triangular Irregular Surface
+fit_TIN <- interp::interp( # using {interp}
+  x = ok$x,           # the function actually accepts coordinate vectors
+  y = ok$y,
+  z = ok$anom,
+  xo = grd_template$x,     # here we already define the target grid
+  yo = grd_template$y,
+  output = "points"
+) %>% bind_cols()
+
+interp_TIN <- raster::rasterFromXYZ(fit_TIN, crs = crs_raster_format)
+crs(interp_TIN) <- CRS('+init=EPSG:4326')
+mapview::mapview(interp_TIN)
+
+hello <- tavg_100yrs %>%
+  dplyr::mutate(mean.anom = purrr::map(
+    site.predictions,
+    .f = function(x) {
+      nrow(x)
+    }
+  ))
 
 
 
