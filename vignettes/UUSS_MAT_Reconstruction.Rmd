@@ -1410,8 +1410,8 @@ bbox <- c(
 )
 
 grd_template <- expand.grid(
-  x = seq(from = bbox["xmin"], to = bbox["xmax"], by = 0.5),
-  y = seq(from = bbox["ymin"], to = bbox["ymax"], by = 0.5) # in degrees resolution
+  x = seq(from = bbox["xmin"], to = bbox["xmax"], by = 0.1),
+  y = seq(from = bbox["ymin"], to = bbox["ymax"], by = 0.1) # in degrees resolution
 )
 #Or use sf to make the grid instead.
 sf_NH4 <- st_as_sf(ok, coords = c("x", "y"), crs = 4326)
@@ -1446,6 +1446,7 @@ alt_grd_template_raster <- alt_grd_template_sf %>%
 fit_TPS <- fields::Tps( # using {fields}
   x = as.matrix(ok[, c("x", "y")]), # accepts points but expects them as matrix
   Y = ok$anom,  # the dependent variable
+  Z = ok$elev,
   miles = TRUE, 
   df = 20
 )
@@ -1453,6 +1454,9 @@ fit_TPS <- fields::Tps( # using {fields}
 interp_TPS <- interpolate(grd_template_raster, fit_TPS)
 crs(interp_TPS) <- CRS('+init=EPSG:4326')
 mapview::mapview(interp_TPS)
+
+out.p<-fields::predictSurface( fit_TPS)
+image( out.p)
 
 # Generalized Additive Model
 fit_GAM <- mgcv::gam( # using {mgcv}
