@@ -1327,9 +1327,38 @@ lines(fit)
 
 
 
-### Generalized Additive Model (GAM) and Mapping
+### Thin Plate Spline Regression (TPS) and Mapping
 
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
+tavg_100yrs <- tavg_predicted %>% 
+  dplyr::select(-gam_fit) %>% 
+  tidyr::unnest(mean_100yrs) %>% 
+  dplyr::filter(date >= -1000 & date <= 1800) %>% 
+  dplyr::group_by(date) %>% 
+  tidyr::nest() %>% 
+  dplyr::rename(site.predictions = data)
+
+tavg_preds <- tavg_100yrs %>%
+  dplyr::mutate(site.predictions = purrr::map(
+    site.predictions,
+    .f = function(x) {
+      map_predictions(
+        site.preds = x,
+           degree.res = 0.25,
+           site.locs = fossil.locs,
+           rast.extent = TRUE
+      )
+    }
+  ))
+
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
+plot(tavg_preds$site.predictions[[1]], col=colors)
+
+
+
+
 
 #First, prepare the raster grid that will be used to do predictions over. In this case, it is the PRISM grid that covers the study area (via the extents done by bounding box).
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
