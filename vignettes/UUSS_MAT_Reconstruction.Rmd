@@ -861,7 +861,7 @@ plot(predict(fit, -1050:1800), ylim = c(-4, 4))
 
 
 beef.pasture <- tavg %>% 
-  #dplyr::filter(site.id == 246) %>% 
+  dplyr::filter(site.id == 246) %>% 
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% 
   dplyr::filter(date >= -1400 & date <= 2000) %>% 
   dplyr::group_by(age) %>% 
@@ -1122,13 +1122,13 @@ summary(b)
 
 
 
-out <- fields::Tps(x,y)
-xgrid<- seq(  min(out$x), max(out$x),,2000)
+out <- fields::Tps(beef.pasture$date ,beef.pasture$anom, df = 80)
+xgrid<- seq(  min(out$x), max(out$x),,40)
 fhat<- predict(out,xgrid)
 plot(x,y)
 title('Tps')
 lines(xgrid, fhat,)
-SE<- predictSE(out, xgrid)
+SE<- fields::predictSE(out, xgrid)
 lines(xgrid,fhat + 1.96* SE, col="red", lty=2)
 lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
 
