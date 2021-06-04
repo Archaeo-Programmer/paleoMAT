@@ -2,7 +2,15 @@ map_predictions <-
   function(site.preds,
            degree.res,
            site.locs,
-           rast.extent = TRUE) {
+           rast.extent = TRUE,
+           nfraction.df) {
+    if (nfraction.df < 0 | nfraction.df > 1) {
+      stop(
+        "This function could not be completed. nfraction.df must be an integer between 0 and 1.
+       This is used to calculate the percentage of n that will be used to define df."
+      )
+    }
+
     if (rast.extent == TRUE) {
       # First, prepare the raster grid, so that the interpolation can be done on the raster grid.
       # Create a bounding box around the site extent (i.e., for site.locs).
@@ -49,7 +57,8 @@ map_predictions <-
       fossilpolygon <-
         sp::spTransform(fossilpolygon,
                         CRS("+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"))
-      fossilpolygon <- rgeos::gBuffer(fossilpolygon, width = 24140.2)
+      fossilpolygon <-
+        rgeos::gBuffer(fossilpolygon, width = 24140.2)
       fossilpolygon <-
         sp::spTransform(fossilpolygon, CRS("+init=epsg:4326"))
 
@@ -98,7 +107,7 @@ map_predictions <-
       # the dependent variable
       #Z = ok$elev,
       miles = TRUE,
-      df = no.sites * 0.6
+      df = no.sites * nfraction.df
     )
 
     interp_TPS <- interpolate(grd_template_raster, fit_TPS)

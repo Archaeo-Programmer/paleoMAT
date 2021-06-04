@@ -1340,6 +1340,12 @@ tavg_100yrs <- tavg_predicted %>%
   tidyr::nest() %>% 
   dplyr::rename(site.predictions = data)
 
+# Get site locations. 
+fossil.locs <- tavg %>%
+  dplyr::group_by(site.name) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::select(site.id, site.name, long, lat)
+
 tavg_preds <- tavg_100yrs %>%
   dplyr::mutate(site.predictions = purrr::map(
     site.predictions,
@@ -1348,7 +1354,8 @@ tavg_preds <- tavg_100yrs %>%
         site.preds = x,
            degree.res = 0.25,
            site.locs = fossil.locs,
-           rast.extent = TRUE
+           rast.extent = TRUE, 
+        nfraction.df = 0.6
       )
     }
   ))
@@ -1356,9 +1363,47 @@ tavg_preds <- tavg_100yrs %>%
 colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
 plot(tavg_preds$site.predictions[[1]], col=colors)
 
+tavg_rbrick <- raster::brick(tavg_preds$site.predictions, varname = "anom")
+names(tavg_rbrick) <- c("1000 BC","900 BC","800 BC", "700 BC", "600 BC","500 BC", "400 BC", "300 BC", "200 BC", "100 BC", "AD 1", "AD 100", "AD 200", "AD 300", "AD 400", "AD 500", "AD 600", "AD 700", "AD 800","AD 900", "AD 1000", "AD 1100", "AD 1200", "AD 1300", "AD 1400", "AD 1500", "AD 1600", "AD 1700", "AD 1800")
+dt<-as.data.frame(
+  as.Date(c('2010-11-1','2008-3-25','2007-3-14','2007-3-18','2007-3-20')))
+tavg_rstack <- raster::stack(tavg_preds$site.predictions)
+tavg_animated <- raster::animate(tavg_rstack, n =2)
+
+plot(tavg_rbrick, nc=6, maxnl=32, col =colors)
+
+# Get number of samples per time period for each site.
+no.samples <- tavg %>%
+  dplyr::filter(date >= -1400 & date <= 2000) %>%
+  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::group_by(site.name, period) %>% 
+  dplyr::mutate(no.samples = length(anom)) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::select(site.id, site.name, date, period, no.samples) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(-period, -site.name) %>% 
+  dplyr::mutate(date = DescTools::RoundTo(x = date, multiple = 100, FUN = floor)) %>% 
+  dplyr::group_by(site.id, date) %>% 
+  dplyr::mutate(no.samples = sum(no.samples)) %>% 
+  dplyr::slice(1)
+
+ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep = FALSE) %>% 
+  dplyr::mutate(no.samples = dplyr::coalesce(no.samples, 0))
 
 
-
+ok<-
+  purrr::map(
+    tavg_100yrs$site.predictions,
+    .f = function(x) {
+      map_predictions(
+        site.preds = x,
+           degree.res = 0.25,
+           site.locs = fossil.locs,
+           rast.extent = TRUE, 
+        nfraction.df = 0.6
+      )
+    }
+  )
 
 #First, prepare the raster grid that will be used to do predictions over. In this case, it is the PRISM grid that covers the study area (via the extents done by bounding box).
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
