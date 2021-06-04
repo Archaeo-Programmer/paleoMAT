@@ -1344,10 +1344,16 @@ fossilpolygon <- concaveman::concaveman(fossilpnts) %>%
   sf::st_transform(crs = 4326) %>%
   sf:::as_Spatial()
 
+# Get site locations. 
+fossil.locs <- tavg %>%
+  dplyr::group_by(site.name) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::select(site.id, site.name, long, lat)
+
 # Next, apply a 25 mile (or 40233.6 meters) buffer from the extent of the sites (to be the edge of extrapolation from the sites). Here, the projection is changed as gBuffer (or GEOS) expects planar coordinates. Then, these are converted back in order to use mask to clip the raster below.
-fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"))
-fossilpolygon <- rgeos::gBuffer(fossilpolygon, width = 40233.6)
-fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+init=epsg:4326"))
+# fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"))
+# fossilpolygon <- rgeos::gBuffer(fossilpolygon, width = 40233.6)
+# fossilpolygon <- sp::spTransform(fossilpolygon, CRS("+init=epsg:4326"))
 
 # Create a bounding box for the extent of the sites.
 # bb2 <- c("xmin" = xys[1], "xmax" = xys[2], "ymin" = xys[3], "ymax" = xys[4]) %>%
@@ -1373,7 +1379,7 @@ tavg_100yrs <- tavg_predicted %>%
   
 
 # FOR TESTING
-test <- tavg_100yrs[29,]
+test <- tavg_100yrs[19:21,]
 site.preds = test$site.predictions
 site.preds <- as.data.frame(site.preds)
 prism.raster = UUSS_prism
@@ -1410,9 +1416,13 @@ bbox <- c(
 )
 
 grd_template <- expand.grid(
-  x = seq(from = bbox["xmin"], to = bbox["xmax"], by = 0.1),
-  y = seq(from = bbox["ymin"], to = bbox["ymax"], by = 0.1) # in degrees resolution
+  x = seq(from = bbox["xmin"], to = bbox["xmax"], by = 0.25),
+  y = seq(from = bbox["ymin"], to = bbox["ymax"], by = 0.25) # in degrees resolution
 )
+# grd_template <- expand.grid(
+#   x = seq(from = min(as.data.frame(bb2[[1]][[1]][[1]])$V1), to = max(as.data.frame(bb2[[1]][[1]][[1]])$V1), by = 0.25),
+#   y = seq(from = min(as.data.frame(bb2[[1]][[1]][[1]])$V2), to = max(as.data.frame(bb2[[1]][[1]][[1]])$V2), by = 0.25) # in degrees resolution
+# )
 #Or use sf to make the grid instead.
 sf_NH4 <- st_as_sf(ok, coords = c("x", "y"), crs = 4326)
 
@@ -1428,7 +1438,7 @@ alt_grd_template_sf <- sf_NH4 %>%
   st_drop_geometry() %>% 
   mutate(Z = 0)
 
-#Rasterize the grid. If using 
+#Rasterize the grid. 
 crs_raster_format <- "+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"
 
 grd_template_raster <- grd_template %>% 
@@ -1446,14 +1456,14 @@ alt_grd_template_raster <- alt_grd_template_sf %>%
 fit_TPS <- fields::Tps( # using {fields}
   x = as.matrix(ok[, c("x", "y")]), # accepts points but expects them as matrix
   Y = ok$anom,  # the dependent variable
-  Z = ok$elev,
+  #Z = ok$elev,
   miles = TRUE, 
   df = 20
 )
 
 interp_TPS <- interpolate(grd_template_raster, fit_TPS)
 crs(interp_TPS) <- CRS('+init=EPSG:4326')
-mapview::mapview(interp_TPS)
+suppressWarnings(mapview::mapview(interp_TPS))
 
 out.p<-fields::predictSurface( fit_TPS)
 image( out.p)
@@ -1492,6 +1502,22 @@ hello <- tavg_100yrs %>%
     }
   ))
 
+
+tavg_preds <- tavg_100yrs %>%
+  dplyr::mutate(site.predictions = purrr::map(
+    site.predictions,
+    .f = function(x) {
+      map_predictions(
+        site.preds = x,
+           degree.res = 0.25,
+           site.locs = fossil.locs,
+           rast.extent = TRUE
+      )
+    }
+  ))
+
+colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
+plot(tavg_preds$site.predictions[[1]], col=colors)
 
 
 # purrr::map(
