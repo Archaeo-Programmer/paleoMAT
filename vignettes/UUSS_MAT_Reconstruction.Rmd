@@ -1405,6 +1405,33 @@ ok<-
     }
   )
 
+#Get the elevation dataset. Also, reprojecting at a lower resolution, so that things will run faster.
+NED <-
+  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
+NED <- raster::aggregate(NED, fact = 4)
+NED <-
+  raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
+bbox <- bbox %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+NED <- raster::crop(NED, bbox)
+
+NED.long <- raster::xFromCol(NED)
+NED.lat <- raster::yFromRow(NED)[2:962]
+NED.elev <- as.matrix(NED)[2:962,]
+NED.elev <- t(NED.elev)
+NED.list <- list(NED.long, NED.lat, NED.elev)
+names(NED.list) <- c("x", "y", "z")
+
+grid.list<- list(x = NED.list$x, y = NED.list$y)
+fit.full<- predictSurface(fit_TPS, grid.list, ZGrid=NED.list)
+
+
+k <- spatial.tools::modify_raster_margins(NED, extent_delta = c(0, 0, 0, -1))
+
+
 #First, prepare the raster grid that will be used to do predictions over. In this case, it is the PRISM grid that covers the study area (via the extents done by bounding box).
 # Convert reconstruction data to class sf, then get the spatial extent of the fossil pollen sites.
 xys <- sf::st_as_sf(reconst_tavg_final) %>%

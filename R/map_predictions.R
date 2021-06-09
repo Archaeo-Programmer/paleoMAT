@@ -105,12 +105,12 @@ map_predictions <-
       # accepts points but expects them as matrix
       Y = site.preds$anom,
       # the dependent variable
-      #Z = ok$elev,
+      Z = site.preds$elev,
       miles = TRUE,
       df = no.sites * nfraction.df
     )
 
-    interp_TPS <- interpolate(grd_template_raster, fit_TPS)
+    interp_TPS <- interpolate(grd_template_raster, fit_TPS, drop.Z = TRUE)
     crs(interp_TPS) <- CRS('+init=EPSG:4326')
 
     return(interp_TPS)
