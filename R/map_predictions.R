@@ -1,118 +1,129 @@
 map_predictions <-
   function(site.preds,
-           degree.res,
            site.locs,
-           rast.extent = TRUE,
-           nfraction.df) {
-    if (nfraction.df < 0 | nfraction.df > 1) {
-      stop(
-        "This function could not be completed. nfraction.df must be an integer between 0 and 1.
-       This is used to calculate the percentage of n that will be used to define df."
-      )
-    }
+           elev.raster,
+           nfraction.df = NA,
+           rast.extrap = FALSE) {
+    # Prepare elevation dataset, so that the prediction can be done with the thin plate spline regression on the elevation grid.
+    # Create a bounding box around the site extent (i.e., for site.locs).
+    bbox <- c(
+      "xmin" = min(site.locs$long),
+      "ymin" = min(site.locs$lat),
+      "xmax" = max(site.locs$long),
+      "ymax" = max(site.locs$lat)
+    )  %>%
+      sf::st_bbox() %>%
+      sf::st_as_sfc() %>%
+      sf::st_as_sf(crs = 4326) %>%
+      sf::st_transform(crs = 4326)
 
-    if (rast.extent == TRUE) {
-      # First, prepare the raster grid, so that the interpolation can be done on the raster grid.
-      # Create a bounding box around the site extent (i.e., for site.locs).
-      bbox <- c(
-        "xmin" = min(site.locs$long),
-        "ymin" = min(site.locs$lat),
-        "xmax" = max(site.locs$long),
-        "ymax" = max(site.locs$lat)
-      )
+    # Crop the elevation dataset to the extent of the bounding box.
+    elev.raster <- raster::crop(elev.raster, bbox)
 
-      grd_template <- expand.grid(
-        x = seq(
-          from = bbox["xmin"],
-          to = bbox["xmax"],
-          by = degree.res
-        ),
-        y = seq(
-          from = bbox["ymin"],
-          to = bbox["ymax"],
-          by = degree.res
-        ) # in degrees resolution
-      )
+    # Need to extract the xy grid and put in ascending order, as the fields package expects that. The top row or first record is NA, so removing the first row/record.
+    elev.raster.long <- raster::xFromCol(elev.raster)
+    elev.raster.lat <-
+      raster::yFromRow(elev.raster)[2:962] %>% sort()
+    elev.raster.elev <- as.matrix(elev.raster)[2:962, ]
+    # Transpose, so that rows and columns will match the long lat lists. Then, mirror the columns so that the latitude is ascending.
+    elev.raster.elev <- t(elev.raster.elev) %>% as.data.frame()
+    elev.raster.elev <-
+      elev.raster.elev[, order(ncol(elev.raster.elev):1)] %>% as.matrix()
+    # Put long, lat, and elevation into 1 list. Then, rename to x, y, and z.
+    elev.raster.list <-
+      list(elev.raster.long, elev.raster.lat, elev.raster.elev)
+    names(elev.raster.list) <- c("x", "y", "z")
 
-      #Rasterize the grid.
-      crs_raster_format <-
-        "+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"
-
-      grd_template_raster <- grd_template %>%
-        dplyr::mutate(Z = 0) %>%
-        raster::rasterFromXYZ(crs = crs_raster_format)
-
-      # If extent is true, then a bounding box is created from the extent of the sites.
-      # If it is false, then a polygon with a buffer is created.
-    } else {
-      # Get extent of fossil pollen sites and make a polygon.
-      fossilpnts <- site.locs %>%
-        sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
-      fossilpolygon <- concaveman::concaveman(fossilpnts) %>%
-        sf::st_as_sf(crs = 4326) %>%
-        sf::st_transform(crs = 4326) %>%
-        sf:::as_Spatial()
-
-      # Next, apply a buffer 15 mile (or 24140.2 meters) buffer from the extent of the sites (to be the edge of extrapolation from the sites). Here, the projection is changed as gBuffer (or GEOS) expects planar coordinates. Then, these are converted back in order to use mask to clip the raster below.
-      fossilpolygon <-
-        sp::spTransform(fossilpolygon,
-                        CRS("+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"))
-      fossilpolygon <-
-        rgeos::gBuffer(fossilpolygon, width = 24140.2)
-      fossilpolygon <-
-        sp::spTransform(fossilpolygon, CRS("+init=epsg:4326"))
-
-      bbox <- c(
-        "xmin" = min(site.locs$long) - (degree.res * 4),
-        "ymin" = min(site.locs$lat) - (degree.res * 4),
-        "xmax" = max(site.locs$long) + (degree.res * 4),
-        "ymax" = max(site.locs$lat) + (degree.res * 4)
-      )
-
-      grd_template <- expand.grid(
-        x = seq(
-          from = bbox["xmin"],
-          to = bbox["xmax"],
-          by = degree.res
-        ),
-        y = seq(
-          from = bbox["ymin"],
-          to = bbox["ymax"],
-          by = degree.res
-        ) # in degrees resolution
-      )
-
-      #Rasterize the grid.
-      crs_raster_format <-
-        "+proj=utm +zone=19 +datum=NAD83 +units=m +no_defs"
-
-      grd_template_raster <- grd_template %>%
-        dplyr::mutate(Z = 0) %>%
-        raster::rasterFromXYZ(crs = crs_raster_format)
-
-      grd_template_raster <-
-        raster::mask(grd_template_raster, fossilpolygon)
-
-    }
+    #Create the grid list, which will be used in the prediction.
+    grid.list <-
+      list(x = elev.raster.list$x, y = elev.raster.list$y)
 
     # Next, get the number of sites, which is used to define the degrees of freedom (df).
     no.sites <- nrow(site.preds)
 
+    if (is.na(nfraction.df) == TRUE) {
+      # Fit the model as the first step in the process.
+      # Thin Plate Spline Regression
+      fit_TPS <- fields::Tps(
+        # Accepts points but expects them as matrix.
+        x = as.matrix(site.preds[, c("long", "lat")]),
+        # The dependent variable.
+        Y = site.preds$anom,
+        # Elevation as an independent covariate.
+        Z = site.preds$elev,
+        miles = TRUE
+      )
+    } else if (nfraction.df < 0 | nfraction.df > 1) {
+      stop(
+        "This function could not be completed. nfraction.df must be an integer between 0 and 1, or NA (which is the default).
+       This is used to calculate the percentage of n that will be used to define df."
+      )
+    } else {
+      # Fit the model as the first step in the process.
+      # Thin Plate Spline Regression
+      fit_TPS <- fields::Tps(
+        # Accepts points but expects them as matrix.
+        x = as.matrix(site.preds[, c("long", "lat")]),
+        # The dependent variable.
+        Y = site.preds$anom,
+        # Elevation as an independent covariate.
+        Z = site.preds$elev,
+        miles = TRUE,
+        df = no.sites * nfraction.df
+      )
+    }
+
     # Fit the model as the first step in the process.
     # Thin Plate Spline Regression
     fit_TPS <- fields::Tps(
+      # Accepts points but expects them as matrix.
       x = as.matrix(site.preds[, c("long", "lat")]),
-      # accepts points but expects them as matrix
+      # The dependent variable.
       Y = site.preds$anom,
-      # the dependent variable
+      # Elevation as an independent covariate.
       Z = site.preds$elev,
       miles = TRUE,
       df = no.sites * nfraction.df
     )
 
-    interp_TPS <- interpolate(grd_template_raster, fit_TPS, drop.Z = TRUE)
-    crs(interp_TPS) <- CRS('+init=EPSG:4326')
+    if (rast.extrap == TRUE) {
+      # Do prediction on elevation surface and output a raster.
+      fit.full <-
+        fields::predictSurface(fit_TPS, grid.list, ZGrid = elev.raster.list, extrap = TRUE)
+      fit.full <- raster(fit.full)
+      crs(fit.full) <- CRS('+init=EPSG:4326')
 
-    return(interp_TPS)
+      fit.full.SE <-
+        fields::predictSurfaceSE(
+          fit_TPS,
+          grid.list,
+          ZGrid = elev.raster.list,
+          drop.Z = TRUE,
+          extrap = TRUE
+        )
+      fit.full.SE <- raster(fit.full.SE)
+      crs(fit.full.SE) <- CRS('+init=EPSG:4326')
+
+    } else {
+      # Do prediction on elevation surface and output a raster.
+      fit.full <-
+        fields::predictSurface(fit_TPS, grid.list, ZGrid = elev.raster.list, extrap = FALSE)
+      raster(fit.full)
+      crs(fit.full) <- CRS('+init=EPSG:4326')
+
+      fit.full.SE <-
+        fields::predictSurfaceSE(
+          fit_TPS,
+          grid.list,
+          ZGrid = elev.raster.list,
+          drop.Z = TRUE,
+          extrap = FALSE
+        )
+      raster(fit.full.SE)
+      crs(fit.full.SE) <- CRS('+init=EPSG:4326')
+
+    }
+
+    return(list(fit.full, fit.full.SE))
 
   }
