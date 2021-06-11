@@ -22,13 +22,15 @@ map_predictions <-
 
     # Need to extract the xy grid and put in ascending order, as the fields package expects that. The top row or first record is NA, so removing the first row/record.
     elev.raster.long <- raster::xFromCol(elev.raster)
-    elev.raster.lat <-
-      raster::yFromRow(elev.raster)[2:962] %>% sort()
-    elev.raster.elev <- as.matrix(elev.raster)[2:962, ]
+    elev.raster.lat <- raster::yFromRow(elev.raster)[2:962] %>%
+      sort()
+    elev.raster.elev <- as.matrix(elev.raster)
+    elev.raster.elev <- elev.raster.elev[2:962, ]
     # Transpose, so that rows and columns will match the long lat lists. Then, mirror the columns so that the latitude is ascending.
-    elev.raster.elev <- t(elev.raster.elev) %>% as.data.frame()
-    elev.raster.elev <-
-      elev.raster.elev[, order(ncol(elev.raster.elev):1)] %>% as.matrix()
+    elev.raster.elev <- t(elev.raster.elev) %>%
+      as.data.frame()
+    elev.raster.elev <- elev.raster.elev[, order(ncol(elev.raster.elev):1)] %>%
+      as.matrix()
     # Put long, lat, and elevation into 1 list. Then, rename to x, y, and z.
     elev.raster.list <-
       list(elev.raster.long, elev.raster.lat, elev.raster.elev)
@@ -41,7 +43,12 @@ map_predictions <-
     # Next, get the number of sites, which is used to define the degrees of freedom (df).
     no.sites <- nrow(site.preds)
 
-    if (is.na(nfraction.df) == TRUE) {
+    if (is.null(nfraction.df) == TRUE) {
+      stop(
+        "Value for nfraction.df cannot be NULL. This function could not be completed. nfraction.df must be an integer
+       between 0 and 1, or NA (the default). This is used to calculate the percentage of n that will be used to define df."
+      )
+    } else if (is.na(nfraction.df) == TRUE) {
       # Fit the model as the first step in the process.
       # Thin Plate Spline Regression
       fit_TPS <- fields::Tps(
@@ -55,7 +62,7 @@ map_predictions <-
       )
     } else if (nfraction.df < 0 | nfraction.df > 1) {
       stop(
-        "This function could not be completed. nfraction.df must be an integer between 0 and 1, or NA (which is the default).
+        "Value for nfraction.df must be an integer between 0 and 1, or NA (the default). So, this function could not be completed.
        This is used to calculate the percentage of n that will be used to define df."
       )
     } else {
@@ -73,21 +80,8 @@ map_predictions <-
       )
     }
 
-    # Fit the model as the first step in the process.
-    # Thin Plate Spline Regression
-    fit_TPS <- fields::Tps(
-      # Accepts points but expects them as matrix.
-      x = as.matrix(site.preds[, c("long", "lat")]),
-      # The dependent variable.
-      Y = site.preds$anom,
-      # Elevation as an independent covariate.
-      Z = site.preds$elev,
-      miles = TRUE,
-      df = no.sites * nfraction.df
-    )
-
     if (rast.extrap == TRUE) {
-      # Do prediction on elevation surface and output a raster.
+      # Do prediction on elevation surface and output a raster that extrapolates to the edge of the bounding box.
       fit.full <-
         fields::predictSurface(fit_TPS, grid.list, ZGrid = elev.raster.list, extrap = TRUE)
       fit.full <- raster(fit.full)
@@ -105,7 +99,7 @@ map_predictions <-
       crs(fit.full.SE) <- CRS('+init=EPSG:4326')
 
     } else {
-      # Do prediction on elevation surface and output a raster.
+      # Do prediction on elevation surface and output a raster that is a convex hull (i.e., no extrapolation beyond site.locs extent).
       fit.full <-
         fields::predictSurface(fit_TPS, grid.list, ZGrid = elev.raster.list, extrap = FALSE)
       raster(fit.full)

@@ -1354,9 +1354,13 @@ NED <- raster::aggregate(NED, fact = 10)
 NED <-
   raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
 
+#Line for testing. Usually use tavg_100yrs$site.predictions below.
+ok <- tavg_100yrs[1:2, ]
+ok2 <- tavg_100yrs[1,]
+
 tavg_preds <-
   purrr::map(
-    ok$site.predictions,
+    tavg_100yrs$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = x,
@@ -1372,7 +1376,7 @@ tavg_preds <-
 names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
 
 colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
-plot(tavg_preds$site.predictions[[1]], col=colors)
+plot(tavg_preds[[1]][[2]], col=colors)
 
 tavg_rbrick <- raster::brick(tavg_preds$site.predictions, varname = "anom")
 names(tavg_rbrick) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
