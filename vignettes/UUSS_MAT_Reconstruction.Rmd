@@ -744,10 +744,10 @@ purrr::map(
  
  temp_data <- tavg %>%
    dplyr::filter(date >= -1400 & date <= 2000) %>%
-   dplyr::filter(site.id == 486) %>%
+   dplyr::filter(site.id == 1127) %>%
    # dplyr::filter(sample.id == 264381 |
    #                 sample.id == 264428 | sample.id == 264447) %>%
-   #dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
    dplyr::group_by(site.id, site.name, elev, long, lat) %>%
    tidyr::nest() %>%
    dplyr::rename(site.data = data) %>%
@@ -766,7 +766,7 @@ purrr::map(
     temp_data <- as.data.frame(temp_data$site.data)
     
     
-    fita <- smooth.spline(temp_data$date, temp_data$anom, df = 15)
+    fita <- smooth.spline(temp_data$date, temp_data$anom, df = 50)
     plot(temp_data$date, temp_data$anom)
     lines(fita)
     
@@ -1120,12 +1120,13 @@ lines(c1, b$linear.predictors, col = 2, lwd = 2)
 summary(b)
 
 
+xgrid2 <- seq(-1350, 850, 100)
 
-
-out <- fields::Tps(beef.pasture$date ,beef.pasture$anom, df = 80)
-xgrid<- seq(  min(out$x), max(out$x),,40)
+out <- fields::Tps(temp_data$date ,temp_data$anom)
+int_grid <- round((max(out$x) - min(out$x))/100)
+xgrid <- seq(min(out$x), max(out$x),,int_grid)
 fhat<- predict(out,xgrid)
-plot(x,y)
+plot(temp_data$date ,temp_data$anom, ylim = c(-1, 4))
 title('Tps')
 lines(xgrid, fhat,)
 SE<- fields::predictSE(out, xgrid)
