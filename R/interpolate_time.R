@@ -129,7 +129,7 @@ interpolate_time <-
 
       fit <- interpolate_time_natural(eliminated)
 
-      return(fit)
+      return(list(fit[[1]], model_fit[[2]]))
 
     } else {
 

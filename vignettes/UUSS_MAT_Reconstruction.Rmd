@@ -688,7 +688,7 @@ tavg_predicted <- tavg %>%
     site.data,
     .f = function(x) {
       interpolate_time(temp_data = x,
-                       model = "natural")
+                       model = "tps")
     }
   )) %>%
   dplyr::select(-site.data) %>%
