@@ -635,6 +635,8 @@ if (!file.exists("./vignettes/data/reconst_gdd_final.rds")) {
 
 ```
 
+
+
 ### Temporal Interpolation
 
 ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
@@ -682,11 +684,17 @@ tavg_predicted <- tavg %>%
                                        })) %>%
   # sf::st_as_sf(coords = c("long", "lat"),
   #                crs = 4326) %>%
-  dplyr::mutate(mean_100yrs = purrr::map(site.data, interpolate_time)) %>%
+  dplyr::mutate(mean_100yrs = purrr::map(
+    site.data,
+    .f = function(x) {
+      interpolate_time(temp_data = x,
+                       model = "natural")
+    }
+  )) %>%
   dplyr::select(-site.data) %>%
   dplyr::arrange(site.name) %>%
   unnest_wider(mean_100yrs) %>%
-  dplyr::rename(mean_100yrs = 6, gam_fit = 7)
+  dplyr::rename(mean_100yrs = 6, model_fit = 7)
 
 
 # Get number of samples for each site.
@@ -744,7 +752,7 @@ purrr::map(
  
  temp_data <- tavg %>%
    dplyr::filter(date >= -1400 & date <= 2000) %>%
-   dplyr::filter(site.id == 1127) %>%
+   dplyr::filter(site.id == 2955) %>%
    # dplyr::filter(sample.id == 264381 |
    #                 sample.id == 264428 | sample.id == 264447) %>%
    dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
@@ -1122,7 +1130,7 @@ summary(b)
 
 xgrid2 <- seq(-1350, 850, 100)
 
-out <- fields::Tps(temp_data$date ,temp_data$anom)
+out <- fields::Tps(temp_data$date,temp_data$anom)
 int_grid <- round((max(out$x) - min(out$x))/100)
 xgrid <- seq(min(out$x), max(out$x),,int_grid)
 fhat<- predict(out,xgrid)
@@ -1334,7 +1342,7 @@ lines(fit)
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
 tavg_100yrs <- tavg_predicted %>% 
-  dplyr::select(-gam_fit) %>% 
+  dplyr::select(-model_fit) %>% 
   tidyr::unnest(mean_100yrs) %>% 
   dplyr::filter(date >= -1000 & date <= 1800) %>% 
   dplyr::group_by(date) %>% 
