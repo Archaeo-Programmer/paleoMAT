@@ -20,22 +20,24 @@ interpolate_time <-
 
     }
 
+    # Here, we set up the midpoint years of each century from the minimum to maximum year represented by each site.
+    agemax <- max(eliminated$date)
+    agemax_rounded <- agemax %>%
+      DescTools::RoundTo(multiple = 100, FUN = ceiling)
+    agemin <- min(eliminated$date)
+    agemin_rounded <- agemin %>%
+      DescTools::RoundTo(multiple = 100, FUN = floor)
+
+    # predict.points <-
+    #   as.data.frame(seq(agemin_rounded, agemax_rounded, by = 100))
+    predict.points <-
+      as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
+    names(predict.points)[1] <- "date"
+
     # First, check to see if there is enough data to do a cubic spline. If not, then do a simple linear regression,
     # and predict on the linear regression.
     if (nrow(eliminated) <= 2) {
       model_fit <- lm(anom ~ date, data = eliminated)
-
-      agemax <- max(eliminated$date)
-      agemax_rounded <- agemax %>%
-        DescTools::RoundTo(multiple = 100, FUN = ceiling)
-      agemin <- min(eliminated$date)
-      agemin_rounded <- agemin %>%
-        DescTools::RoundTo(multiple = 100, FUN = floor)
-
-      predict.points <-
-        as.data.frame(seq(agemin_rounded, agemax_rounded, by = 100))
-      #predict.points <- as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
-      names(predict.points)[1] <- "date"
 
       predict.anom <-
         as.data.frame(predict(model_fit, predict.points, se.fit = TRUE)) %>%
@@ -67,18 +69,6 @@ interpolate_time <-
       #plot_gam <- plot.gam(model_fit)
       #plot_gam[[1]]$se
 
-      agemax <- max(eliminated$date)
-      agemax_rounded <- agemax %>%
-        DescTools::RoundTo(multiple = 100, FUN = ceiling)
-      agemin <- min(eliminated$date)
-      agemin_rounded <- agemin %>%
-        DescTools::RoundTo(multiple = 100, FUN = floor)
-
-      predict.points <-
-        as.data.frame(seq(agemin_rounded, agemax_rounded, by = 100))
-      #predict.points <- as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
-      names(predict.points)[1] <- "date"
-
       predict.anom <-
         as.data.frame(mgcv::predict.gam(
           model_fit,
@@ -87,14 +77,18 @@ interpolate_time <-
           se.fit = TRUE
         )) %>%
         dplyr::rename(anom = 1)
+
       fit <- cbind(predict.points, predict.anom)
 
       return(list(fit, model_fit))
 
     } else if (model == "tps") {
       if (length(eliminated$anom) == 3) {
-        # Tps cannot run when n = 3. Here, we set it to 3 because above we have already dealt with when n<=2, which results in a lm.
+        # Tps cannot run when n = 3. Here, we set it to 3 because above we have already dealt with when n<=2, which results in applying a lm.
         fit <- interpolate_time_natural(eliminated)
+
+model_fit <- model_fit[[2]]
+fit <- model_fit[[1]]
 
       } else {
         if (length(eliminated$anom) > 3 & length(eliminated$anom) <= 6) {
@@ -104,35 +98,97 @@ interpolate_time <-
           smooth.dim <- ceiling(length(eliminated$anom) * 0.6)
         }
 
+        predict.points <- as.numeric(unlist(predict.points))
+
         model_fit <-
           fields::Tps(eliminated$date, eliminated$anom, df = smooth.dim)
-        int_grid <-
-          round((max(model_fit$x) - min(model_fit$x)) / 100)
-        xgrid <- seq(min(model_fit$x), max(model_fit$x), , int_grid)
-        fhat <- predict(model_fit, xgrid)
-        # plot(eliminated$date ,eliminated$anom)
-        # title('Tps')
-        # lines(xgrid, fhat,)
-        SE <- fields::predictSE(model_fit, xgrid)
-        # lines(xgrid,fhat + 1.96* SE, col="red", lty=2)
-        # lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
+
+        fhat <- predict(model_fit, predict.points)
+
+        SE <- fields::predictSE(model_fit, predict.points)
+
         fit <-
-          cbind(as.data.frame(xgrid),
+          cbind(as.data.frame(predict.points),
                 as.data.frame(fhat),
                 as.data.frame(SE))
         names(fit) <- c("date", "anom", "se.fit")
 
+        # Now, plot the results. Save as a ggpplot object and will return with the rest of the data and models.
+        plot_fit <- ggplot(data = fit,
+                           aes(x = date,
+                               y = anom)) +
+          geom_ribbon(
+            aes(
+              x = predict.points,
+              ymin = fhat - 1.96 * SE,
+              ymax = fhat + 1.96 * SE,
+              alpha = 0.2
+            ),
+            fill = "grey",
+            colour = "dark grey",
+            show.legend = F
+          ) +
+          geom_line(colour = "red", size = 1.0) +
+          xlab("Year BC/AD") +
+          ylab("Temperature Anomaly") +
+          scale_x_continuous(
+            breaks = seq(agemin_rounded, agemax_rounded, 200),
+            minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                          100), 200)
+          ) +
+          scale_y_continuous(breaks = seq((
+            DescTools::RoundTo(min(fhat - 1.96 * SE), multiple = 0.5, FUN = floor)
+          ), (
+            DescTools::RoundTo(max(fhat + 1.96 * SE), multiple = 0.5, FUN = ceiling)
+          ), 0.5)) +
+          theme_bw() +
+          theme(
+            panel.border = element_blank(),
+            panel.grid.major = element_blank(),
+            axis.text = element_text(
+              size = 14,
+              colour = "black",
+              family = "Helvetica"
+            ),
+            axis.title.y = element_text(
+              size = 20,
+              family = "Helvetica",
+              margin = margin(
+                t = 10,
+                r = 20,
+                b = 10,
+                l = 10
+              )
+            ),
+            axis.title.x = element_text(
+              size = 20,
+              family = "Helvetica",
+              margin = margin(
+                t = 20,
+                r = 10,
+                b = 10,
+                l = 10
+              )
+            ),
+            panel.grid.minor = element_line(colour = "light grey"),
+            axis.line = element_line(colour = "black"),
+            legend.text = element_text(size = 18, family = "Helvetica"),
+            legend.title = element_text(size = 22, family = "Helvetica")
+          )
+
       }
-      return(list(fit, model_fit))
+
+      return(list(fit, model_fit, plot_fit))
 
     } else if (model == "natural") {
-
       fit <- interpolate_time_natural(eliminated)
 
-      return(list(fit[[1]], model_fit[[2]]))
+      model_fit <- fit[[2]]
+      fit <- fit[[1]]
+
+      return(list(fit, model_fit))
 
     } else {
-
       stop("Please choose a valid model.")
     }
 

@@ -694,7 +694,7 @@ tavg_predicted <- tavg %>%
   dplyr::select(-site.data) %>%
   dplyr::arrange(site.name) %>%
   unnest_wider(mean_100yrs) %>%
-  dplyr::rename(mean_100yrs = 6, model_fit = 7)
+  dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8)
 
 
 # Get number of samples for each site.
@@ -752,7 +752,7 @@ purrr::map(
  
  temp_data <- tavg %>%
    dplyr::filter(date >= -1400 & date <= 2000) %>%
-   dplyr::filter(site.id == 2955) %>%
+   dplyr::filter(site.id == 504) %>%
    # dplyr::filter(sample.id == 264381 |
    #                 sample.id == 264428 | sample.id == 264447) %>%
    dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
