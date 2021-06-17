@@ -696,6 +696,15 @@ tavg_predicted <- tavg %>%
   unnest_wider(mean_100yrs) %>%
   dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8)
 
+# Plot results in one PDF.
+plot_objects <- tavg_predicted$plot_fit
+names(plot_objects) <- c(tavg_predicted$site.name)
+
+plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=1, ncol=1, top=quote(names(plot_objects)[g]))
+
+# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
+ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/site_temporal_interpolation.pdf", plot_objects_arranged, scale = 1.5)
+
 
 # Get number of samples for each site.
 # ok2 <- ok %>% 
@@ -752,7 +761,7 @@ purrr::map(
  
  temp_data <- tavg %>%
    dplyr::filter(date >= -1400 & date <= 2000) %>%
-   dplyr::filter(site.id == 504) %>%
+   dplyr::filter(site.id == 246) %>%
    # dplyr::filter(sample.id == 264381 |
    #                 sample.id == 264428 | sample.id == 264447) %>%
    dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%

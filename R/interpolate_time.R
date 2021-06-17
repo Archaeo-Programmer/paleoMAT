@@ -45,7 +45,10 @@ interpolate_time <-
 
       fit <- cbind(predict.points, predict.anom)
 
-      return(list(fit, model_fit))
+      # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
+      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
+
+      return(list(fit, model_fit, plot_fit))
 
     } else if (model == "gam") {
       # If there are at least 3 samples, then run the mgcv::gam model. First, get the smoothing dimension, which is generally n/2.
@@ -69,6 +72,9 @@ interpolate_time <-
       #plot_gam <- plot.gam(model_fit)
       #plot_gam[[1]]$se
 
+      predict.points <- as.data.frame(predict.points) %>%
+        dplyr::rename(date = predict.points)
+
       predict.anom <-
         as.data.frame(mgcv::predict.gam(
           model_fit,
@@ -80,15 +86,21 @@ interpolate_time <-
 
       fit <- cbind(predict.points, predict.anom)
 
-      return(list(fit, model_fit))
+      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded,
+                                         std.err = TRUE)
+
+      return(list(fit, model_fit, plot_fit))
 
     } else if (model == "tps") {
       if (length(eliminated$anom) == 3) {
         # Tps cannot run when n = 3. Here, we set it to 3 because above we have already dealt with when n<=2, which results in applying a lm.
         fit <- interpolate_time_natural(eliminated)
 
-model_fit <- model_fit[[2]]
-fit <- model_fit[[1]]
+        model_fit <- fit[[2]]
+        fit <- fit[[1]]
+
+        # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
+        plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
 
       } else {
         if (length(eliminated$anom) > 3 & length(eliminated$anom) <= 6) {
@@ -113,68 +125,9 @@ fit <- model_fit[[1]]
                 as.data.frame(SE))
         names(fit) <- c("date", "anom", "se.fit")
 
-        # Now, plot the results. Save as a ggpplot object and will return with the rest of the data and models.
-        plot_fit <- ggplot(data = fit,
-                           aes(x = date,
-                               y = anom)) +
-          geom_ribbon(
-            aes(
-              x = predict.points,
-              ymin = fhat - 1.96 * SE,
-              ymax = fhat + 1.96 * SE,
-              alpha = 0.2
-            ),
-            fill = "grey",
-            colour = "dark grey",
-            show.legend = F
-          ) +
-          geom_line(colour = "red", size = 1.0) +
-          xlab("Year BC/AD") +
-          ylab("Temperature Anomaly") +
-          scale_x_continuous(
-            breaks = seq(agemin_rounded, agemax_rounded, 200),
-            minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
-                                                          100), 200)
-          ) +
-          scale_y_continuous(breaks = seq((
-            DescTools::RoundTo(min(fhat - 1.96 * SE), multiple = 0.5, FUN = floor)
-          ), (
-            DescTools::RoundTo(max(fhat + 1.96 * SE), multiple = 0.5, FUN = ceiling)
-          ), 0.5)) +
-          theme_bw() +
-          theme(
-            panel.border = element_blank(),
-            panel.grid.major = element_blank(),
-            axis.text = element_text(
-              size = 14,
-              colour = "black",
-              family = "Helvetica"
-            ),
-            axis.title.y = element_text(
-              size = 20,
-              family = "Helvetica",
-              margin = margin(
-                t = 10,
-                r = 20,
-                b = 10,
-                l = 10
-              )
-            ),
-            axis.title.x = element_text(
-              size = 20,
-              family = "Helvetica",
-              margin = margin(
-                t = 20,
-                r = 10,
-                b = 10,
-                l = 10
-              )
-            ),
-            panel.grid.minor = element_line(colour = "light grey"),
-            axis.line = element_line(colour = "black"),
-            legend.text = element_text(size = 18, family = "Helvetica"),
-            legend.title = element_text(size = 22, family = "Helvetica")
-          )
+        # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
+        plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded,
+                                           std.err = TRUE)
 
       }
 
@@ -186,7 +139,10 @@ fit <- model_fit[[1]]
       model_fit <- fit[[2]]
       fit <- fit[[1]]
 
-      return(list(fit, model_fit))
+      # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
+      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
+
+      return(list(fit, model_fit, plot_fit))
 
     } else {
       stop("Please choose a valid model.")
