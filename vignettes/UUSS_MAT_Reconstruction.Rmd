@@ -1390,7 +1390,7 @@ tavg_preds <-
     }
   )
 ok <- purrr::map(tavg_preds, 1)
-saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters.RDS")
+saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex.RDS")
 # Rename the layers.
 names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
@@ -1405,7 +1405,35 @@ dt<-as.data.frame(
 tavg_rstack <- raster::stack(ok)
 tavg_animated <- raster::animate(tavg_rbrick, n =2)
 
-plot(tavg_rbrick, nc=6, maxnl=32, col =colors)
+plot(tavg_rbrick, col =colors)
+tavg_rbrick2 <- tavg_rbrick[[17:28]]
+plot(tavg_rbrick2, col =colors)
+            
+rasterVis::levelplot(tavg_rstack, 
+          margin=FALSE,                       
+          colorkey=list(
+            space='bottom',                   
+            labels=list(at=-5:5, font=4),
+            axis.line=list(col='black'),
+            width=0.75
+          ),    
+          par.settings=list(
+            strip.border=list(col='transparent'),
+            strip.background=list(col='transparent'),
+            axis.line=list(col='transparent')
+          ),
+          scales=list(draw=FALSE),            
+          col.regions=colors,                   
+          at=seq(-5, 5, len=101))
+
+rasterVis::gplot(tavg_rbrick) + 
+    geom_tile(aes(fill = value)) +
+    facet_wrap(~ variable) +
+    scale_fill_gradientn(colours = colors) +
+    coord_equal() + theme_classic()
+
+# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
+ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/Temp_rasters_convex.pdf", plot_objects_arranged, scale = 1.5)
 
 # Get number of samples per time period for each site.
 no.samples <- tavg %>%
@@ -1436,4 +1464,16 @@ tmap_animation(anim, "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters2.gi
 #breaks = c(-9999, seq(-4.0, 4.0, 0.5), 9999 )
 
 
+
+tavg_rbrick3 <- tavg_rbrick[[1:15]]
+usa <- map("state", fill = TRUE, plot = FALSE)
+
+
+par(mfrow=c(5,3), mai = c(.2, .35, .3, .3))
+for (ii in 1:nlayers(tavg_rbrick3)){
+  plot(subset(tavg_rbrick3,ii), main=names(tavg_rbrick3)[ii])
+  plot(MDB[[ii]], main=names(tavg_rbrick3)[ii], pch = 19, cex = 1, add=T)
+  polygon(usa$x, usa$y)
+}
+dev.off()
 ```

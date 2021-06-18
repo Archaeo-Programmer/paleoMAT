@@ -832,9 +832,28 @@ geom_line(colour = "red", size = 1.0) +
 ```
 
 
+```{r elevation_anomaly, fig.width=8, fig.height=9, echo=FALSE}
+
+ok6 <- tavg_100yrs %>%
+  dplyr::mutate(elev_avg = purrr::map(site.predictions, .f = function(x) {
+    mean(x$elev)
+  })) %>% 
+  dplyr::mutate(anom_avg = purrr::map(site.predictions, .f = function(x) {
+    mean(x$anom)
+  })) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(-site.predictions, -date) %>% 
+  tidyr::unnest(cols = c(elev_avg, anom_avg)) %>% 
+  as.data.frame()
+
+```
+
+
+
+
 ```{r maize, fig.width=8, fig.height=9, echo=FALSE}
 
-MDB <-
+MDB_nest <-
   readRDS(
     "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
   ) %>%
@@ -852,7 +871,7 @@ MDB <-
   dplyr::arrange(date)
   
   MDB <- purrr::map(
-    MDB$data,
+    MDB_nest$data,
     .f = function(x) {
       sp::SpatialPointsDataFrame(x[,1:2], 
                                  x,
