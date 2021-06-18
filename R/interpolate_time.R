@@ -1,5 +1,7 @@
 interpolate_time <-
-  function(temp_data, model = "tps") {
+  function(temp_data,
+           model = "tps",
+           gam.smooth = NULL) {
     # Only the most extreme outliers are removed here by using 0.01 and 0.99 quantiles.
     #First, if there are too few data points, then the input is just returned.
     Q <- quantile(temp_data$anom,
@@ -46,51 +48,61 @@ interpolate_time <-
       fit <- cbind(predict.points, predict.anom)
 
       # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
-      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
+      plot_fit <-
+        interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
 
       return(list(fit, model_fit, plot_fit))
 
     } else if (model == "gam") {
-      # If there are at least 3 samples, then run the mgcv::gam model. First, get the smoothing dimension, which is generally n/2.
-      # However, for mgcv::gam, k must be at least equal to 3. So, for any n length less than 6, then the min number is 3.
-      if (length(eliminated$anom) < 6) {
-        smooth.dim <- 3
-
+      if (is.null(gam.smooth) == TRUE) {
+        stop(
+          "You must select a smooth term for GAM. Please see https://stat.ethz.ch/R-manual/R-devel/library/mgcv/html/smooth.terms.html for options."
+        )
       } else {
-        smooth.dim <- ceiling(length(eliminated$anom) * 0.6)
+        # If there are at least 3 samples, then run the mgcv::gam model. First, get the smoothing dimension, which is generally n/2.
+        # However, for mgcv::gam, k must be at least equal to 3. So, for any n length less than 6, then the min number is 3.
+        if (length(eliminated$anom) < 6) {
+          smooth.dim <- 3
 
+        } else {
+          smooth.dim <- ceiling(length(eliminated$anom) * 0.6)
+
+        }
+
+        model_fit <-
+          mgcv::gam(anom ~ s(date, bs = gam.smooth, k = smooth.dim),
+                    data = eliminated,
+                    family = gaussian())
+        #plot(model_fit)
+        gam_knots <-
+          model_fit$smooth[[1]]$xp  ## extract knots locations
+        # Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.
+        #plot_gam <- plot.gam(model_fit)
+        #plot_gam[[1]]$se
+
+        predict.points <- as.data.frame(predict.points) %>%
+          dplyr::rename(date = predict.points)
+
+        predict.anom <-
+          as.data.frame(mgcv::predict.gam(
+            model_fit,
+            predict.points,
+            type = 'response',
+            se.fit = TRUE
+          )) %>%
+          dplyr::rename(anom = 1)
+
+        fit <- cbind(predict.points, predict.anom)
+
+        plot_fit <-
+          interpolate_time_plots(fit,
+                                 eliminated,
+                                 agemin_rounded,
+                                 agemax_rounded,
+                                 std.err = TRUE)
+
+        return(list(fit, model_fit, plot_fit))
       }
-
-      model_fit <-
-        mgcv::gam(anom ~ s(date, bs = 'cs', k = smooth.dim),
-                  data = eliminated,
-                  family = gaussian())
-      #plot(model_fit)
-      gam_knots <-
-        model_fit$smooth[[1]]$xp  ## extract knots locations
-      # Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.
-      #plot_gam <- plot.gam(model_fit)
-      #plot_gam[[1]]$se
-
-      predict.points <- as.data.frame(predict.points) %>%
-        dplyr::rename(date = predict.points)
-
-      predict.anom <-
-        as.data.frame(mgcv::predict.gam(
-          model_fit,
-          predict.points,
-          type = 'response',
-          se.fit = TRUE
-        )) %>%
-        dplyr::rename(anom = 1)
-
-      fit <- cbind(predict.points, predict.anom)
-
-      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded,
-                                         std.err = TRUE)
-
-      return(list(fit, model_fit, plot_fit))
-
     } else if (model == "tps") {
       if (length(eliminated$anom) == 3) {
         # Tps cannot run when n = 3. Here, we set it to 3 because above we have already dealt with when n<=2, which results in applying a lm.
@@ -100,7 +112,12 @@ interpolate_time <-
         fit <- fit[[1]]
 
         # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
-        plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
+        plot_fit <-
+          interpolate_time_plots(fit,
+                                 eliminated,
+                                 agemin_rounded,
+                                 agemax_rounded,
+                                 std.err = FALSE)
 
       } else {
         if (length(eliminated$anom) > 3 & length(eliminated$anom) <= 6) {
@@ -126,8 +143,12 @@ interpolate_time <-
         names(fit) <- c("date", "anom", "se.fit")
 
         # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
-        plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded,
-                                           std.err = TRUE)
+        plot_fit <-
+          interpolate_time_plots(fit,
+                                 eliminated,
+                                 agemin_rounded,
+                                 agemax_rounded,
+                                 std.err = TRUE)
 
       }
 
@@ -140,7 +161,8 @@ interpolate_time <-
       fit <- fit[[1]]
 
       # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
-      plot_fit <- interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
+      plot_fit <-
+        interpolate_time_plots(fit, eliminated, agemin_rounded, agemax_rounded, std.err = FALSE)
 
       return(list(fit, model_fit, plot_fit))
 

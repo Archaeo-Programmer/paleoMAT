@@ -1385,14 +1385,14 @@ tavg_preds <-
         site.locs = fossil.locs,
         elev.raster = NED,
         nfraction.df = 0.6,
-        rast.extrap = TRUE
+        rast.extrap = FALSE
       )
     }
   )
 ok <- purrr::map(tavg_preds, 1)
 saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters.RDS")
 # Rename the layers.
-names(tavg_preds) <- c("950BC","850BC","750BC", "650BC", "5500BC","450BC", "350BC", "250BC", "150BC", "50BC", "50AD", "150AD", "250AD", "350AD", "450AD", "550AD", "650AD", "750AD", "850AD","950AD", "1050AD", "1150AD", "1250AD", "1350AD", "1450AD", "1550AD", "1650AD", "1750AD")
+names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
 
 colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
@@ -1402,7 +1402,7 @@ tavg_rbrick <- raster::brick(ok, varname = "anom")
 names(tavg_rbrick) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
 dt<-as.data.frame(
   as.Date(c('2010-11-1','2008-3-25','2007-3-14','2007-3-18','2007-3-20')))
-tavg_rstack <- raster::stack(tavg_preds$site.predictions)
+tavg_rstack <- raster::stack(ok)
 tavg_animated <- raster::animate(tavg_rbrick, n =2)
 
 plot(tavg_rbrick, nc=6, maxnl=32, col =colors)
@@ -1424,6 +1424,14 @@ no.samples <- tavg %>%
 
 ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep = FALSE) %>% 
   dplyr::mutate(no.samples = dplyr::coalesce(no.samples, 0))
+
+
+# Animate and save as a gif.
+library(tmap)
+tavg_rstack2 <- reclassify(tavg_rstack, cbind(-Inf, -4.0, -9999), right=FALSE)
+tavg_rstack2 <- reclassify(tavg_rstack2, cbind(4.0, Inf, 9999), right=FALSE)
+anim <- tm_shape(tavg_rstack2) + tm_raster(palette = colors, title = "Temperature Anamoly", breaks = c(-9999, seq(-4.0, 4.0, 0.5), 9999 )) + tm_facets(nrow = 1, ncol = 1)
+tmap_animation(anim, "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters.gif")
 
 
 ```

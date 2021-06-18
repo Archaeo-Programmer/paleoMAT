@@ -433,3 +433,396 @@ UUSS_100yrAvgs_tgs_anom <-
 
 
 ```
+
+
+```{r anomaly_2, fig.width=8, fig.height=9, echo=FALSE}
+
+# Method 1: Use temporal interpolations from all sites to create overall reconstruction.
+tavg_100yrs_all <- tavg_predicted %>%
+  dplyr::select(-model_fit,-plot_fit) %>%
+  tidyr::unnest(mean_100yrs)
+
+# Here, we set up the midpoint years of each century from the minimum to maximum year represented by each site.
+agemax <- max(tavg_100yrs_all$date)
+agemax_rounded <- agemax %>%
+  DescTools::RoundTo(multiple = 100, FUN = ceiling)
+agemin <- min(tavg_100yrs_all$date)
+agemin_rounded <- agemin %>%
+  DescTools::RoundTo(multiple = 100, FUN = floor)
+
+predict.points <-
+  as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
+names(predict.points)[1] <- "date"
+
+# GAM
+model_gam <-
+  mgcv::gam(anom ~ s(date, bs = "cp", k = 32),
+            data = tavg_100yrs_all,
+            family = gaussian())
+plot(model_gam)
+gam_knots <-
+  model_fit$smooth[[1]]$xp  ## extract knots locations
+# Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.
+plot_gam <- plot.gam(model_fit)
+plot_gam[[1]]$se
+
+predict.points <- as.data.frame(predict.points) %>%
+  dplyr::rename(date = predict.points)
+
+predict.anom <-
+  as.data.frame(mgcv::predict.gam(model_gam,
+                                  predict.points,
+                                  type = 'response',
+                                  se.fit = TRUE)) %>%
+  dplyr::rename(anom = 1)
+
+fit <- cbind(predict.points, predict.anom)
+
+fit <- fit %>%
+  dplyr::filter(date >= -1000 & date <= 1799)
+
+plot_gam <- ggplot(data = fit,
+                   aes(x = date,
+                       y = anom)) +
+  # geom_ribbon(
+  #   data = fit,
+  #   aes(
+  #     x = date,
+  #     ymin = anom - 1.96 *  se.fit,
+  #     ymax = anom + 1.96 * se.fit,
+  #     alpha = 0.2
+  #   ),
+  #   fill = "grey",
+  #   colour = "dark grey",
+  #   show.legend = F
+# ) +
+geom_line(colour = "red", size = 1.0) +
+  # geom_point(data = eliminated, aes(x = date,
+  #                                   y = anom)) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(
+    breaks = seq(agemin_rounded, agemax_rounded, 200),
+    minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                  100), 200)
+  ) +
+  scale_y_continuous(breaks = seq(-2.0, 2.0, 0.1), limits = c(-1.0, 0)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 14,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
+
+#TPS
+predict.points <- as.numeric(unlist(predict.points))
+smooth.dim <-
+  32#length(predict.points) #ceiling(length(tavg_100yrs_all$anom) * 0.3)
+
+model_tps <-
+  fields::Tps(tavg_100yrs_all$date, tavg_100yrs_all$anom, df = 30)
+
+fhat <- predict(model_tps, predict.points)
+
+SE <- fields::predictSE(model_tps, predict.points)
+
+fit <-
+  cbind(as.data.frame(predict.points),
+        as.data.frame(fhat),
+        as.data.frame(SE))
+names(fit) <- c("date", "anom", "se.fit")
+
+fit <- fit %>%
+  dplyr::filter(date >= -1000 & date <= 1799)
+
+plot_tps <- ggplot(data = fit,
+                   aes(x = date,
+                       y = anom)) +
+  # geom_ribbon(
+  #   data = fit,
+  #   aes(
+  #     x = date,
+  #     ymin = anom - 1.96 *  se.fit,
+  #     ymax = anom + 1.96 * se.fit,
+  #     alpha = 0.2
+  #   ),
+  #   fill = "grey",
+  #   colour = "dark grey",
+  #   show.legend = F
+# ) +
+geom_line(colour = "red", size = 1.0) +
+  # geom_point(data = eliminated, aes(x = date,
+  #                                   y = anom)) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(
+    breaks = seq(agemin_rounded, agemax_rounded, 200),
+    minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                  100), 200)
+  ) +
+  scale_y_continuous(breaks = seq(-2.0, 2.0, 0.5),
+                     limits = c(-1.5, 1.5)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 14,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
+
+
+
+
+
+#******************************
+
+
+
+
+
+
+
+
+# Method 2: Use pre-temporal interpolations from all sites to create overall reconstruction.
+tavg_all <- tavg
+
+# Here, we set up the midpoint years of each century from the minimum to maximum year represented by each site.
+agemax <- max(tavg_100yrs_all$date)
+agemax_rounded <- agemax %>%
+  DescTools::RoundTo(multiple = 100, FUN = ceiling)
+agemin <- min(tavg_100yrs_all$date)
+agemin_rounded <- agemin %>%
+  DescTools::RoundTo(multiple = 100, FUN = floor)
+
+predict.points <-
+  as.data.frame(seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100))
+names(predict.points)[1] <- "date"
+
+# GAM
+model_gam <-
+  mgcv::gam(anom ~ s(date, bs = "cp", k = 32),
+            data = tavg_100yrs_all,
+            family = gaussian())
+plot(model_gam)
+gam_knots <-
+  model_fit$smooth[[1]]$xp  ## extract knots locations
+# Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.
+plot_gam <- plot.gam(model_fit)
+plot_gam[[1]]$se
+
+predict.points <- as.data.frame(predict.points) %>%
+  dplyr::rename(date = predict.points)
+
+predict.anom <-
+  as.data.frame(mgcv::predict.gam(model_gam,
+                                  predict.points,
+                                  type = 'response',
+                                  se.fit = TRUE)) %>%
+  dplyr::rename(anom = 1)
+
+fit <- cbind(predict.points, predict.anom)
+
+fit <- fit %>%
+  dplyr::filter(date >= -1000 & date <= 1799)
+
+plot_gam <- ggplot(data = fit,
+                   aes(x = date,
+                       y = anom)) +
+  # geom_ribbon(
+  #   data = fit,
+  #   aes(
+  #     x = date,
+  #     ymin = anom - 1.96 *  se.fit,
+  #     ymax = anom + 1.96 * se.fit,
+  #     alpha = 0.2
+  #   ),
+  #   fill = "grey",
+  #   colour = "dark grey",
+  #   show.legend = F
+# ) +
+geom_line(colour = "red", size = 1.0) +
+  # geom_point(data = eliminated, aes(x = date,
+  #                                   y = anom)) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(
+    breaks = seq(agemin_rounded, agemax_rounded, 200),
+    minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                  100), 200)
+  ) +
+  scale_y_continuous(breaks = seq(-2.0, 2.0, 0.1), limits = c(-1.0, 0)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 14,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
+
+#TPS
+predict.points <- as.numeric(unlist(predict.points))
+smooth.dim <-
+  32#length(predict.points) #ceiling(length(tavg_100yrs_all$anom) * 0.3)
+
+model_tps <-
+  fields::Tps(tavg_100yrs_all$date, tavg_100yrs_all$anom, df = 30)
+
+fhat <- predict(model_tps, predict.points)
+
+SE <- fields::predictSE(model_tps, predict.points)
+
+fit <-
+  cbind(as.data.frame(predict.points),
+        as.data.frame(fhat),
+        as.data.frame(SE))
+names(fit) <- c("date", "anom", "se.fit")
+
+fit <- fit %>%
+  dplyr::filter(date >= -1000 & date <= 1799)
+
+plot_tps <- ggplot(data = fit,
+                   aes(x = date,
+                       y = anom)) +
+  # geom_ribbon(
+  #   data = fit,
+  #   aes(
+  #     x = date,
+  #     ymin = anom - 1.96 *  se.fit,
+  #     ymax = anom + 1.96 * se.fit,
+  #     alpha = 0.2
+  #   ),
+  #   fill = "grey",
+  #   colour = "dark grey",
+  #   show.legend = F
+# ) +
+geom_line(colour = "red", size = 1.0) +
+  # geom_point(data = eliminated, aes(x = date,
+  #                                   y = anom)) +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(
+    breaks = seq(agemin_rounded, agemax_rounded, 200),
+    minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                  100), 200)
+  ) +
+  scale_y_continuous(breaks = seq(-2.0, 2.0, 0.5),
+                     limits = c(-1.5, 1.5)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 14,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
+
+
+```
