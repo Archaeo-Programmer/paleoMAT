@@ -11,7 +11,7 @@ interpolate_time <-
     if (anyNA(Q) == TRUE) {
       eliminated <- as.data.frame(temp_data)
 
-    } else if (is.na(nfraction.df) == TRUE) {
+    } else {
       iqr <- IQR(temp_data$anom)
       up <-  Q[2] + 1.5 * iqr # Upper Range
       low <- Q[1] - 1.5 * iqr # Lower Range
@@ -70,9 +70,11 @@ interpolate_time <-
         }
 
         model_fit <-
-          mgcv::gam(anom ~ s(date, bs = gam.smooth, k = smooth.dim),
-                    data = eliminated,
-                    family = gaussian())
+          mgcv::gam(
+            anom ~ s(date, bs = gam.smooth, k = smooth.dim),
+            data = eliminated,
+            family = gaussian()
+          )
         #plot(model_fit)
         gam_knots <-
           model_fit$smooth[[1]]$xp  ## extract knots locations

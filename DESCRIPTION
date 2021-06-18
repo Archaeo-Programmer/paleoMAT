@@ -22,7 +22,8 @@ Depends:
     palaeoSig,
     raster,
     reshape2, 
-    mgcv
+    mgcv,
+    ggplot2
 Imports: 
     rebus.numbers,
     leaflet,
@@ -30,7 +31,6 @@ Imports:
     rgdal,
     plotly,
     RColorBrewer,
-    ggplot2,
     here,
     lubridate,
     units,
