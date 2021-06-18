@@ -545,20 +545,25 @@ geom_line(colour = "red", size = 1.0) +
 #TPS
 predict.points <- as.numeric(unlist(predict.points))
 smooth.dim <-
-  32#length(predict.points) #ceiling(length(tavg_100yrs_all$anom) * 0.3)
+  length(predict.points) #ceiling(length(tavg_100yrs_all$anom) * 0.3)
 
 model_tps <-
-  fields::Tps(tavg_100yrs_all$date, tavg_100yrs_all$anom, df = 30)
+  fields::Tps(tavg_100yrs_all$date, tavg_100yrs_all$anom, df = smooth.dim)
 
 fhat <- predict(model_tps, predict.points)
 
-SE <- fields::predictSE(model_tps, predict.points)
+# se.fit.avg <- tavg_100yrs_all %>% 
+#   dplyr::ungroup() %>% 
+#   dplyr::select(date, se.fit) %>%
+#   dplyr::group_by(date) %>% 
+#   dplyr::summarise(se.avg = mean(se.fit, na.rm = TRUE))
+  
 
 fit <-
-  cbind(as.data.frame(predict.points),
-        as.data.frame(fhat),
-        as.data.frame(SE))
-names(fit) <- c("date", "anom", "se.fit")
+  cbind(as.data.frame(predict.points) %>% dplyr::rename(date = predict.points),
+        as.data.frame(fhat) %>% dplyr::rename(anom = V1)) #%>% 
+  #dplyr::left_join(se.fit.avg, by = "date")
+#names(fit) <- c("date", "anom", "se.fit")
 
 fit <- fit %>%
   dplyr::filter(date >= -1000 & date <= 1799)
@@ -566,17 +571,17 @@ fit <- fit %>%
 plot_tps <- ggplot(data = fit,
                    aes(x = date,
                        y = anom)) +
-  # geom_ribbon(
-  #   data = fit,
-  #   aes(
-  #     x = date,
-  #     ymin = anom - 1.96 *  se.fit,
-  #     ymax = anom + 1.96 * se.fit,
-  #     alpha = 0.2
-  #   ),
-  #   fill = "grey",
-  #   colour = "dark grey",
-  #   show.legend = F
+# geom_ribbon(
+#   data = fit,
+#   aes(
+#     x = date,
+#     ymin = anom - 1.96 *  se.avg,
+#     ymax = anom + 1.96 * se.avg,
+#     alpha = 0.2
+#   ),
+#   fill = "grey",
+#   colour = "dark grey",
+#   show.legend = F
 # ) +
 geom_line(colour = "red", size = 1.0) +
   # geom_point(data = eliminated, aes(x = date,
@@ -588,8 +593,8 @@ geom_line(colour = "red", size = 1.0) +
     minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
                                                   100), 200)
   ) +
-  scale_y_continuous(breaks = seq(-2.0, 2.0, 0.5),
-                     limits = c(-1.5, 1.5)) +
+  scale_y_continuous(breaks = seq(-1.5, 1.0, 0.5),
+                     limits = c(-1.5, 1.0)) +
   theme_bw() +
   theme(
     panel.border = element_blank(),

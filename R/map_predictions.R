@@ -5,8 +5,24 @@ map_predictions <-
            nfraction.df = NA,
            rast.extrap = FALSE) {
     # Prepare elevation dataset, so that the prediction can be done with the thin plate spline regression on the elevation grid.
-    # Create a bounding box around the site extent (i.e., for site.locs).
-    bbox <- c(
+    # Create a bounding box around the site extent (i.e., for site.locs), but with a 1 degree buffer in each direction.
+    bbox_buffer <- c(
+      "xmin" = min(site.locs$long)-1,
+      "ymin" = min(site.locs$lat)-1,
+      "xmax" = max(site.locs$long)+1,
+      "ymax" = max(site.locs$lat)+1
+    )  %>%
+      sf::st_bbox() %>%
+      sf::st_as_sfc() %>%
+      sf::st_as_sf(crs = 4326) %>%
+      sf::st_transform(crs = 4326)
+
+    # Crop the elevation dataset to the extent of the bounding box.
+    elev.raster <- raster::crop(elev.raster, bbox_buffer)
+
+    # Create a bounding box around the site extent (i.e., for site.locs). This is essentially the same as bbox_buffer, but without the 1 degree buffer.
+    # This will be used to crop the raster output below.
+    bbox_limited <- c(
       "xmin" = min(site.locs$long),
       "ymin" = min(site.locs$lat),
       "xmax" = max(site.locs$long),
@@ -17,8 +33,6 @@ map_predictions <-
       sf::st_as_sf(crs = 4326) %>%
       sf::st_transform(crs = 4326)
 
-    # Crop the elevation dataset to the extent of the bounding box.
-    elev.raster <- raster::crop(elev.raster, bbox)
 
     # Need to extract the xy grid and put in ascending order, as the fields package expects that. The top row or first record is NA, so removing the first row/record.
     elev.raster.long <- raster::xFromCol(elev.raster)
@@ -102,7 +116,7 @@ map_predictions <-
       # Do prediction on elevation surface and output a raster that is a convex hull (i.e., no extrapolation beyond site.locs extent).
       fit.full <-
         fields::predictSurface(fit_TPS, grid.list, ZGrid = elev.raster.list, extrap = FALSE)
-      raster(fit.full)
+      fit.full <- raster(fit.full)
       crs(fit.full) <- CRS('+init=EPSG:4326')
 
       fit.full.SE <-
@@ -113,7 +127,7 @@ map_predictions <-
           drop.Z = TRUE,
           extrap = FALSE
         )
-      raster(fit.full.SE)
+      fit.full.SE <- raster(fit.full.SE)
       crs(fit.full.SE) <- CRS('+init=EPSG:4326')
 
     }
