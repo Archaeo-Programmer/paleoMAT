@@ -112,6 +112,9 @@ map_predictions <-
       fit.full.SE <- raster(fit.full.SE)
       crs(fit.full.SE) <- CRS('+init=EPSG:4326')
 
+      fit.full <- raster::crop(fit.full, bbox_limited)
+      fit.full.SE <- raster::crop(fit.full.SE, bbox_limited)
+
     } else {
       # Do prediction on elevation surface and output a raster that is a convex hull (i.e., no extrapolation beyond site.locs extent).
       fit.full <-
@@ -129,6 +132,9 @@ map_predictions <-
         )
       fit.full.SE <- raster(fit.full.SE)
       crs(fit.full.SE) <- CRS('+init=EPSG:4326')
+
+      fit.full <- raster::crop(fit.full, bbox_limited)
+      fit.full.SE <- raster::crop(fit.full.SE, bbox_limited)
 
     }
 

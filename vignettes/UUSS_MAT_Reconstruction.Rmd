@@ -1430,8 +1430,10 @@ ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep
 library(tmap)
 tavg_rstack2 <- reclassify(tavg_rstack, cbind(-Inf, -4.0, -9999), right=FALSE)
 tavg_rstack2 <- reclassify(tavg_rstack2, cbind(4.0, Inf, 9999), right=FALSE)
-anim <- tm_shape(tavg_rstack2) + tm_raster(palette = colors, title = "Temperature Anamoly", breaks = c(-9999, seq(-4.0, 4.0, 0.5), 9999 )) + tm_facets(nrow = 1, ncol = 1)
-tmap_animation(anim, "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters.gif")
+anim <- tm_shape(tavg_rstack) + tm_raster(palette = colors, title = "Temperature Anamoly") + tm_facets(nrow = 1, ncol = 1)
+tmap_animation(anim, "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters2.gif")
+
+#breaks = c(-9999, seq(-4.0, 4.0, 0.5), 9999 )
 
 
 ```
