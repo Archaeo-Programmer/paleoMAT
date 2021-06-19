@@ -1433,7 +1433,7 @@ rasterVis::gplot(tavg_rbrick) +
     coord_equal() + theme_classic()
 
 # Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/Temp_rasters_convex.pdf", plot_objects_arranged, scale = 1.5)
+ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/Temp_rasters_convex.pdf", raster_objects_arranged, scale = 1.5)
 
 # Get number of samples per time period for each site.
 no.samples <- tavg %>%
@@ -1476,4 +1476,17 @@ for (ii in 1:nlayers(tavg_rbrick3)){
   polygon(usa$x, usa$y)
 }
 dev.off()
+
+
+test_spdf <- as(ok, "SpatialPixelsDataFrame")
+test_df <- as.data.frame(test_spdf)
+colnames(test_df) <- c("value", "x", "y")
+
+gplot1 <- as.data.frame(ok, xy = TRUE)
+
+ggplot() +  
+  geom_raster(data=gplot1, aes(x=x, y=y, fill=layer), alpha=0.8) +
+  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)) +
+  coord_equal()
+
 ```
