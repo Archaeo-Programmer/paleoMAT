@@ -1079,8 +1079,8 @@ maize_anomaly_plots_arranged <- gridExtra::marrangeGrob(maize_anomaly_plots, nro
 
 # Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
 ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/maize_anomaly_plots_arranged.pdf", maize_anomaly_plots_arranged, scale = 1.5, 
-       width = 210, 
-       height = 297, 
+       width = 297, 
+       height = 210, 
        units = "mm")
 
 ```
