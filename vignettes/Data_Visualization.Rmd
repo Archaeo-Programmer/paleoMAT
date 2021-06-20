@@ -854,9 +854,10 @@ ok6 <- tavg_100yrs %>%
 
 ```{r maize, fig.width=8, fig.height=9, echo=FALSE}
 
+#/Users/andrewgillreath-brown/Dropbox/WSU/
 MDB_nest <-
   readRDS(
-    "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
+    "/Users/andrewgillreath-brown/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
   ) %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(MedianBP)) %>%
   dplyr::filter(date >= -1000 & date <= 900) %>%
@@ -898,7 +899,7 @@ MDB_NF$date[[12]] <- MDB_NF$date[[12]]+1
 ```{r anomaly_maize_plot, fig.width=8, fig.height=9, echo=FALSE}
 
 # Prepare Maize plot.
-# "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
+# "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/"
 MDB_FULL<-
   readRDS(
     "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
@@ -1033,6 +1034,7 @@ ggplot(multi.plot, mapping = aes(x = date, y = value)) +
 
 #First, get reconstruction data, then limit to the maize range (BC950 to AD450).
 tavg_recon <- purrr::map(tavg_preds, 1)
+names(tavg_recon) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 tavg_recon <- tavg_recon[1:15]
 
 # Get maize database and change all time periods to sf objects.
@@ -1042,10 +1044,6 @@ MDB_sf <- MDB %>%
       sf::st_as_sf(x, crs = 4326)
     }
   )
-
-# Get usa map.
-usa <- sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
-usa <- sf::st_transform(usa, crs = 4326)
 
 # Get major cities in US (will limit these in the function used below).
 data(us.cities)
@@ -1057,30 +1055,53 @@ tavg_recon_list <- purrr::map(
     list(x)
   }
 )
+
 MDB_sf_list <- purrr::map(
   MDB_sf,
   .f = function(x) {
     list(x)
   }
 )
-tavg_MDB_list <-
-  mapply(c, tavg_recon_list, MDB_sf_list, SIMPLIFY = FALSE)
+
+tavg_MDB_list <- 
+  mapply(c, tavg_recon_list, MDB_sf_list, SIMPLIFY = FALSE, USE.NAMES = TRUE)
 
 maize_anomaly_plots <-
-  purrr::map(
-    tavg_MDB_list,
-    .f = function(x) {
-      map_anomaly_maize(x, usa = usa, us.cities = us.cities)
+  purrr::map2(
+    .x = tavg_MDB_list, .y = names(tavg_MDB_list),
+    .f = function(x, y) {
+      plot_map_anomaly_maize(x = x, x.name = y, us.cities = us.cities, animation = FALSE)
     }
   )
 
-
-maize_anomaly_plots_arranged <- gridExtra::marrangeGrob(maize_anomaly_plots, nrow=2, ncol=1, top=quote(names(maize_anomaly_plots)[g]), gp=gpar(fontsize=15,font=8))
+# Arrange all of the plots, then can output below as PDF.
+maize_anomaly_plots_arranged <- gridExtra::marrangeGrob(maize_anomaly_plots, nrow=2, ncol=1, top=NULL)
 
 # Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/maize_anomaly_plots_arranged.pdf", maize_anomaly_plots_arranged, scale = 1.5, 
-       width = 297, 
-       height = 210, 
+ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/maize_anomaly_plots_arranged.pdf", maize_anomaly_plots_arranged, scale = 1.5, 
+       width = 210, 
+       height = 297, 
        units = "mm")
+
+#Gif animation
+## list file names and read in
+imgs <- list.files("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/animation/", full.names = TRUE)
+index = c(15, 14, 13, 12, 11, 9, 8, 7, 6, 10, 5, 1, 2, 3, 4)
+index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+imgs = imgs[order(index)]
+img_list <- lapply(imgs, magick::image_read)
+
+## join the images together
+img_joined <- image_join(img_list)
+
+## animate at 2 frames per second
+img_animated <- image_animate(img_joined, fps = 2)
+
+## view animated image
+img_animated
+
+## save to disk
+image_write(image = img_animated,
+            path = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/animation/maize_anomaly_plots_arranged.gif")
 
 ```
