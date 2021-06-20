@@ -1478,15 +1478,72 @@ for (ii in 1:nlayers(tavg_rbrick3)){
 dev.off()
 
 
-test_spdf <- as(ok, "SpatialPixelsDataFrame")
-test_df <- as.data.frame(test_spdf)
-colnames(test_df) <- c("value", "x", "y")
+# test_spdf <- as(ok, "SpatialPixelsDataFrame")
+# test_df <- as.data.frame(test_spdf)
+# colnames(test_df) <- c("value", "x", "y")
 
+library(maps)
+crs(ok) <- "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs"
 gplot1 <- as.data.frame(ok, xy = TRUE)
+gplot1_transformed <- usmap_transform(gplot1)
+usa <- sf::st_as_sf(maps::map("state", fill=TRUE, plot =FALSE))
+usa <- sf::st_transform(usa, crs = 4326)
+data(us.cities)
+cities <- us.cities %>% 
+  dplyr::select(name, long, lat) %>% 
+  dplyr::filter(name %in% c("Farmington NM", "Santa Fe NM", "Albuquerque NM", "Flagstaff AZ", "Phoenix AZ")) %>% 
+  dplyr::add_row(name = "Mesa Verde", long = -108.463050, lat = 37.230299) %>% 
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
-ggplot() +  
-  geom_raster(data=gplot1, aes(x=x, y=y, fill=layer), alpha=0.8) +
-  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)) +
-  coord_equal()
+MDB_sf <- sf::st_as_sf(MDB_full, coords = c("Longitude", "Latitude"), crs = 4326)
+
+
+ggplot() + 
+  geom_raster(data=gplot1_transformed, aes(x=x, y=y, fill=layer), alpha=0.8, na.rm = TRUE) +
+  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255), na.value = "transparent", name = "Anomaly °C") +
+  coord_equal() +
+  theme_classic() +
+  scale_x_continuous(breaks = seq(-113, -105.5, 1.0),
+                     limits = c(-113, -105.5)) +
+  scale_y_continuous(breaks = seq(33.5, 38.0, 0.5), limits = c(33.5, 38.0)) +
+  geom_sf(data = usa, color = "#2b2b2b", fill = "transparent", size=0.5) +
+  geom_sf(data = MDB_sf) +
+  geom_sf(data = cities, shape=23, fill="blue", size=3) +
+  shadowtext::geom_shadowtext(data = cities2, aes(x = long, y = lat, label = name), nudge_y = 0.15, color = "white") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 14,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
 
 ```

@@ -25,6 +25,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # devtools::install()
 # devtools::load_all()
+devtools::install_github("zeehio/facetscales")
 library(paleomat)
 
 ```
@@ -897,9 +898,10 @@ MDB_NF$date[[12]] <- MDB_NF$date[[12]]+1
 ```{r anomaly_maize_plot, fig.width=8, fig.height=9, echo=FALSE}
 
 # Prepare Maize plot.
+# "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
 MDB_FULL<-
   readRDS(
-    "/Users/andrewgillreath-brown/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
+    "/Users/andrew/Dropbox/WSU/Dissertation/Paper 1/Maize compilation/MDB_full_cal_min.RDS"
   ) %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(MedianBP)) %>%
   dplyr::filter(date >= -1000 & date <= 1800) %>%
@@ -958,7 +960,7 @@ maize_plot <- ggplot(MDB_FULL, aes(x = date, y = Latitude)) +
   )
 
 
-# Use facetting to plot together.
+# Use faceting to plot together.
 t1 <- fit %>% 
   dplyr::select(date, anom) %>%
   reshape2::melt(measure.vars = c("anom")) %>% 
@@ -968,6 +970,11 @@ t2 <- MDB_FULL %>%
   reshape2::melt(measure.vars = c("Latitude"))
 multi.plot <- rbind(t1, t2)
 
+scales_y <- list(
+  `Anomaly` = scale_y_continuous(limits = c(-1.5, 0.5), breaks = seq(-1.5, 0.5, 0.25)),
+  `Latitude` = scale_y_continuous(limits = c(31.5, 37.5), breaks = seq(31.5, 37.5, 0.5))
+)
+
 ggplot(multi.plot, mapping = aes(x = date, y = value)) +
   facet_grid(variable ~ ., scales = "free_y") +
   geom_line(data = t1, stat = "identity") + 
@@ -976,9 +983,11 @@ ggplot(multi.plot, mapping = aes(x = date, y = value)) +
   xlab("Year BC/AD") +
   ylab("Value") +
   scale_x_continuous(
-    breaks = seq(-1000, 1400, 200),
+    breaks = seq(-1000, 2000, 200),
     minor_breaks = seq((-1000 + 100), (2000 -100), 200)
   ) +
+  facetscales::facet_grid_sc(rows = vars(variable), 
+                scales = list(y = scales_y)) +
   #scale_y_continuous(breaks = seq(31.5, 38, 0.5)) +
   theme_bw() +
   theme(
@@ -1015,5 +1024,63 @@ ggplot(multi.plot, mapping = aes(x = date, y = value)) +
   )
 
 
+
+```
+
+
+
+```{r anomaly_maize_maps, fig.width=8, fig.height=9, echo=FALSE}
+
+#First, get reconstruction data, then limit to the maize range (BC950 to AD450).
+tavg_recon <- purrr::map(tavg_preds, 1)
+tavg_recon <- tavg_recon[1:15]
+
+# Get maize database and change all time periods to sf objects.
+MDB_sf <- MDB %>%
+  purrr::map(
+    .f = function(x) {
+      sf::st_as_sf(x, crs = 4326)
+    }
+  )
+
+# Get usa map.
+usa <- sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
+usa <- sf::st_transform(usa, crs = 4326)
+
+# Get major cities in US (will limit these in the function used below).
+data(us.cities)
+
+# Need to put the temp and maize data into one list in order to run map on it. First, I make each time period a list of a list (to make it easier for combining the lists).
+tavg_recon_list <- purrr::map(
+  tavg_recon,
+  .f = function(x) {
+    list(x)
+  }
+)
+MDB_sf_list <- purrr::map(
+  MDB_sf,
+  .f = function(x) {
+    list(x)
+  }
+)
+tavg_MDB_list <-
+  mapply(c, tavg_recon_list, MDB_sf_list, SIMPLIFY = FALSE)
+
+maize_anomaly_plots <-
+  purrr::map(
+    tavg_MDB_list,
+    .f = function(x) {
+      map_anomaly_maize(x, usa = usa, us.cities = us.cities)
+    }
+  )
+
+
+maize_anomaly_plots_arranged <- gridExtra::marrangeGrob(maize_anomaly_plots, nrow=2, ncol=1, top=quote(names(maize_anomaly_plots)[g]), gp=gpar(fontsize=15,font=8))
+
+# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
+ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/maize_anomaly_plots_arranged.pdf", maize_anomaly_plots_arranged, scale = 1.5, 
+       width = 210, 
+       height = 297, 
+       units = "mm")
 
 ```
