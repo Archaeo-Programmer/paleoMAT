@@ -1494,7 +1494,7 @@ anomaly_plots <-
   purrr::map2(
     .x = tavg_recon_list, .y = names(tavg_recon_list),
     .f = function(x, y) {
-      plot_map_anomaly(x = x, x.name = y, us.cities = us.cities, animation = TRUE)
+      plot_map_anomaly(x = x, x.name = y, us.cities = us.cities, animation = FALSE)
     }
   )
 

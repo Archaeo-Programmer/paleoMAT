@@ -380,6 +380,9 @@ gs.months <- mean(gs.months)
 gs_anom <- UUSS_100yrAvgs_tavg_GS %>%
   dplyr::mutate(anom =  value_mean - gs.months)
 
+
+
+
 UUSS_100yrAvgs_tgs_anom <-
   ggplot(
     data = (dplyr::filter(gs_anom[44:60,])),
@@ -432,6 +435,12 @@ UUSS_100yrAvgs_tgs_anom <-
   ) +
   labs(col = "Temperature (°C)")
 
+
+
+# writeRaster(PRISM_tavg_monthly_normals, filename="/Users/andrew/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif", format="GTiff", overwrite=TRUE)
+# Get tavg PRISM raster for July.
+July_PRISM_tavg <- brick("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% 
+  raster::subset(7)
 
 ```
 
@@ -631,7 +640,62 @@ geom_line(colour = "red", size = 1.0) +
     legend.title = element_text(size = 22, family = "Helvetica")
   )
 
+smooth_vals = predict(fit)
+garb3$smooth_vals <- smooth_vals
 
+# Animate
+plot_tps <- ggplot(data = fit,
+                   aes(x = date,
+                       y = anom)) +
+geom_line(colour = "red", size = 1.0, aes(y = anom)) +
+    transition_reveal(date) +
+  ease_aes("linear") +
+  xlab("Year BC/AD") +
+  ylab("Temperature Anomaly") +
+  scale_x_continuous(
+    breaks = seq(agemin_rounded, agemax_rounded, 200),
+    minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
+                                                  100), 200)
+  ) +
+  scale_y_continuous(breaks = seq(-1.5, 1.0, 0.5),
+                     limits = c(-1.5, 1.0)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 10,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 20,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 20,
+      family = "Helvetica",
+      margin = margin(
+        t = 20,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 22, family = "Helvetica")
+  )
+
+anim2 <- animate(plot_tps, fps = 10, duration = 7, height = 4, width = 7, units = "in", res = 300)
+anim_save(animation = anim2, filename ="/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly.gif")
 
 
 #******************************
