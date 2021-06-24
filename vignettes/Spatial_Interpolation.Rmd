@@ -138,7 +138,7 @@ interpolate_time_temp <-
     } else if (model == "tps") {
       if (length(eliminated$value) == 3) {
         # Tps cannot run when n = 3. Here, we set it to 3 because above we have already dealt with when n<=2, which results in applying a lm.
-        fit <- interpolate_time_natural(eliminated)
+        fit <- interpolate_time_natural_temp(eliminated)
         
         model_fit <- fit[[2]]
         fit <- fit[[1]]
@@ -205,6 +205,46 @@ interpolate_time_temp <-
   }
 
 
+
+# Interpolate time natural
+interpolate_time_natural_temp <-
+  function(eliminated) {
+
+    model_fit <-
+      spline(eliminated$date, eliminated$value, method = "natural")
+    model_fit <- as.data.frame(model_fit)
+
+    Q <- quantile(model_fit$y, probs = c(.01, .99), na.rm = FALSE)
+    iqr <- IQR(model_fit$y)
+    up <-  Q[2] + 1.5 * iqr # Upper Range
+    low <- Q[1] - 1.5 * iqr # Lower Range
+    eliminated <-
+      subset(model_fit, model_fit$y > (Q[1] - 1.5 * iqr) & model_fit$y < (Q[2] + 1.5 * iqr))
+
+    model_fit <- smooth.spline(eliminated, all.knots = TRUE)
+
+    agemax <- max(eliminated$x)
+    agemax_rounded <- agemax %>%
+      DescTools::RoundTo(multiple = 100, FUN = ceiling)
+    agemin <- min(eliminated$x)
+    agemin_rounded <- agemin %>%
+      DescTools::RoundTo(multiple = 100, FUN = floor)
+
+    midpoints <-
+      seq((agemin_rounded + 50), (agemax_rounded - 50), by = 100)
+    fit <- as.data.frame(predict(model_fit, agemin:agemax)) %>%
+      dplyr::filter(x >= -1000 & x <= 1799) %>%
+      dplyr::group_by(mean = (row_number() - 1) %/% 100) %>%
+      dplyr::mutate(mean = mean(y)) %>%
+      dplyr::filter(x %in% midpoints) %>%
+      dplyr::select(-y) %>%
+      dplyr::rename(date = x, value = mean)
+
+    return(list(fit, model_fit))
+
+  }
+
+
 ```
 
 
@@ -214,6 +254,8 @@ interpolate_time_temp <-
 
 #Just temporary as this number is actually calculated in the Data_visualization.rmd
 warmest.month = 15.6182926829268
+
+reconst_tavg_final <- readr::read_rds("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/model/paleomat/vignettes/data/reconst_tavg_final.rds")
 
 # Put lat and long into individual columns.
 tavg <- reconst_tavg_final %>%
@@ -258,7 +300,7 @@ tavg_predicted_temp <- tavg %>%
   )) %>%
   dplyr::select(-site.data) %>%
   dplyr::arrange(site.name) %>%
-  unnest_wider(mean_100yrs) %>%
+  tidyr::unnest_wider(mean_100yrs) %>%
   dplyr::rename(mean_100yrs = 6, model_fit = 7)
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
@@ -278,13 +320,15 @@ fossil.locs <- tavg %>%
 
 #Get the elevation dataset.
 NED <-
-  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
+  raster::raster("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/model/NED_1.tif")
+  #raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
 # Temporarily re-projecting at a lower resolution that the code runs faster.
 NED <- raster::aggregate(NED, fact = 10)
 NED <-
   raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
 
-
+modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% 
+  raster::subset(7)
 
 ```
 
@@ -292,8 +336,24 @@ NED <-
 ```{r interpolate, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
-ok <- tavg_100yrs[1:2,]
-ok2 <- tavg_100yrs[1, ]
+#ok <- tavg_100yrs[1:2,]
+ok <- tavg_100yrs[1, ]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 tavg_preds <-
   purrr::map(
