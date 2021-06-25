@@ -330,6 +330,10 @@ NED <-
 modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% 
   raster::subset(7)
 
+# Crop the elevation dataset to the extent of the bounding box.
+temp.raster <- raster::mask(modern_temp, bbox_buffer)
+
+
 ```
 
 
@@ -337,22 +341,24 @@ modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/P
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 #ok <- tavg_100yrs[1:2,]
-ok <- tavg_100yrs[1, ]
+ok <- tavg_100yrs$site.predictions[[18]]
 
 
 
+temperature = as.data.frame(extract(modern_temp, ok)) %>% 
+  dplyr::rename(modern = 1)
+ok <- cbind(ok, temperature)
 
 
+temp.raster.stars <- st_as_stars(temp.raster)
+names(temp.raster.stars) <- "modern"
+temp.raster.stars <- st_transform(temp.raster.stars, crs = 4326)
+bbox_buffer <- st_transform(bbox_buffer, crs = 4326)
+temp.raster.stars <- st_crop(temp.raster.stars, bbox_buffer)
 
+g = gstat(formula = value ~ 1, data = ok)
 
-
-
-
-
-
-
-
-
+z = predict(g, ok2)
 
 
 tavg_preds <-
