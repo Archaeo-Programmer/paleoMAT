@@ -331,7 +331,10 @@ modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/P
   raster::subset(7)
 
 # Crop the elevation dataset to the extent of the bounding box.
-temp.raster <- raster::mask(modern_temp, bbox_buffer)
+temp.raster <- raster::crop(modern_temp, bbox_buffer)
+temp.raster <-
+  raster::projectRaster(temp.raster, crs = CRS("+init=epsg:4326"))
+
 
 
 ```
@@ -341,7 +344,8 @@ temp.raster <- raster::mask(modern_temp, bbox_buffer)
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 #ok <- tavg_100yrs[1:2,]
-ok <- tavg_100yrs$site.predictions[[18]]
+ok2 <- tavg_100yrs[18,]$site.predictions
+hello <- tavg_100yrs[18,]
 
 
 
@@ -361,9 +365,9 @@ g = gstat(formula = value ~ 1, data = ok)
 z = predict(g, ok2)
 
 
-tavg_preds <-
+tavg_preds2 <-
   purrr::map(
-    tavg_100yrs$site.predictions,
+    ok$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = x,
@@ -376,12 +380,21 @@ tavg_preds <-
   )
 
 
+v <- getValues(NED)
+i <- !is.na(v)
+xy <- site.preds[i,]
+v <- v[i]
+tps2 <- Tps(as.matrix(site.preds[, c("long", "lat", "elev")]), site.preds$value)
+p2 <- interpolate(Y, tps2, xyOnly=FALSE)
 
+# as a linear coveriate
+tps3 <- Tps(site.preds[, c("long", "lat")], site.preds$value, Z=site.preds$elev)
+p3 <- interpolate(NED, tps3, xyOnly=FALSE, fun=pfun)
 
 
 bbox_buffer <- c(
   "xmin" = min(site.locs$long) - 1,
-  "ymin" = min(site.locs$lat) - 1,
+  "ymin" = min(site.locs$lat) - 0.55,
   "xmax" = max(site.locs$long) + 1,
   "ymax" = max(site.locs$lat) + 1
 )  %>%
@@ -406,7 +419,7 @@ bbox_limited <- c(
   sf::st_as_sf(crs = 4326) %>%
   sf::st_transform(crs = 4326)
 
-
+	
 # Need to extract the xy grid and put in ascending order, as the fields package expects that. The top row or first record is NA, so removing the first row/record.
 elev.raster.long <- raster::xFromCol(elev.raster)
 elev.raster.lat <- raster::yFromRow(elev.raster)[2:962] %>%
@@ -460,5 +473,139 @@ crs(fit.full.SE) <- CRS('+init=EPSG:4326')
 
 fit.full <- raster::crop(fit.full, bbox_limited)
 fit.full.SE <- raster::crop(fit.full.SE, bbox_limited)
-  
+
+
+library(fields)
+library(dplyr)
+library(elevatr)
+library(sf)
+library(raster)
+data(COmonthlyMet)
+# data(PRISMelevation)
+
+swcolorado <- c(
+  "xmin" = -105,
+  "ymin" = 36,
+  "xmax" = -109.060253,
+  "ymax" = 39
+)  %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
+elev.raster <- elevatr::get_elev_raster(swcolorado, z = 5) %>%
+  raster::crop(elevation, swcolorado) %>%
+  raster::aggregate(fact = 12)
+
+# temp.points <- cbind(fossil.locs, hello2) %>%
+#   dplyr::ungroup() %>% 
+#   dplyr::rename("temperature" = 5) %>% 
+#   dplyr::select(-site.id, -site.name) %>% 
+#   dplyr::filter(long > -109 & lat > 36)
+# 
+# temp.points2 <- temp.points %>% 
+#   sf::st_as_sf(coords = c("long", "lat"), crs = 4326) %>%
+#   sf::st_transform(crs = 4326)
+# 
+# elev.locs <- raster::extract(elev.raster, temp.points2)
+# 
+# temp.points <- cbind(temp.points, elev.locs)
+# temp.points <- temp.points[-11, ]
+
+temp.points <- structure(list(long = c(-108.160375, -107.808675, -106.510525, 
+-107.81571, -105.514165, -106.45052, -105.740635, -105.63166, 
+-106.843695, -107.61537, -107.682735, -107.6975, -108.503889, 
+-105.724665, -108.10256), lat = c(37.473105, 37.647645, 36.047665, 
+37.60664, 37.569525, 37.021745, 37.71109, 38.08806, 37.611035, 
+37.902105, 37.74759, 37.737778, 37.473889, 37.67773, 37.46906
+), temperature = c(14.6972137463016, 14.8096938066668, 14.9004909660972, 
+14.8110845322457, 9.7248919765495, 13.271146269724, 18.0169186561757, 
+10.5835671771822, 10.8751447949415, 8.98234964596861, 11.8225704515042, 
+11.982697080223, 19.8293764051047, 18.0406584631011, 12.8451985711037
+), elev.locs = c(3024, 2694, 2932, 2706, 3589, 3054, 2293, 3449, 
+3471, 3739, 3205, 3329, 2111, 2290, 3291)), row.names = c(1L, 
+2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L, 12L, 13L, 14L, 15L, 16L), class = "data.frame")
+
+# Need to extract the xy grid and put in ascending order, as the fields package expects that. The top row or first record is NA, so removing the first row/record.
+elev.raster.long <- raster::xFromCol(elev.raster)
+elev.raster.lat <- raster::yFromRow(elev.raster) %>%
+  sort()
+elev.raster.elev <- as.matrix(elev.raster)
+elev.raster.elev <- elev.raster.elev
+# Transpose, so that rows and columns will match the long lat lists. Then, mirror the columns so that the latitude is ascending.
+elev.raster.elev <- t(elev.raster.elev) %>%
+  as.data.frame()
+elev.raster.elev <-
+  elev.raster.elev[, order(ncol(elev.raster.elev):1)] %>%
+  as.matrix()
+# Put long, lat, and elevation into 1 list. Then, rename to x, y, and z.
+elev.raster.list <-
+  list(elev.raster.long, elev.raster.lat, elev.raster.elev)
+names(elev.raster.list) <- c("x", "y", "z")
+
+#Create the grid list, which will be used in the prediction.
+grid.list <-
+  list(x = elev.raster.list$x, y = elev.raster.list$y)
+
+obj <- fields::Tps(
+  # Accepts points but expects them as matrix.
+  x = as.matrix(temp.points[, c("long", "lat")]),
+  # The dependent variable.
+  Y = temp.points$temperature,
+  # Elevation as an independent covariate.
+  Z = temp.points$elev.locs,
+  miles = TRUE
+)
+
+out.p <- predictSurface(obj,
+                        grid.list = grid.list,
+                        ZGrid = elev.raster.list,
+                        extrap = TRUE)
+out.raster <- raster(out.p)
+crs(out.raster) <- CRS('+init=EPSG:4326')
+out.raster <- crop(out.raster, sf::st_bbox(c(
+  "xmin" = -109,
+  "ymin" = 36.0,
+  "xmax" = -105,
+  "ymax" = 38.25
+)))
+
+
+# Now using the same data, but using interpolate.
+
+tps2 <-
+  Tps(as.matrix(temp.points[, c("long", "lat", "elev.locs")]), temp.points$temperature)
+p2 <- interpolate(elev.raster, tps2, xyOnly = FALSE)
+p2 <- crop(p2, sf::st_bbox(c(
+  "xmin" = -109,
+  "ymin" = 36.0,
+  "xmax" = -105,
+  "ymax" = 38.25
+)))
+
+
+# as a linear covariate
+tps3 <-
+  Tps(as.matrix(temp.points[, c("long", "lat")]),
+      temp.points$temperature,
+      Z = temp.points$elev.locs)
+p3 <- interpolate(elev.raster, tps3, xyOnly = FALSE, fun = pfun)
+p3 <- crop(p3, sf::st_bbox(c(
+  "xmin" = -109,
+  "ymin" = 36.0,
+  "xmax" = -105,
+  "ymax" = 38.25
+)))
+
+
+get_prism_annual("tmean", years = 2010, keepZip = FALSE, keep_pre81_months = FALSE)
+my.layer<- raster("/Users/andrew/Downloads/prism_set_dl_dir/PRISM_tmean_stable_4kmM3_2010_bil/PRISM_tmean_stable_4kmM3_2010_bil.bil") %>% 
+  crop(sf::st_bbox(c(
+  "xmin" = -109,
+  "ymin" = 36.0,
+  "xmax" = -105,
+  "ymax" = 38.25
+)))
+
 ```
