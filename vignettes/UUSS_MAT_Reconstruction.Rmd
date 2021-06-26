@@ -793,11 +793,11 @@ NED <-
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 ok <- tavg_100yrs[1:2, ]
-ok2 <- tavg_100yrs[1,]
+ok2 <- tavg_100yrs[18,]
 
 tavg_preds <-
   purrr::map(
-    tavg_100yrs$site.predictions,
+    ok2$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = x,

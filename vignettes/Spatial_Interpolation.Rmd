@@ -345,6 +345,7 @@ temp.raster <-
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 #ok <- tavg_100yrs[1:2,]
 ok2 <- tavg_100yrs[18,]$site.predictions
+ok2 <- ok2[[1]]
 hello <- tavg_100yrs[18,]
 
 
@@ -374,7 +375,7 @@ tavg_preds2 <-
         site.locs = fossil.locs,
         elev.raster = NED,
         nfraction.df = 0.6,
-        rast.extrap = FALSE
+        rast.extrap = TRUE
       )
     }
   )
