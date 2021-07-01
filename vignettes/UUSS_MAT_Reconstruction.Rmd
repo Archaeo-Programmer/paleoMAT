@@ -947,5 +947,4 @@ img_animated
 image_write(image = img_animated,
             path = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged.gif")
 
-
 ```
