@@ -912,9 +912,8 @@ names(tavg_recon_list) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "
 anomaly_plots <-
   purrr::map2(
     .x = tavg_recon_list, .y = names(tavg_recon_list),
-    .f = function(x, y) {
-      plot_map_anomaly(x = x, x.name = y, us.cities = us.cities, animation = FALSE)
-    }
+    .f = 
+      ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE)
   )
 
 # Arrange all of the plots, then can output below as PDF.

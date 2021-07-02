@@ -304,7 +304,7 @@ tavg_predicted_temp <- tavg %>%
   dplyr::rename(mean_100yrs = 6, model_fit = 7)
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs <- tavg_predicted_temp %>%
+tavg_100yrs_temp <- tavg_predicted_temp %>%
   dplyr::select(-model_fit) %>%
   tidyr::unnest(mean_100yrs) %>%
   dplyr::filter(date >= -1000 & date <= 1800) %>%
@@ -344,15 +344,14 @@ temp.raster <-
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 #ok <- tavg_100yrs[1:2,]
-ok2 <- tavg_100yrs[18,]$site.predictions
-ok2 <- ok2[[1]]
-hello <- tavg_100yrs[18,]
+ok2 <- tavg_100yrs_temp[18,]$site.predictions[[1]]
+#hello <- tavg_100yrs[18,]
+ok <- ok2 %>% dplyr::select(long, lat)
 
 
-
-temperature = as.data.frame(extract(modern_temp, ok)) %>% 
+temperature = as.data.frame(raster::extract(x = temp.raster, y = ok)) %>% 
   dplyr::rename(modern = 1)
-ok <- cbind(ok, temperature)
+ok3 <- cbind(ok2, temperature)
 
 
 temp.raster.stars <- st_as_stars(temp.raster)
@@ -368,7 +367,7 @@ z = predict(g, ok2)
 
 tavg_preds2 <-
   purrr::map(
-    ok$site.predictions,
+    tavg_100yrs$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = x,
