@@ -170,6 +170,41 @@ MPCT_metadata_counts_final <-
 
 
 
+# Keep only modern samples in the western United States. Here, I take the Williams and Shuman 2008 eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
+# Read in all the western shapefiles.
+temp = list.files(path = "/Users/andrew/Dropbox/WSU/SKOPEII/Articles/Williams and Shuman 2008 Supplementary",
+                  pattern = "*WEST.shp$",
+                  full.names = TRUE)
+
+# Then, apply the st_read function to the list of shapefiles.
+myfiles = lapply(temp, st_read, crs = 4326)
+
+# Then, set the name of each list element (each shapefile) to its respective file name.
+names(myfiles) <- gsub(
+  "*WEST.shp$",
+  "",
+  list.files(
+    "/Users/andrew/Dropbox/WSU/SKOPEII/Articles/Williams and Shuman 2008 Supplementary",
+    pattern = "*WEST.shp$",
+    full.names = FALSE
+  ),
+  fixed = TRUE
+)
+
+# This was for changing the crs of each of the shapefiles. But not using as am able to do it with first lapply above.
+# myfiles = purrr::map(myfiles, ~ {
+#               st_crs(.x) <- 4326
+#               .x
+#         })
+
+# Combine all the shapefiles into 1 shapefile with 1 layer.
+all_west <- sf::st_as_sf(data.table::rbindlist(myfiles))
+all_west <- st_union(all_west)
+
+# Keep only the area that falls within the continental United States.
+west_in_states <- sf::st_intersection(all_west, st_union(continental.states))
+
+
 # # Keep only modern samples in specific ecoregions. This is if the reconstructions are limited by their level 1 ecoregions.
 # # Read in the Level 1 ecoregions shapefile (https://gaftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/na_cec_eco_l1.zip), which will be used to filter out modern pollen sites that are outside of the given ecoregions.
 # ecoregions <- readOGR("/Volumes/PUCK_HD/Users/andrew/Downloads/na_cec_eco_l1/NA_CEC_Eco_Level1.shp")
