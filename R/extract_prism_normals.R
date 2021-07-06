@@ -26,8 +26,8 @@ extract_prism_normals <-
          prism_10,
          prism_11,
          prism_12) %>%
-      # prism_extraction <- list(prism_1,
-      #                          prism_2) %>%
+      prism_extraction <- list(prism_1,
+                               prism_2) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(element, month) %>%
       dplyr::rowwise() %>%
