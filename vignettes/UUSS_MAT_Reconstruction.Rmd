@@ -196,14 +196,20 @@ names(myfiles) <- gsub(
 #               st_crs(.x) <- 4326
 #               .x
 #         })
-
+?read_sf
 # Combine all the shapefiles into 1 shapefile with 1 layer.
 all_west <- sf::st_as_sf(data.table::rbindlist(myfiles))
 all_west <- st_union(all_west)
 
 # Keep only the area that falls within the continental United States.
 west_in_states <- sf::st_intersection(all_west, st_union(continental.states))
+west_in_states_spdf <- sf:::as_Spatial(west_in_states)
 
+write_sf(west_in_states, dsn = "vignettes/data/raw_data/", layer = 'west_in_states', driver = "ESRI Shapefile")
+read_sf("vignettes/data/raw_data/west_in_states.shp")
+
+  west_in_states <-
+    sf::read_sf("vignettes/data/raw_data/west_in_states.shp")
 
 # # Keep only modern samples in specific ecoregions. This is if the reconstructions are limited by their level 1 ecoregions.
 # # Read in the Level 1 ecoregions shapefile (https://gaftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/na_cec_eco_l1.zip), which will be used to filter out modern pollen sites that are outside of the given ecoregions.
