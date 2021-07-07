@@ -198,13 +198,7 @@ names(myfiles) <- gsub(
 # Combine all the shapefiles into 1 shapefile with 1 layer.
 all_west <- sf::st_as_sf(data.table::rbindlist(myfiles))
 all_west <- st_union(all_west$geometry)
-
-# Keep only the area that falls within the continental United States.
-west_in_states <-
-  sf::st_intersection(all_west, st_union(continental.states$geometry))
-west_in_states <- st_union(west_in_states)
-#west_in_states_spdf <- sf:::as_Spatial(west_in_states)
-west_in_states <- st_cast(west_in_states, "POLYGON")
+west_in_states <- all_west
 
 write_sf(west_in_states,
          dsn = "vignettes/data/raw_data/",
@@ -213,16 +207,6 @@ write_sf(west_in_states,
 
 west_in_states <-
   sf::read_sf("vignettes/data/raw_data/west_in_states.shp")
-
-
-# Update projection to CRS 4326, which is WGS 84.
-west_in_states <- sf::st_transform(west_in_states, 4326)
-# Need to make the geometry valid for the states shapefile.
-west_in_states <- sf::st_make_valid(west_in_states)
-
-# Do an intersection and keep only the sites that are within the western continental United States.
-MPCT_metadata_counts_final <- 
-  sf::st_intersection(MPCT_metadata_counts, west_in_states)
 
 
 # # Keep only modern samples in specific ecoregions. This is if the reconstructions are limited by their level 1 ecoregions.
@@ -304,8 +288,6 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
 
-crs(MPCT_metadata_counts_final) <- 4326
-
 # Extract Prism Climate data for modern pollen.
 MPCT_climate <-
   MPCT_metadata_counts_final %>%
@@ -323,9 +305,13 @@ MPCT_climate <-
                 climate = prism.normals,
                 pollen = pollen.counts)
 
+# Do an intersection and keep only the sites that are within the western continental United States.
+MPCT_climate_final <- 
+  sf::st_intersection(MPCT_climate, all_west)
+
 # Get the data into the final format used by the palaeoSig and rioja packages.
 MPCT_final <-
-  MPCT_climate %>%
+  MPCT_climate_final %>%
   dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
     # pollen =
     #   purrr::map(pollen,
@@ -347,8 +333,6 @@ MPCT_final <-
                                         values_from = value)
                  }))
 
-
-
 #readr::write_rds(MPCT_final, here::here("vignettes/data/MPCT_final.rds"))
 # MPCT_final <-
 #   readr::read_rds(here::here("vignettes/data/MPCT_final.rds"))
@@ -369,7 +353,7 @@ The MAT method is testing whether the modern calibration is able to detect signa
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-palaeoSig::randomTF(spp = 
+ok <- palaeoSig::randomTF(spp = 
                       MPCT_final %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
