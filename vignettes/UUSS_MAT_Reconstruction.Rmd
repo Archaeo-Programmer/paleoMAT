@@ -499,7 +499,7 @@ if (!file.exists("./vignettes/data/reconst_tavg_west.rds")) {
       }
     )
   
-  readr::write_rds(reconst_tavg, "./vignettes/data/reconst_tavg_west.rds")
+  readr::write_rds(reconst_tavg_west, "./vignettes/data/reconst_tavg_west.rds")
   
 } else if (!exists("reconst_tavg_west")) {
   reconst_tavg <-
@@ -635,7 +635,7 @@ setwd("/Volumes/VILLAGE/paleomat")
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_tavg_final_west.rds")) {
   reconst_tavg_final_west <-
-    simplify_reconstruction(reconstruction.data = reconst_tavg_threshold,
+    simplify_reconstruction(reconstruction.data = reconst_tavg_threshold_west,
                             fossil.metadata = fossil_metadata_counts_final) %>%
     # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
     tidyr::drop_na(age, value) %>% 
