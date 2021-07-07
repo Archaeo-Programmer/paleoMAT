@@ -26,8 +26,8 @@ extract_prism_normals <-
          prism_10,
          prism_11,
          prism_12) %>%
-      prism_extraction <- list(prism_1,
-                               prism_2) %>%
+      # prism_extraction <- list(prism_1,
+      #                          prism_2) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(element, month) %>%
       dplyr::rowwise() %>%
@@ -46,10 +46,10 @@ extract_prism_normals <-
       dplyr::mutate(extraction = extraction / 10.00) %>%
       tidyr::pivot_wider(names_from = element,
                          values_from = extraction) %>%
-      dplyr::left_join(month_days) %>%
+      dplyr::left_join(month_days, by = "month") %>%
       dplyr::rowwise() %>%
       dplyr::mutate(tavg =
-                      (tmax + tmin) / 2)  %>%
+                      ((tmax + tmin) / 2))  %>%
       dplyr::rowwise() %>%
       dplyr::mutate(gdd = (calc_gdd(
         tmin = tmin,

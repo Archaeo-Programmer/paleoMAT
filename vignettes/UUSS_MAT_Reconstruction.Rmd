@@ -194,15 +194,17 @@ names(myfiles) <- gsub(
 #               st_crs(.x) <- 4326
 #               .x
 #         })
-? read_sf
+
 # Combine all the shapefiles into 1 shapefile with 1 layer.
 all_west <- sf::st_as_sf(data.table::rbindlist(myfiles))
-all_west <- st_union(all_west)
+all_west <- st_union(all_west$geometry)
 
 # Keep only the area that falls within the continental United States.
 west_in_states <-
-  sf::st_intersection(all_west, st_union(continental.states))
-west_in_states_spdf <- sf:::as_Spatial(west_in_states)
+  sf::st_intersection(all_west, st_union(continental.states$geometry))
+west_in_states <- st_union(west_in_states)
+#west_in_states_spdf <- sf:::as_Spatial(west_in_states)
+west_in_states <- st_cast(west_in_states, "POLYGON")
 
 write_sf(west_in_states,
          dsn = "vignettes/data/raw_data/",
@@ -211,6 +213,7 @@ write_sf(west_in_states,
 
 west_in_states <-
   sf::read_sf("vignettes/data/raw_data/west_in_states.shp")
+
 
 # Update projection to CRS 4326, which is WGS 84.
 west_in_states <- sf::st_transform(west_in_states, 4326)
@@ -344,6 +347,11 @@ MPCT_final <-
                                         values_from = value)
                  }))
 
+
+
+#readr::write_rds(MPCT_final, here::here("vignettes/data/MPCT_final.rds"))
+# MPCT_final <-
+#   readr::read_rds(here::here("vignettes/data/MPCT_final.rds"))
 
 ```
 
