@@ -39,7 +39,7 @@ plot_map_anomaly_maize <-
       ) +
       scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
                            na.value = "transparent",
-                           name = "Anomaly °C") +
+                           name = "Temperature °C") +
       coord_equal() +
       theme_classic() +
       scale_x_continuous(breaks = seq(-113,-105.5, 1.0),

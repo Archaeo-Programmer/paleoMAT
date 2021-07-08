@@ -822,7 +822,7 @@ lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
 ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs <- tavg_predicted %>% 
+tavg_100yrs <- tavg_predicted_west %>% 
   dplyr::select(-model_fit, -plot_fit) %>% 
   tidyr::unnest(mean_100yrs) %>% 
   dplyr::filter(date >= -1000 & date <= 1800) %>% 
@@ -834,6 +834,7 @@ tavg_100yrs <- tavg_predicted %>%
 fossil.locs <- tavg %>%
   dplyr::group_by(site.name) %>% 
   dplyr::slice(1) %>% 
+  dplyr::filter(date >= -1400 & date <= 2000) %>% 
   dplyr::select(site.id, site.name, long, lat)
 
 #Get the elevation dataset.
@@ -845,12 +846,12 @@ NED <-
   raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
-ok <- tavg_100yrs[1:2, ]
-ok2 <- tavg_100yrs[18,]
+# ok <- tavg_100yrs[1:2, ]
+# ok2 <- tavg_100yrs[18,]
 
 tavg_preds <-
   purrr::map(
-    ok2$site.predictions,
+    tavg_100yrs$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = x,

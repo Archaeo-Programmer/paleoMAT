@@ -69,7 +69,7 @@ map_predictions <-
         # Accepts points but expects them as matrix.
         x = as.matrix(site.preds[, c("long", "lat")]),
         # The dependent variable.
-        Y = site.preds$anom,
+        Y = site.preds$value,
         # Elevation as an independent covariate.
         Z = site.preds$elev,
         miles = TRUE
@@ -86,7 +86,7 @@ map_predictions <-
         # Accepts points but expects them as matrix.
         x = as.matrix(site.preds[, c("long", "lat")]),
         # The dependent variable.
-        Y = site.preds$anom,
+        Y = site.preds$value,
         # Elevation as an independent covariate.
         Z = site.preds$elev,
         miles = TRUE,
