@@ -2,7 +2,7 @@ interpolate_time_natural <-
   function(eliminated) {
 
     model_fit <-
-      spline(eliminated$date, eliminated$anom, method = "natural")
+      spline(eliminated$date, eliminated$value, method = "natural")
     model_fit <- as.data.frame(model_fit)
 
     Q <- quantile(model_fit$y, probs = c(.01, .99), na.rm = FALSE)
@@ -29,7 +29,7 @@ interpolate_time_natural <-
       dplyr::mutate(mean = mean(y)) %>%
       dplyr::filter(x %in% midpoints) %>%
       dplyr::select(-y) %>%
-      dplyr::rename(date = x, anom = mean)
+      dplyr::rename(date = x, value = mean)
 
     return(list(fit, model_fit))
 

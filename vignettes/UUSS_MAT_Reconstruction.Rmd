@@ -715,9 +715,11 @@ tavg <- reconst_tavg_final_west %>%
   
 
 # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
-tavg_predicted <- tavg %>%
+# Also, filter out the earliest date for Sagehen Marsh as there is too large of a time gap between the first point and the next point (about 1102 years [i.e., 600 to 1702]).
+tavg_predicted_west <- tavg %>%
   dplyr::filter(date >= -1400 & date <= 2000) %>%
   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
+  dplyr::filter(!(site.id == 2241 & date <= 1600)) %>%
   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
   tidyr::nest() %>%
   dplyr::rename(site.data = data) %>%
@@ -748,13 +750,13 @@ tavg_predicted <- tavg %>%
   dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8)
 
 # Plot results in one PDF.
-plot_objects <- tavg_predicted$plot_fit
-names(plot_objects) <- c(tavg_predicted$site.name)
+plot_objects <- tavg_predicted_west$plot_fit
+names(plot_objects) <- c(tavg_predicted_west$site.name)
 
 plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=1, ncol=1, top=quote(names(plot_objects)[g]))
 
 # Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/site_temporal_interpolation.pdf", plot_objects_arranged, scale = 1.5)
+ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/site_temporal_interpolation_west.pdf", plot_objects_arranged, scale = 1.5)
 
 
 # Get number of samples for each site.

@@ -7,13 +7,13 @@ interpolate_time_plots <-
     if (std.err == TRUE) {
       plot_fit <- ggplot(data = fit,
                          aes(x = date,
-                             y = anom)) +
+                             y = value)) +
         geom_ribbon(
           data = fit,
           aes(
             x = date,
-            ymin = anom - 1.96 *  se.fit,
-            ymax = anom + 1.96 * se.fit,
+            ymin = value - 1.96 *  se.fit,
+            ymax = value + 1.96 * se.fit,
             alpha = 0.2
           ),
           fill = "grey",
@@ -22,9 +22,9 @@ interpolate_time_plots <-
         ) +
         geom_line(colour = "red", size = 1.0) +
         geom_point(data = eliminated, aes(x = date,
-                                          y = anom)) +
+                                          y = value)) +
         xlab("Year BC/AD") +
-        ylab("Temperature Anomaly") +
+        ylab("Temperature °C") +
         scale_x_continuous(
           breaks = seq(agemin_rounded, agemax_rounded, 200),
           minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
@@ -32,13 +32,13 @@ interpolate_time_plots <-
         ) +
         scale_y_continuous(breaks = seq((
           DescTools::RoundTo(
-            min(fit$anom - 1.96 * fit$se.fit),
+            min(fit$value - 1.96 * fit$se.fit),
             multiple = 0.5,
             FUN = floor
           )
         ), (
           DescTools::RoundTo(
-            max(fit$anom + 1.96 * fit$se.fit),
+            max(fit$value + 1.96 * fit$se.fit),
             multiple = 0.5,
             FUN = ceiling
           )
@@ -82,21 +82,21 @@ interpolate_time_plots <-
       # Now, plot the results. Save as a ggplot object and will return with the rest of the data and models.
       plot_fit <- ggplot(data = fit,
                          aes(x = date,
-                             y = anom)) +
+                             y = value)) +
         geom_line(colour = "red", size = 1.0) +
         geom_point(data = eliminated, aes(x = date,
-                                          y = anom)) +
+                                          y = value)) +
         xlab("Year BC/AD") +
-        ylab("Temperature Anomaly") +
+        ylab("Temperature °C") +
         scale_x_continuous(
           breaks = seq(agemin_rounded, agemax_rounded, 200),
           minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
                                                         100), 200)
         ) +
         scale_y_continuous(breaks = seq((
-          DescTools::RoundTo(min(fit$anom), multiple = 0.5, FUN = floor)
+          DescTools::RoundTo(min(fit$value), multiple = 0.5, FUN = floor)
         ), (
-          DescTools::RoundTo(max(fit$anom), multiple = 0.5, FUN = ceiling)
+          DescTools::RoundTo(max(fit$value), multiple = 0.5, FUN = ceiling)
         ), 0.5)) +
         theme_bw() +
         theme(
