@@ -693,9 +693,9 @@ if (!file.exists("./vignettes/data/reconst_gdd_final_west.rds")) {
 ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Determine what sites have multiple datasets.
-unique_datasets <- unique(tavg[c("dataset.id", "site.name")])
-duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>% 
-  unique()
+# unique_datasets <- unique(tavg[c("dataset.id", "site.name")])
+# duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>% 
+#   unique()
 #list1[!list1 %in% list2]
 
 #Just temporary as this number is actually calculated in the Data_visualization.rmd
@@ -774,46 +774,6 @@ no.samples <- tavg %>%
   ))
 
 
-# For TESTING
- temp_data <- tavg %>%
-   dplyr::filter(date >= -1400 & date <= 2000) %>%
-   dplyr::filter(site.id == 246) %>%
-   # dplyr::filter(sample.id == 264381 |
-   #                 sample.id == 264428 | sample.id == 264447) %>%
-   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
-   tidyr::nest() %>%
-   dplyr::rename(site.data = data) %>%
-   dplyr::mutate(site.data = purrr::map(site.data,
-                                        function(x) {
-                                          x %>%
-                                            dplyr::group_by(age) %>%
-                                            dplyr::mutate(
-                                              value = mean(value),
-                                              error = mean(error),
-                                              anom = mean(anom)
-                                            ) %>%
-                                            dplyr::distinct(age, .keep_all = TRUE) %>%
-                                            dplyr::arrange(age)
-                                        }))
-    temp_data <- as.data.frame(temp_data$site.data)
-    
-
-
-xgrid2 <- seq(-1350, 850, 100)
-
-out <- fields::Tps(temp_data$date,temp_data$anom)
-int_grid <- round((max(out$x) - min(out$x))/100)
-xgrid <- seq(min(out$x), max(out$x),,int_grid)
-fhat<- predict(out,xgrid)
-plot(temp_data$date ,temp_data$anom, ylim = c(-1, 4))
-title('Tps')
-lines(xgrid, fhat,)
-SE<- fields::predictSE(out, xgrid)
-lines(xgrid,fhat + 1.96* SE, col="red", lty=2)
-lines(xgrid, fhat - 1.96*SE, col="red", lty=2)
-
-
 ```
 
 
@@ -852,10 +812,7 @@ modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/P
 temp.raster <-
   raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
 
-#Line for testing. Usually use tavg_100yrs$site.predictions below.
-# ok <- tavg_100yrs[1:2, ]
-# ok2 <- tavg_100yrs[18,]
-
+# Do the thin plate spline regression and return interpolated temperature raster and standard error raster for each time period.
 tavg_preds <-
   purrr::map(
     tavg_100yrs$site.predictions,
@@ -870,43 +827,56 @@ tavg_preds <-
     }
   )
 
-ok <- purrr::map(tavg_preds, 1)
-
+# Save the data as RDS files.
 saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west.RDS")
 
-# Calculate anomaly for each time period.
+# Calculate anomaly for each time period using the modern PRISM data for July.
 tavg_preds_temp <- purrr::map(tavg_preds, 1)
 tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - temp.raster})
 
+# Save the anomaly data as RDS files.
 saveRDS(tavg_preds_anom, file = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west_anomaly.RDS")
 
+# Create a raster stack.
 tavg_rstack <- raster::stack(tavg_preds_anom)
+# Create a raster brick.
+tavg_rbrick <- raster::brick(tavg_preds_anom)
 
 # Rename the layers.
 names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
+# names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
 
+# Define custom color palette.
 colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
 plot(tavg_preds_anom[[1]], col=colors)
 
-anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>% 
-  as.data.frame() %>% 
-  tidyr::pivot_longer(cols = BC950:AD1750) %>% 
-  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
-  ggplot() +
-  geom_line(aes(x = name, y = value))
+# Create maps from ggplot
+library(maps)
+data(us.cities)
 
-tavg_rbrick <- raster::brick(ok)
-names(tavg_rbrick) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
-dt<-as.data.frame(
-  as.Date(c('2010-11-1','2008-3-25','2007-3-14','2007-3-18','2007-3-20')))
-tavg_rstack <- raster::stack(ok)
-tavg_animated <- raster::animate(tavg_rbrick, n =2)
+names(tavg_preds_anom) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 
-plot(tavg_rbrick, col =colors)
-tavg_rbrick2 <- tavg_rbrick[[17:28]]
-plot(tavg_rbrick2, col =colors)
-            
+anomaly_plots <-
+  purrr::map2(
+    .x = tavg_preds_anom, .y = names(tavg_preds_anom),
+    .f = 
+      ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE)
+  )
+
+# Arrange all of the plots, then can output below as PDF.
+anomaly_plots_arranged <- gridExtra::marrangeGrob(anomaly_plots, nrow=2, ncol=1, top=NULL)
+
+# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
+ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_west.pdf", anomaly_plots_arranged, scale = 1.5, 
+       width = 210, 
+       height = 297, 
+       units = "mm")
+
+# Do quick animation with raster::animate.
+tavg_animated <- raster::animate(tavg_rbrick, n =2, col = colors)
+ 
+# Quick visualization plotting.
+# Levelplot visualization (will put all in the plots viewer side by side, etc.).           
 rasterVis::levelplot(tavg_rstack, 
           margin=FALSE,                       
           colorkey=list(
@@ -930,8 +900,47 @@ rasterVis::gplot(tavg_rbrick) +
     scale_fill_gradientn(colours = colors) +
     coord_equal() + theme_classic()
 
-# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/Temp_rasters_convex.pdf", raster_objects_arranged, scale = 1.5)
+# Visualizing maize over the reconstructions.
+tavg_rbrick3 <- tavg_rbrick[[1:15]]
+usa <- map("state", fill = TRUE, plot = FALSE)
+par(mfrow=c(5,3), mai = c(.2, .35, .3, .3))
+for (ii in 1:nlayers(tavg_rbrick3)){
+  plot(subset(tavg_rbrick3,ii), main=names(tavg_rbrick3)[ii])
+  plot(MDB[[ii]], main=names(tavg_rbrick3)[ii], pch = 19, cex = 1, add=T)
+  polygon(usa$x, usa$y)
+}
+dev.off()
+
+#Gif animation
+## list file names and read in
+imgs <- list.files("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2/", full.names = TRUE)
+# index = c(28:24, 22:19, 23, 13, 6, 10:12, 14:18, 1:5, 7:9)
+# index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
+# imgs = imgs[order(index)]
+img_list <- lapply(imgs, magick::image_read)
+
+## join the images together
+img_joined <- magick::image_join(img_list)
+
+## animate at 2 frames per second
+img_animated <- magick::image_animate(img_joined, fps = 2)
+
+## view animated image
+img_animated
+
+## save to disk
+magick::image_write(image = img_animated,
+            path = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_NEW.gif")
+
+
+# Calculate the anomaly across time for entire area (to produce line graph).
+anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>% 
+  as.data.frame() %>% 
+  tidyr::pivot_longer(cols = BC950:AD1750) %>% 
+  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
+  ggplot() +
+  geom_line(aes(x = name, y = value))
+
 
 # Get number of samples per time period for each site.
 no.samples <- tavg %>%
@@ -951,78 +960,5 @@ no.samples <- tavg %>%
 ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep = FALSE) %>% 
   dplyr::mutate(no.samples = dplyr::coalesce(no.samples, 0))
 
-
-# Animate and save as a gif.
-library(tmap)
-tavg_rstack2 <- reclassify(tavg_rstack, cbind(-Inf, -4.0, -9999), right=FALSE)
-tavg_rstack2 <- reclassify(tavg_rstack2, cbind(4.0, Inf, 9999), right=FALSE)
-anim <- tm_shape(tavg_rstack) + tm_raster(palette = colors, title = "Temperature Anamoly") + tm_facets(nrow = 1, ncol = 1)
-tmap_animation(anim, "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters2.gif")
-
-#breaks = c(-9999, seq(-4.0, 4.0, 0.5), 9999 )
-
-
-
-tavg_rbrick3 <- tavg_rbrick[[1:15]]
-usa <- map("state", fill = TRUE, plot = FALSE)
-
-
-par(mfrow=c(5,3), mai = c(.2, .35, .3, .3))
-for (ii in 1:nlayers(tavg_rbrick3)){
-  plot(subset(tavg_rbrick3,ii), main=names(tavg_rbrick3)[ii])
-  plot(MDB[[ii]], main=names(tavg_rbrick3)[ii], pch = 19, cex = 1, add=T)
-  polygon(usa$x, usa$y)
-}
-dev.off()
-
-
-# test_spdf <- as(ok, "SpatialPixelsDataFrame")
-# test_df <- as.data.frame(test_spdf)
-# colnames(test_df) <- c("value", "x", "y")
-
-
-# Create maps from ggplot
-library(maps)
-data(us.cities)
-
-tavg_recon_list <- purrr::map(tavg_preds, 1)
-names(tavg_preds_anom) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-
-anomaly_plots <-
-  purrr::map2(
-    .x = tavg_preds_anom, .y = names(tavg_preds_anom),
-    .f = 
-      ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE)
-  )
-
-# Arrange all of the plots, then can output below as PDF.
-anomaly_plots_arranged <- gridExtra::marrangeGrob(anomaly_plots, nrow=2, ncol=1, top=NULL)
-
-# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_west.pdf", anomaly_plots_arranged, scale = 1.5, 
-       width = 210, 
-       height = 297, 
-       units = "mm")
-
-#Gif animation
-## list file names and read in
-imgs <- list.files("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/", full.names = TRUE)
-# index = c(28:24, 22:19, 23, 13, 6, 10:12, 14:18, 1:5, 7:9)
-# index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-# imgs = imgs[order(index)]
-img_list <- lapply(imgs, magick::image_read)
-
-## join the images together
-img_joined <- image_join(img_list)
-
-## animate at 2 frames per second
-img_animated <- image_animate(img_joined, fps = 2)
-
-## view animated image
-img_animated
-
-## save to disk
-image_write(image = img_animated,
-            path = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged.gif")
 
 ```

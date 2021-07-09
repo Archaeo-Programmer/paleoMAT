@@ -310,12 +310,10 @@ July_anom <- UUSS_100yrAvgs_tavg_July %>%
 
 UUSS_100yrAvgs_tavg_anom <-
   ggplot(
-    data = (dplyr::filter(July_anom[44:60,])),
+    data = (dplyr::filter(anom)),
     aes(
-      x = midP,
-      y = anom,
-      label = value_n,
-      label2 = value_unique_sites
+      x = name,
+      y = value
     )
   ) +
   geom_line(colour = "red", size = 3.0) +
@@ -323,7 +321,7 @@ UUSS_100yrAvgs_tavg_anom <-
   ylab("Temperature Anomaly") +
   scale_x_continuous(breaks = seq(-3100, 2100, 200),
                      minor_breaks = seq(-3000, 2000, 200)) +
-  scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4)) +
+  #scale_y_continuous(breaks = seq(-4, 4, 1), limits = c(-4, 4)) +
   #geom_smooth() +
   theme_bw() +
   theme(
@@ -359,7 +357,7 @@ UUSS_100yrAvgs_tavg_anom <-
     legend.text = element_text(size = 18, family = "Helvetica"),
     legend.title = element_text(size = 22, family = "Helvetica")
   ) +
-  labs(col = "Temperature (°C)")
+  labs(col = "Temperature (°C)") 
 
 # Save the plot for GS.
 ggsave(

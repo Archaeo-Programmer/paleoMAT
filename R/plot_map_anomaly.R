@@ -109,7 +109,7 @@ plot_map_anomaly <-
     if (animation == TRUE) {
       fp <-
         file.path(
-          "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/",
+          "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2",
           paste0(title.name, ".png")
         )
 
