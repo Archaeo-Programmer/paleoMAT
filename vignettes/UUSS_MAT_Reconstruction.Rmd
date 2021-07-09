@@ -838,12 +838,19 @@ fossil.locs <- tavg %>%
   dplyr::select(site.id, site.name, long, lat)
 
 #Get the elevation dataset.
-NED <-
-  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
-# Temporarily re-projecting at a lower resolution that the code runs faster.
-NED <- raster::aggregate(NED, fact = 10)
-NED <-
-  raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
+# NED <-
+#   raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
+# # Temporarily re-projecting at a lower resolution that the code runs faster.
+# NED <- raster::aggregate(NED, fact = 10)
+# NED <-
+#   raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
+
+# Get the PRISM modern July temperature dataset.
+modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% 
+  raster::subset(7)
+
+temp.raster <-
+  raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 # ok <- tavg_100yrs[1:2, ]
@@ -856,20 +863,38 @@ tavg_preds <-
       map_predictions(
         site.preds = x,
         site.locs = fossil.locs,
-        elev.raster = NED,
+        raster.data = temp.raster,
         nfraction.df = 0.6,
         rast.extrap = FALSE
       )
     }
   )
+
 ok <- purrr::map(tavg_preds, 1)
-saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex.RDS")
+
+saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west.RDS")
+
+# Calculate anomaly for each time period.
+tavg_preds_temp <- purrr::map(tavg_preds, 1)
+tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - temp.raster})
+
+saveRDS(tavg_preds_anom, file = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west_anomaly.RDS")
+
+tavg_rstack <- raster::stack(tavg_preds_anom)
+
 # Rename the layers.
 names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
 
 colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
-plot(tavg_preds[[1]][[2]], col=colors)
+plot(tavg_preds_anom[[1]], col=colors)
+
+anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>% 
+  as.data.frame() %>% 
+  tidyr::pivot_longer(cols = BC950:AD1750) %>% 
+  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
+  ggplot() +
+  geom_line(aes(x = name, y = value))
 
 tavg_rbrick <- raster::brick(ok)
 names(tavg_rbrick) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
@@ -961,11 +986,11 @@ library(maps)
 data(us.cities)
 
 tavg_recon_list <- purrr::map(tavg_preds, 1)
-names(tavg_recon_list) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+names(tavg_preds_anom) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 
 anomaly_plots <-
   purrr::map2(
-    .x = tavg_recon_list, .y = names(tavg_recon_list),
+    .x = tavg_preds_anom, .y = names(tavg_preds_anom),
     .f = 
       ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE)
   )
@@ -974,7 +999,7 @@ anomaly_plots <-
 anomaly_plots_arranged <- gridExtra::marrangeGrob(anomaly_plots, nrow=2, ncol=1, top=NULL)
 
 # Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged.pdf", anomaly_plots_arranged, scale = 1.5, 
+ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_west.pdf", anomaly_plots_arranged, scale = 1.5, 
        width = 210, 
        height = 297, 
        units = "mm")

@@ -344,7 +344,7 @@ temp.raster <-
 
 #Line for testing. Usually use tavg_100yrs$site.predictions below.
 #ok <- tavg_100yrs[1:2,]
-ok2 <- tavg_100yrs_temp[18,]$site.predictions[[1]]
+ok2 <- tavg_100yrs[18,]$site.predictions[[1]]
 #hello <- tavg_100yrs[18,]
 ok <- ok2 %>% dplyr::select(long, lat)
 
