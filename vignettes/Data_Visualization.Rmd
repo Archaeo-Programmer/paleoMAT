@@ -45,32 +45,6 @@ if (file.exists(here::here("vignettes/data/reconst_tavg_final.rds"))) {
   
 }
 
-# Load GDD data.
-if (file.exists(here::here("vignettes/data/reconst_gdd_final.rds"))) {
-  reconst_gdd_final <-
-    readr::read_rds(here::here("vignettes/data/reconst_gdd_final.rds"))
-} else {
-  stop(
-    "The final output file for the reconstruction has not been made. Please return to the UUSS_MAT_Reconstruction.RMD to complete the reconstruction."
-  )
-  
-}
-
-# Now, extract out the maize growing season months for GDD.
-reconst_GDD_total <- reconst_gdd_final %>%
-  dplyr::filter(month >= 5 & month <= 9) %>%
-  dplyr::group_by(dataset.id, sample.id, depth) %>%
-  dplyr::summarise_at(c("value", "error"), tibble::lst(sum, mean)) %>%
-  dplyr::select(dataset.id, sample.id, depth, value_sum, error_mean)
-
-reconst_GDD_total_meta <- reconst_gdd_final %>%
-  dplyr::filter(month == 5) %>%
-  dplyr::select(-c(value, error, month))
-
-UUSS_GDD <-
-  dplyr::left_join(reconst_GDD_total_meta,
-                   reconst_GDD_total,
-                   by = c("dataset.id", "sample.id", "depth"))
 
 ```
 
@@ -81,9 +55,6 @@ UUSS_GDD <-
 # First, convert the years BP in the age column to BC/AD dates, which we create a new column called date.
 reconst_tavg_final <- reconst_tavg_final %>% 
   dplyr::mutate(date = paleomat::BPtoBCAD(reconst_tavg_final$age))
-
-UUSS_GDD <- UUSS_GDD %>% 
-  dplyr::mutate(date = paleomat::BPtoBCAD(UUSS_GDD$age))
 
 # Do 100 year average temperatures across growing season months (May through September).
 UUSS_100yrAvgs_tavg_GS <- reconst_tavg_final %>%
@@ -141,32 +112,6 @@ UUSS_100yrAvgs_tavg_July <- reconst_tavg_final %>%
 
 #We can also visualize how the number of samples changes through time.
 ggplot(UUSS_100yrAvgs_tavg_July,aes(x=midP,y=value_n))+geom_bar(stat="identity")
-
-# Calculate GDD for the growing season (May through September).
-UUSS_100yrAvgs_GDD <- UUSS_GDD %>%
-  dplyr::filter(age < 5950) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-4100, 2100, 100))) %>%
-  dplyr::summarise_at(
-    c("value_sum", "error_mean", "elev"),
-    funs(
-      mean,
-      n = n(),
-      unique_sites = dplyr::n_distinct(site.id),
-      unique_datasets = dplyr::n_distinct(dataset.id)
-    )
-  ) %>%
-  dplyr::arrange(as.numeric(period)) %>%
-  dplyr::select(
-    -c(
-      error_mean_n,
-      elev_n,
-      error_mean_unique_sites,
-      error_mean_unique_datasets,
-      elev_unique_sites,
-      elev_unique_datasets
-    )
-  ) %>%
-  dplyr::mutate(midP = seq(-3950, 2050, 100))
 
 ```
 
