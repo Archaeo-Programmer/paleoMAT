@@ -798,12 +798,12 @@ fossil.locs <- tavg %>%
   dplyr::select(site.id, site.name, long, lat)
 
 #Get the elevation dataset.
-# NED <-
-#   raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
-# # Temporarily re-projecting at a lower resolution that the code runs faster.
-# NED <- raster::aggregate(NED, fact = 10)
-# NED <-
-#   raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
+NED <-
+  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
+# Temporarily re-projecting at a lower resolution that the code runs faster.
+NED <- raster::aggregate(NED, fact = 10)
+NED <-
+  raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
 
 # Get the PRISM modern July temperature dataset.
 modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% 
@@ -813,14 +813,14 @@ temp.raster <-
   raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
 
 # Do the thin plate spline regression and return interpolated temperature raster and standard error raster for each time period.
-tavg_preds <-
+tavg_preds_elev <-
   purrr::map(
     tavg_100yrs$site.predictions,
     .f = function(x) {
       map_predictions(
-        site.preds = x,
+        site.preds = tavg_100yrs$site.predictions[[1]],
         site.locs = fossil.locs,
-        raster.data = temp.raster,
+        raster.data = NED,
         nfraction.df = 0.6,
         rast.extrap = FALSE
       )
@@ -973,8 +973,16 @@ temp_extract <- tavg_100yrs %>%
   raster::extract(x = y, y = x %>% dplyr::select(long, lat))
 }))
 
-raster.anom <- tavg_100yrs %>% 
+raster.anom <- temp_extract %>% 
+  ungroup() %>% 
+  unnest(cols = new_anom) %>% 
+  dplyr::select(new_anom)
+
+temp_extract2 <- tavg_100yrs %>% 
+  ungroup() %>% 
   unnest(cols = site.predictions)
+
+raster.anom <- cbind(temp_extract2, raster.anom)
 
 
 # BC950 <- tavg_preds_anom[[1]]
@@ -1015,24 +1023,38 @@ raster.anom <- tavg_100yrs %>%
   unnest(cols = site.predictions)
 
 
-# BC950 <- tavg_preds_anom[[1]]
-# BC950_points <- tavg_100yrs[1,]$site.predictions[[1]]
-# 
-# new <- raster::extract(BC950, BC950_points %>% dplyr::select(long, lat))
-
-
 
 # Alternative for getting anomaly.
-site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions)
-    modern_temperature <-
-      as.data.frame(raster::extract(x = temp.raster, y = site.preds.unlisted %>% ungroup() %>% 
-                                      dplyr::select(long, lat))) %>%
-      dplyr::rename(modern = 1)
-    site.preds.unlisted <- cbind(site.preds.unlisted, modern_temperature)
-    
-    site.preds.unlisted.anom <- site.preds.unlisted %>% 
-      rowwise() %>% 
-      dplyr::mutate(anom = value - modern)
+site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions) %>% 
+  ungroup() %>% 
+  dplyr::mutate(modern = as.data.frame(
+    raster::extract(
+      x = temp.raster,
+      y = site.preds.unlisted %>% ungroup() %>%
+        dplyr::select(long, lat)
+    )
+  )) %>% 
+  dplyr::rename(modern = 11)
 
+site.preds.unlisted.anom <- site.preds.unlisted %>%
+  rowwise() %>%
+  dplyr::mutate(anom = value - modern)
+
+
+# Both.
+anoms_evaluated <- cbind(raster.anom, dplyr::select(site.preds.unlisted.anom, anom)) %>% 
+  rowwise() %>% 
+  dplyr::mutate(difference = new_anom - anom) %>% 
+  ungroup() %>% 
+  as.data.frame()
+
+
+dplyr::select(anoms_evaluated, difference) %>% as.data.frame() %>% 
+  unlist() %>% 
+  as.data.frame() %>% 
+  dplyr::rename(anom = 1) %>% 
+  ggplot(aes(anom)) +
+    geom_histogram()
+  
 
 ```

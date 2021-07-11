@@ -17,6 +17,13 @@ map_predictions <-
       sf::st_as_sf(crs = 4326) %>%
       sf::st_transform(crs = 4326)
 
+    # Get the modern temperature (from PRISM) at each of the fossil pollen sites.
+    modern_temperature <-
+      as.data.frame(raster::extract(x = raster.data,
+                                    y = site.preds %>%
+                                      dplyr::select(long, lat))) %>%
+      dplyr::rename(modern = 1)
+
     # Crop the raster dataset to the extent of the bounding box.
     raster.data <- raster::crop(raster.data, bbox_buffer)
 
@@ -39,7 +46,7 @@ map_predictions <-
     raster.data.long <- raster::xFromCol(raster.data)
     raster.data.lat <- raster::yFromRow(raster.data) %>%
       sort()
-    raster.data.2 <- as.matrix(raster.data)
+    raster.data.2 <- raster::as.matrix(raster.data)
     # Transpose, so that rows and columns will match the long lat lists. Then, mirror the columns so that the latitude is ascending.
     raster.data.2 <- t(raster.data.2) %>%
       as.data.frame()
@@ -57,12 +64,6 @@ map_predictions <-
     # Next, get the number of sites, which is used to define the degrees of freedom (df).
     no.sites <- nrow(site.preds)
 
-    # Get the modern temperature (from PRISM) at each of the fossil pollen sites.
-    modern_temperature <-
-      as.data.frame(raster::extract(x = raster.data,
-                                    y = site.preds %>%
-                                      dplyr::select(long, lat))) %>%
-      dplyr::rename(modern = 1)
     site.preds <- cbind(site.preds, modern_temperature)
 
     if (is.null(nfraction.df) == TRUE) {

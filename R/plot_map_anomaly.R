@@ -37,6 +37,7 @@ plot_map_anomaly <-
         na.rm = TRUE
       ) +
       scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+                           limits = c(-8,8),
                            na.value = "transparent",
                            name = "Anomaly °C") +
       coord_equal() +
