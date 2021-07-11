@@ -799,7 +799,7 @@ fossil.locs <- tavg %>%
 
 #Get the elevation dataset.
 NED <-
-  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/SKOPE_SWUS/rasters/NED_1.tif")
+  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif")
 # Temporarily re-projecting at a lower resolution that the code runs faster.
 NED <- raster::aggregate(NED, fact = 10)
 NED <-
