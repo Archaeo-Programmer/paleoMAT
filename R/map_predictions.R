@@ -17,8 +17,8 @@ map_predictions <-
       sf::st_as_sf(crs = 4326) %>%
       sf::st_transform(crs = 4326)
 
-    # Get the modern temperature (from PRISM) at each of the fossil pollen sites.
-    modern_temperature <-
+    # Get the modern data (from PRISM) at each of the fossil pollen sites.
+    modern.data <-
       as.data.frame(raster::extract(x = raster.data,
                                     y = site.preds %>%
                                       dplyr::select(long, lat))) %>%
@@ -64,7 +64,7 @@ map_predictions <-
     # Next, get the number of sites, which is used to define the degrees of freedom (df).
     no.sites <- nrow(site.preds)
 
-    site.preds <- cbind(site.preds, modern_temperature)
+    site.preds <- cbind(site.preds, modern.data)
 
     if (is.null(nfraction.df) == TRUE) {
       stop(

@@ -812,16 +812,33 @@ modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/P
 temp.raster <-
   raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
 
+# Resample NED so that it is the same resolution and scale as temp.raster.
+bbox_buffer <- c(
+  "xmin" = min(fossil.locs$long) - 1,
+  "ymin" = min(fossil.locs$lat) - 1,
+  "xmax" = max(fossil.locs$long) + 1,
+  "ymax" = max(fossil.locs$lat) + 1
+)  %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
+temp.raster.cropped <- raster::crop(temp.raster, bbox_buffer)
+NED.raster.cropped <- raster::crop(NED, bbox_buffer)
+
+NED.raster.cropped <- projectRaster(NED.raster.cropped, temp.raster.cropped, method = 'ngb')
+
 # Do the thin plate spline regression and return interpolated temperature raster and standard error raster for each time period.
-tavg_preds_elev <-
+tavg_preds_refined <-
   purrr::map(
     tavg_100yrs$site.predictions,
     .f = function(x) {
       map_predictions(
         site.preds = tavg_100yrs$site.predictions[[1]],
         site.locs = fossil.locs,
-        raster.data = NED,
-        nfraction.df = 0.6,
+        raster.data = temp.raster.cropped,
+        nfraction.df = NA,
         rast.extrap = FALSE
       )
     }
@@ -832,7 +849,7 @@ saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_raste
 
 # Calculate anomaly for each time period using the modern PRISM data for July.
 tavg_preds_temp <- purrr::map(tavg_preds, 1)
-tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - temp.raster})
+tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - raster(raster.data.list)})
 
 # Save the anomaly data as RDS files.
 saveRDS(tavg_preds_anom, file = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west_anomaly.RDS")
