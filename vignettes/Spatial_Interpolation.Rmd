@@ -608,4 +608,76 @@ my.layer<- raster("/Users/andrew/Downloads/prism_set_dl_dir/PRISM_tmean_stable_4
   "ymax" = 38.25
 )))
 
+
+
+
+
+
+alt_grd_template_sf <- ok %>%
+  as.data.frame() %>% 
+  dplyr::rename(Z = 3) %>% 
+    mutate(Z = 0)
+
+crs_raster_format <- "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+grd_template_raster <- alt_grd_template_sf %>% 
+  raster::rasterFromXYZ( 
+    crs = crs_raster_format)
+
+site.preds.sf <- st_as_sf(site.preds, coords = c("long", "lat"), crs = 4326) %>% 
+  dplyr::select(value, geometry)
+
+fit_NN <- gstat::gstat( # using package {gstat} 
+  formula = value ~ 1,    # The column `NH4` is what we are interested in
+  data = as(site.preds.sf, "Spatial"), # using {sf} and converting to {sp}, which is expected
+  nmax = 10, nmin = 3 # Number of neighboring observations used for the fit
+)
+
+fit_IDW <- gstat::gstat( # The setup here is quite similar to NN
+  formula = value ~ 1,
+  data = as(site.preds.sf, "Spatial"),
+  nmax = 10, nmin = 3,
+  set = list(idp = 0.5) # inverse distance power
+)
+
+fit_TPS <- fields::Tps( # using {fields}
+  x = as.matrix(site.preds[, c("long", "lat")]), # accepts points but expects them as matrix
+  Y = site.preds$value,  # the dependent variable
+  miles = FALSE     # EPSG 25833 is based in meters
+)
+
+fit_GAM <- mgcv::gam( # using {mgcv}
+  value ~ s(long, lat, k = 13),      # here come our X/Y/Z data - straightforward enough
+  data = site.preds      # specify in which object the data is stored
+)
+
+fit_TIN <- interp::interp( # using {interp}
+  x = site.preds$long,           # the function actually accepts coordinate vectors
+  y = site.preds$lat,
+  z = site.preds$value,
+  xo = alt_grd_template_sf$x,     # here we already define the target grid
+  yo = alt_grd_template_sf$y,
+  output = "points"
+) %>% bind_cols()
+
+site.preds.cart <- project(as.matrix(site.preds[, c("long", "lat")]), "+proj=utm +zone=51 ellps=WGS84")
+site.preds.cart2 <- site.preds %>% 
+  dplyr::select(-long, -lat) %>% 
+  cbind(site.preds.cart) %>% 
+  st_as_sf(coords = c("long", "lat"))
+
+# This one did not work (smashed along x axis). Would have to figure out the projection issues.
+# fit_KRIG <- automap::autoKrige(      # using {automap}
+#   formula = value ~ 1,                 # The interface is similar to {gstat} but
+#   input_data = as(site.preds.cart2, "Spatial") # {automap} makes a lot of assumptions for you
+# ) %>% 
+#   .$krige_output %>%  # the function returns a complex object with lot's of metainfo
+#   as.data.frame() %>% # we keep only the data we are interested in
+#   dplyr::select(X = x1, Y = x2, Z = var1.pred)
+
+proj4string(grd_template_raster) <- CRS("+proj=utm +zone=10+datum=WGS84")
+site.preds.sf <- st_transform(site.preds.sf, crs = proj4string(grd_template_raster))
+
+
+
 ```
