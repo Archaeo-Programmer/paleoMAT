@@ -624,7 +624,10 @@ grd_template_raster <- alt_grd_template_sf %>%
   raster::rasterFromXYZ( 
     crs = crs_raster_format)
 
-site.preds.sf <- st_as_sf(site.preds, coords = c("long", "lat"), crs = 4326) %>% 
+site.preds.sf <- as.data.frame(p@coords) %>% 
+    dplyr::mutate(value = site.preds$value)
+
+site.preds.sf <- st_as_sf(site.preds.sf, coords = c("long", "lat"), crs = 4326) %>% 
   dplyr::select(value, geometry)
 
 fit_NN <- gstat::gstat( # using package {gstat} 
@@ -635,7 +638,7 @@ fit_NN <- gstat::gstat( # using package {gstat}
 
 fit_IDW <- gstat::gstat( # The setup here is quite similar to NN
   formula = value ~ 1,
-  data = as(site.preds.sf, "Spatial"),
+  data = as(sf_p3, "Spatial"),
   nmax = 10, nmin = 3,
   set = list(idp = 0.5) # inverse distance power
 )
@@ -661,10 +664,20 @@ fit_TIN <- interp::interp( # using {interp}
 ) %>% bind_cols()
 
 site.preds.cart <- project(as.matrix(site.preds[, c("long", "lat")]), "+proj=utm +zone=51 ellps=WGS84")
+coordinates(site.preds) <- ~ long + lat
+proj4string(site.preds) <- CRS("+proj=longlat +datum=WGS84")
+p <- sp::spTransform(site.preds, CRS("+proj=tmerc +lat_0=0 +lon_0=27 +k=1 +x_0=5500000 +y_0=0 +ellps=krass +units=m +no_defs"))
 site.preds.cart2 <- site.preds %>% 
   dplyr::select(-long, -lat) %>% 
   cbind(site.preds.cart) %>% 
   st_as_sf(coords = c("long", "lat"))
+
+p2 <- as.data.frame(p@coords) %>%
+  dplyr::mutate(value = site.preds$value) %>% 
+  st_as_sf(coords = c("long", "lat"))
+
+p3 <- as.data.frame(p@coords) %>%
+  dplyr::mutate(value = site.preds$value)
 
 # This one did not work (smashed along x axis). Would have to figure out the projection issues.
 # fit_KRIG <- automap::autoKrige(      # using {automap}
@@ -675,7 +688,8 @@ site.preds.cart2 <- site.preds %>%
 #   as.data.frame() %>% # we keep only the data we are interested in
 #   dplyr::select(X = x1, Y = x2, Z = var1.pred)
 
-proj4string(grd_template_raster) <- CRS("+proj=utm +zone=10+datum=WGS84")
+proj4string(grd_template_raster) <- CRS("+proj=tmerc +lat_0=0 +lon_0=27 +k=1 +x_0=5500000 +y_0=0 +ellps=krass +units=m +no_defs")
+grd_template_raster <- raster::projectRaster(grd_template_raster, crs = "+proj=tmerc +lat_0=0 +lon_0=27 +k=1 +x_0=5500000 +y_0=0 +ellps=krass +units=m +no_defs")
 site.preds.sf <- st_transform(site.preds.sf, crs = proj4string(grd_template_raster))
 
 
