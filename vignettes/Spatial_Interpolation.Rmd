@@ -693,5 +693,56 @@ grd_template_raster <- raster::projectRaster(grd_template_raster, crs = "+proj=t
 site.preds.sf <- st_transform(site.preds.sf, crs = proj4string(grd_template_raster))
 
 
+ok5 <- raster(idw_pow2)
+crs(ok5) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+
+
+
+
+
+x_range <- as.numeric(c(-112.81446, -105.52416))  # min/max longitude of the interpolation area
+y_range <- as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
+# create an empty grid of values ranging from the xmin-xmax, ymin-ymax
+grd <- expand.grid(x = seq(from = x_range[1],
+                   to = x_range[2], 
+                   by = 0.1),
+                   y = seq(from = y_range[1], to = y_range[2], 
+                       by = 0.1))  # expand points to grid
+coordinates(grd) <- ~x + y
+# turn into a spatial pixels object
+gridded(grd) <- TRUE
+
+
+
+tavg_idw <-
+  purrr::map(
+    site.preds.unlisted.anom.nested$site.predictions,
+    .f = function(x) {
+      coordinates(x) <- ~long + lat
+      idw_pow2 <- idw(formula = anom ~ 1,
+                locations = x,
+                newdata = grd,
+                idp = 1)
+      idw_pow3 <- raster(idw_pow2)
+      crs(idw_pow3) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+      return(idw_pow3)
+    }
+  )
+
+tavg_idw_stack <- raster::stack(tavg_idw)
+names(tavg_idw_stack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+
+plot(tavg_idw_stack[[1:16]], col = colors)
+plot(tavg_idw_stack[[17:28]], col = colors)
+
+
+# Calculate the anomaly across time for entire area (to produce line graph).
+anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
+  as.data.frame() %>% 
+  tidyr::pivot_longer(cols = BC950:AD1750) %>% 
+  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
+  ggplot() +
+  geom_line(aes(x = name, y = value))
+
 
 ```

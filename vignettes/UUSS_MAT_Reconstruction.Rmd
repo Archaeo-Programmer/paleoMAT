@@ -1009,20 +1009,34 @@ raster.anom <- cbind(temp_extract2, raster.anom)
 
 
 
-# Alternative for getting anomaly.
+# Alternative for getting anomaly. Here, I extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
 site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions)
-    modern_temperature <-
-      as.data.frame(raster::extract(x = temp.raster, y = site.preds.unlisted %>% ungroup() %>% 
-                                      dplyr::select(long, lat))) %>%
-      dplyr::rename(modern = 1)
-    site.preds.unlisted <- cbind(site.preds.unlisted, modern_temperature)
+modern_temperature <-
+  as.data.frame(
+    raster::extract(
+      x = temp.raster,
+      y = site.preds.unlisted %>% ungroup() %>%
+        dplyr::select(long, lat)
+    )
+  ) %>%
+  dplyr::rename(modern = 1)
+
+site.preds.unlisted <-
+  cbind(site.preds.unlisted, modern_temperature$modern) %>%
+  dplyr::rename(modern = 11)
+
+site.preds.unlisted.anom <- site.preds.unlisted %>%
+  rowwise() %>%
+  dplyr::mutate(anom = value - modern)
     
-    site.preds.unlisted.anom <- site.preds.unlisted %>% 
-      rowwise() %>% 
-      dplyr::mutate(anom = value - modern)
+# here, we nest the data into each time bin.
+site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
+  dplyr::group_by(date) %>%
+  tidyr::nest() %>%
+  dplyr::rename(site.predictions = data)
 
 
-
+site.preds3 <- site.preds.unlisted.anom.nested$site.predictions[[1]]
 
 
 temp_extract <- tavg_100yrs %>% 
