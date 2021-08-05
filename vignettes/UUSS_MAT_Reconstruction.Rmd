@@ -357,21 +357,46 @@ The MAT method is testing whether the modern calibration is able to detect signa
 
 ```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
 
+# Get the data into the final format used by the palaeoSig and rioja packages.
+MPCT_proportions <-
+  MPCT_climate_final %>%
+  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
+    pollen =
+      purrr::map(pollen,
+        function(x){
+          x/rowSums(x)
+        }),
+    climate =
+      purrr::map(climate,
+                 function(x) {
+                   x %>%
+                     dplyr::select(month,
+                                   ppt,
+                                   tavg,
+                                   gdd) %>%
+                     tidyr::pivot_longer(ppt:gdd,
+                                         names_to = "element") %>%
+                     tidyr::unite("element_month", element, month) %>%
+                     tidyr::pivot_wider(names_from = element_month,
+                                        values_from = value)
+                 })) %>% 
+  dplyr::select(-FID)
+
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
-ok2 <- palaeoSig::randomTF(spp = 
-                      MPCT_final_whole %>%
+modern_significance <- palaeoSig::randomTF(spp = 
+                      MPCT_proportions %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
                       tidyr::unnest(cols = c(pollen)) %>%
                       tibble::column_to_rownames("sample.id"),
                     env = 
-                      MPCT_final_whole %>%
+                      MPCT_proportions %>%
                       dplyr::select(sample.id, climate) %>%
                       sf::st_drop_geometry() %>%
                       tidyr::unnest(cols = c(climate)) %>%
                       tibble::column_to_rownames("sample.id"),
                     fos = 
-                      MPCT_final_whole %>%
+                      MPCT_proportions %>%
                       dplyr::select(sample.id, pollen) %>%
                       sf::st_drop_geometry() %>%
                       tidyr::unnest(cols = c(pollen)) %>%
@@ -379,8 +404,8 @@ ok2 <- palaeoSig::randomTF(spp =
                     n = 99,
                     fun = rioja::MAT,
                     col = 1,
-                    k = 10) %$%
-  tibble::tibble("variable" = colnames(MPCT_final_whole$climate[[1]]),
+                    k = 150) %$%
+  tibble::tibble("variable" = colnames(MPCT_proportions$climate[[1]]),
                  "% Explained" = EX*100,
                  "p-value" = sig)
 
@@ -471,8 +496,8 @@ Once we have validated the methods, we re-run the analyses using MAT.
 
 # First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
 
-if (!file.exists("./vignettes/data/reconst_tavg_west.rds")) {
-  mat_models_temp_west <- purrr::map(
+if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
+  mat_models_temp_west_3 <- purrr::map(
     1:12,
     .f = function(j) {
       rioja::MAT(
@@ -485,7 +510,7 @@ if (!file.exists("./vignettes/data/reconst_tavg_west.rds")) {
     }
   )
   
-  reconst_tavg_west <- mat_models_temp_west %>%
+  reconst_tavg_west_3 <- mat_models_temp_west_3 %>%
     purrr::map(
       .f = function(the.model) {
         # Create the MAT reconstruction.
@@ -499,11 +524,11 @@ if (!file.exists("./vignettes/data/reconst_tavg_west.rds")) {
       }
     )
   
-  readr::write_rds(reconst_tavg_west, "./vignettes/data/reconst_tavg_west.rds")
+  readr::write_rds(reconst_tavg_west, "./vignettes/data/reconst_tavg_west_3.rds")
   
-} else if (!exists("reconst_tavg_west")) {
+} else if (!exists("reconst_tavg_west_3")) {
   reconst_tavg <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_west.rds"))
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_west_3.rds"))
   
 } else {
   stop(
@@ -568,9 +593,9 @@ if (!file.exists("./vignettes/data/reconst_gdd_west.rds")) {
 # Apply a threshold to the reconstruction, so that if an analogue is too dissimilar that it will not be used in the reconstruction. Then, based on the remaining analogues, the final reconstruction and associated error will be re-calculated.
 
 #tavg
-if (!file.exists("./vignettes/data/reconst_tavg_threshold_west.rds")) {
-  reconst_tavg_threshold_west <-
-    reconst_tavg_west %>%
+if (!file.exists("./vignettes/data/reconst_tavg_threshold_west_3.rds")) {
+  reconst_tavg_threshold_west_3 <-
+    reconst_tavg_west_3 %>%
     purrr::map(
       .f = function(the.reconst) {
         apply_threshold(x = the.reconst,
@@ -578,12 +603,12 @@ if (!file.exists("./vignettes/data/reconst_tavg_threshold_west.rds")) {
       }
     )
   
-  readr::write_rds(reconst_tavg_threshold_west,
-                   "./vignettes/data/reconst_tavg_threshold_west.rds")
+  readr::write_rds(reconst_tavg_threshold_west_3,
+                   "./vignettes/data/reconst_tavg_threshold_west_3.rds")
   
-} else if (!exists("reconst_tavg_threshold_west")) {
-  reconst_tavg_threshold_west <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_threshold_west.rds"))
+} else if (!exists("reconst_tavg_threshold_west_3")) {
+  reconst_tavg_threshold_west_3 <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_threshold_west_3.rds"))
   
 } else {
   stop(
@@ -633,9 +658,9 @@ setwd("/Volumes/VILLAGE/paleomat")
   
 
 # Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
-if (!file.exists("./vignettes/data/reconst_tavg_final_west.rds")) {
-  reconst_tavg_final_west <-
-    simplify_reconstruction(reconstruction.data = reconst_tavg_threshold_west,
+if (!file.exists("./vignettes/data/reconst_tavg_final_west_3.rds")) {
+  reconst_tavg_final_west_3 <-
+    simplify_reconstruction(reconstruction.data = reconst_tavg_threshold_west_3,
                             fossil.metadata = fossil_metadata_counts_final) %>%
     # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
     tidyr::drop_na(age, value) %>% 
@@ -645,12 +670,12 @@ if (!file.exists("./vignettes/data/reconst_tavg_final_west.rds")) {
     dplyr::select(-age.y, -age.x) %>% 
     dplyr::mutate(age = round(age))
   
-  readr::write_rds(reconst_tavg_final_west,
-                   "./vignettes/data/reconst_tavg_final_west.rds")
+  readr::write_rds(reconst_tavg_final_west_3,
+                   "./vignettes/data/reconst_tavg_final_west_3.rds")
   
-} else if (!exists("reconst_tavg_final_west")) {
-  reconst_tavg_final_west <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west.rds"))
+} else if (!exists("reconst_tavg_final_west_3")) {
+  reconst_tavg_final_west_3 <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds"))
   
 } else {
   stop(
@@ -702,7 +727,7 @@ if (!file.exists("./vignettes/data/reconst_gdd_final_west.rds")) {
 warmest.month = 15.6182926829268
 
 # Put lat and long into individual columns.
-tavg <- reconst_tavg_final_west %>%
+tavg <- reconst_tavg_final_west_3 %>%
   tidyr::unnest(geometry) %>%
   dplyr::group_by(sample.id, month) %>%
   dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
