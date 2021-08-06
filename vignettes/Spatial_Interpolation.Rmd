@@ -719,7 +719,7 @@ tavg_idw <-
     site.preds.unlisted.anom.nested$site.predictions,
     .f = function(x) {
       coordinates(x) <- ~long + lat
-      idw_pow2 <- idw(formula = anom ~ 1,
+      idw_pow2 <- gstat::idw(formula = anom ~ 1,
                 locations = x,
                 newdata = grd,
                 idp = 1)
@@ -739,7 +739,8 @@ plot(tavg_idw_stack[[17:28]], col = colors)
 # Calculate the anomaly across time for entire area (to produce line graph).
 anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
   as.data.frame() %>% 
-  tidyr::pivot_longer(cols = BC950:AD1750) %>% 
+  tidyr::pivot_longer(cols = 1:28) %>% 
+  #cols = BC950:AD1750
   dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
   ggplot() +
   geom_line(aes(x = name, y = value))
