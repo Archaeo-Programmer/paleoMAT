@@ -387,7 +387,7 @@ v <- v[i]
 tps2 <- Tps(as.matrix(site.preds[, c("long", "lat", "elev")]), site.preds$value)
 p2 <- interpolate(Y, tps2, xyOnly=FALSE)
 
-# as a linear coveriate
+# as a linear covariate
 tps3 <- Tps(site.preds[, c("long", "lat")], site.preds$value, Z=site.preds$elev)
 p3 <- interpolate(NED, tps3, xyOnly=FALSE, fun=pfun)
 
