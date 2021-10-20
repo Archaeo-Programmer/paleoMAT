@@ -1,0 +1,41 @@
+---
+title: "Paleomat Figures"
+author: "Andrew Gillreath-Brown"
+date: "10/20/2021"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(paleomat)
+
+```
+
+```{r fig1}
+
+alley2000 <- read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
+  dplyr::mutate(Age = Age * 1000)  %>%
+  dplyr::filter(Age <= 20000) 
+
+alley2000 %>% 
+  ggplot(aes(x = Age, y = Temperature)) +
+  geom_line() +
+  scale_x_reverse() +
+  theme_classic() +
+  xlab("calibrated years BP") +
+  ylab("Temperature °C") +
+  annotate("rect", xmin = 11500, xmax = 12800, ymin = min(alley2000$Temperature) - 0.5, ymax = max(alley2000$Temperature),
+        alpha = .2) +
+  annotate("text", x = 12150, y = -27.25, label = "Younger \n Dryas", size = 3.5) +
+  geom_segment(aes(x = 8200, y = -36.5, xend = 8200, yend = -33),
+                  arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate("text", x = 8200, y = -38, label = "8200 cal yr BP \n cold event", size = 3 ) +
+  annotate("rect", xmin = 4000, xmax = 6000, ymin = min(alley2000$Temperature) - 0.5, ymax = max(alley2000$Temperature),
+        alpha = .2) +
+  annotate("text", x = 5000, y = -27.25, label = "northward expansion \n of agriculture", size = 3)
+  
+
+
+```
