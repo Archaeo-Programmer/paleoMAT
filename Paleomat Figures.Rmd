@@ -236,3 +236,20 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
 
 ```
 
+
+```{r table1}
+
+fossil.locs2 <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
+  dplyr::select(-c(month, type, pub_year, value, error, sample.id)) %>% 
+  dplyr::ungroup() %>% 
+  tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
+  dplyr::group_by(dataset.id, site.id, site.name) %>% 
+  summarise(minAge = min(age), maxAge = max(age), minDepth = min(depth), maxDepth = max(depth), across(c(long, lat, elev), unique)) %>% 
+  dplyr::select(site.name, site.id, dataset.id, minAge, maxAge, minDepth, maxDepth, long, lat, elev) %>% 
+  dplyr::arrange(site.name) %>% 
+  dplyr::rename("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "Earliest date of core (BP)" = minAge, "Latest date of core (BP)" = maxAge, "Minimum Depth" = minDepth, "Maximum Depth" = maxDepth, "Longitude" = long, "Latitude" = lat, "Elevation (m)" = elev )
+
+write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
+
+```
