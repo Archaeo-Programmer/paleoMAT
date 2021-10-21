@@ -14,6 +14,7 @@ library(paleomat)
 ```
 
 ```{r fig1}
+# Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
 alley2000 <- read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
   dplyr::mutate(Age = Age * 1000)  %>%
@@ -43,3 +44,195 @@ alley2000 %>%
 # 964.939    -30.4628
 
 ```
+
+
+```{r fig2}
+# Moberg et al. 2005 low-frequency reconstruction (only).
+
+Moberg <- read.delim("./data-raw/nhtemp-moberg2005.txt", header = TRUE, sep = "\t", dec = ".") [, 1:3] %>%
+  dplyr::filter(LF != -9.9999 & date <= 2000) %>% 
+  dplyr::mutate(date = 1950 - date)
+
+
+GDD_Plot_Final_Moberg <- ggplot(data=Moberg, aes(x= date, y=LF)) +
+  geom_line(size = 1.5) +
+  xlab("calibrated years BP") +
+  ylab("Temperature Anomaly (°C)") +
+  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) + 
+  scale_x_reverse(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
+  scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
+  theme_bw() +
+  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=12, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 14, family = "Helvetica", margin = margin(t = 10, r = 4, b = 10, l = 10)), axis.title.x = element_text(size = 14, family = "Helvetica", margin = margin(t = 4, r = 10, b = 10, l = 10)),
+        panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"),
+        plot.margin = margin(t = 5, r = 10, b = 5, l = 5))
+```
+
+```{r fig3}
+# Showing extent of UUSS and the fossil pollen sites.
+
+# Get locations of the fossil pollen sites.
+fossil.locs <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% 
+  dplyr::group_by(site.name) %>% 
+  dplyr::slice(1) %>% 
+  dplyr::ungroup() %>% 
+  dplyr::select(site.id, site.name, geometry) %>% 
+  tidyr::unnest_wider(geometry) %>% 
+  dplyr::rename(long = 3, lat = 4)
+  
+# Get the PRISM modern July temperature dataset.
+modern_temp <-
+  brick(
+    "/Volumes/PUCK_HD/Users/andrew/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif"
+  ) %>%
+  raster::subset(7)
+
+temp.raster <-
+  raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
+
+# bbox_buffer <- c(
+#   "xmin" = min(fossil.locs$long) - 1,
+#   "ymin" = min(fossil.locs$lat) - 1,
+#   "xmax" = max(fossil.locs$long) + 1,
+#   "ymax" = max(fossil.locs$lat) + 1
+# )  %>%
+#   sf::st_bbox() %>%
+#   sf::st_as_sfc() %>%
+#   sf::st_as_sf(crs = 4326) %>%
+#   sf::st_transform(crs = 4326)
+# 
+# temp.raster.cropped <- raster::crop(temp.raster, bbox_buffer)
+
+# Create a bounding box for the upper united states southwest
+bb <-
+  c(
+    "xmin" = -113,
+    "xmax" = -105,
+    "ymin" = 32,
+    "ymax" = 38.09
+  ) %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
+usa <- sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
+usa <- sf::st_transform(usa, crs = 4326)
+
+cities2 <- us.cities %>%
+  dplyr::select(name, long, lat) %>%
+  dplyr::filter(
+    name %in% c(
+      "Farmington NM",
+      "Santa Fe NM",
+      "Albuquerque NM",
+      "Flagstaff AZ",
+      "Phoenix AZ"
+    )
+  ) %>%
+  dplyr::add_row(name = "Mesa Verde CO",
+                 long = -108.463050,
+                 lat = 37.230299)
+
+cities <- cities2  %>%
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
+
+fossil.sites <- fossil.locs %>% 
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
+
+crs(temp.raster) <-
+  "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs"
+temperature <- as.data.frame(temp.raster, xy = TRUE)
+temperature_transformed <- usmap::usmap_transform(temperature)
+
+
+UUSS_bb_prism_fossil_sites <- ggplot() +
+  geom_raster(
+    data = temperature_transformed,
+    aes(x = x, y = y, fill = PRISM_tavg_monthly_normals.7),
+    alpha = 0.8,
+    na.rm = TRUE
+  ) +
+  scale_fill_gradientn(
+    colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+    #limits = c(-8, 8),
+    na.value = "transparent",
+    name = "Temperature °C"
+  ) +
+  coord_equal() +
+  theme_classic() +
+  scale_x_continuous(breaks = seq(-115, -103, 2.0),
+                     limits = c(-115, -103.2)) +
+  scale_y_continuous(breaks = seq(31, 39, 2.0),
+                     limits = c(31.25, 39)) +
+  geom_sf(
+    data = usa,
+    color = "#2b2b2b",
+    fill = "transparent",
+    size = 0.5
+  ) +
+    geom_sf(
+    data = fossil.sites,
+    shape = 20,
+    fill = "blue",
+    size = 3
+  ) +
+  geom_sf(
+    data = cities,
+    shape = 23,
+    fill = "blue",
+    size = 3
+  ) +
+    geom_sf(
+    data = bb,
+    size = 1,
+    fill=NA,
+    colour="dark grey",
+    alpha = 0.3
+  ) +
+  shadowtext::geom_shadowtext(
+    data = cities2,
+    aes(x = long, y = lat, label = name),
+    nudge_y = 0.15,
+    color = "white"
+  ) +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 4,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 4,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.text = element_text(size = 12, family = "Helvetica"),
+    legend.title = element_text(size = 13, family = "Helvetica")
+  )
+
+
+
+```
+
