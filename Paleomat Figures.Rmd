@@ -2,7 +2,7 @@
 title: "Paleomat Figures"
 author: "Andrew Gillreath-Brown"
 date: "10/20/2021"
-output: word_document
+output: bookdown::word_document2
 ---
 
 ```{r setup, include=FALSE}
@@ -10,32 +10,70 @@ output: word_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(paleomat)
+library(maps)
+data(us.cities)
 
 ```
 
-```{r fig1}
+```{r fig1, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
-alley2000 <- read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
+alley2000 <-
+  read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
   dplyr::mutate(Age = Age * 1000)  %>%
-  dplyr::filter(Age <= 20000) 
+  dplyr::filter(Age <= 20000)
 
-alley2000 %>% 
+alley2000 %>%
   ggplot(aes(x = Age, y = Temperature)) +
   geom_line() +
   scale_x_reverse(breaks = seq(0, 20000, 2500)) +
   theme_classic() +
   xlab("calibrated years BP") +
   ylab("Temperature °C") +
-  annotate("rect", xmin = 11500, xmax = 12800, ymin = min(alley2000$Temperature) - 0.5, ymax = max(alley2000$Temperature),
-        alpha = .2) +
-  annotate("text", x = 12150, y = -27.25, label = "Younger \n Dryas", size = 3.5) +
-  geom_segment(aes(x = 8200, y = -36.5, xend = 8200, yend = -33),
-                  arrow = arrow(length = unit(0.3, "cm"))) +
-  annotate("text", x = 8200, y = -38, label = "8200 cal yr BP \n cold event", size = 3 ) +
-  annotate("rect", xmin = 4000, xmax = 6000, ymin = min(alley2000$Temperature) - 0.5, ymax = max(alley2000$Temperature),
-        alpha = .2) +
-  annotate("text", x = 5000, y = -27.25, label = "northward expansion \n of agriculture", size = 3) 
+  annotate(
+    "rect",
+    xmin = 11500,
+    xmax = 12800,
+    ymin = min(alley2000$Temperature) - 0.5,
+    ymax = max(alley2000$Temperature),
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 12150,
+    y = -27.25,
+    label = "Younger \n Dryas",
+    size = 3.5
+  ) +
+  geom_segment(aes(
+    x = 8200,
+    y = -36.5,
+    xend = 8200,
+    yend = -33
+  ),
+  arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate(
+    "text",
+    x = 8200,
+    y = -38,
+    label = "8200 cal yr BP \n cold event",
+    size = 3
+  ) +
+  annotate(
+    "rect",
+    xmin = 4000,
+    xmax = 6000,
+    ymin = min(alley2000$Temperature) - 0.5,
+    ymax = max(alley2000$Temperature),
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 5000,
+    y = -27.25,
+    label = "northward expansion \n of agriculture",
+    size = 3
+  ) 
 
 # Warmest periods following 5000 BP.
 # 3297.07     -28.748
@@ -46,40 +84,81 @@ alley2000 %>%
 ```
 
 
-```{r fig2}
-# Moberg et al. 2005 low-frequency reconstruction (only).
+```{r fig2, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Moberg <- read.delim("./data-raw/nhtemp-moberg2005.txt", header = TRUE, sep = "\t", dec = ".") [, 1:3] %>%
-  dplyr::filter(LF != -9.9999 & date <= 2000) %>% 
+# Moberg et al. 2005 low-frequency reconstruction (only).
+Moberg <-
+  read.delim(
+    "./data-raw/nhtemp-moberg2005.txt",
+    header = TRUE,
+    sep = "\t",
+    dec = "."
+  ) [, 1:3] %>%
+  dplyr::filter(LF != -9.9999 & date <= 2000) %>%
   dplyr::mutate(date = 1950 - date)
 
 
-GDD_Plot_Final_Moberg <- ggplot(data=Moberg, aes(x= date, y=LF)) +
+ggplot(data = Moberg, aes(x = date, y = LF)) +
   geom_line(size = 1.5) +
   xlab("calibrated years BP") +
   ylab("Temperature Anomaly (°C)") +
-  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) + 
-  scale_x_reverse(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
+  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
+  scale_x_reverse(breaks = seq(0, 2000, 200),
+                  minor_breaks = seq(100, 1900, 200)) +
   scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
   theme_bw() +
-  theme(panel.border = element_blank(), panel.grid.major = element_blank(), axis.text=element_text(size=12, colour = "black", family = "Helvetica"), axis.title.y = element_text(size = 14, family = "Helvetica", margin = margin(t = 10, r = 4, b = 10, l = 10)), axis.title.x = element_text(size = 14, family = "Helvetica", margin = margin(t = 4, r = 10, b = 10, l = 10)),
-        panel.grid.minor = element_line(colour = "grey 70"), axis.line = element_line(colour = "black"),
-        plot.margin = margin(t = 5, r = 10, b = 5, l = 5))
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 4,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 4,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "grey 70"),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 10,
+      b = 5,
+      l = 5
+    )
+  )
 ```
 
-```{r fig3}
+```{r fig3, fig.cap="Locations of fossil pollen samples used in this study and extent of the Upper United States Southwest (Bocinsky and Kohler 2014).", fig.width=6.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
 # Showing extent of UUSS and the fossil pollen sites.
 
 # Get locations of the fossil pollen sites.
 fossil.locs <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% 
-  dplyr::group_by(site.name) %>% 
-  dplyr::slice(1) %>% 
-  dplyr::ungroup() %>% 
-  dplyr::select(site.id, site.name, geometry) %>% 
-  tidyr::unnest_wider(geometry) %>% 
-  dplyr::rename(long = 3, lat = 4)
-  
+  readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>%
+  tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
+  dplyr::group_by(site.name) %>%
+  dplyr::slice(1) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(site.id, site.name, long, lat)
+
 # Get the PRISM modern July temperature dataset.
 modern_temp <-
   brick(
@@ -100,7 +179,7 @@ temp.raster <-
 #   sf::st_as_sfc() %>%
 #   sf::st_as_sf(crs = 4326) %>%
 #   sf::st_transform(crs = 4326)
-# 
+#
 # temp.raster.cropped <- raster::crop(temp.raster, bbox_buffer)
 
 # Create a bounding box for the upper united states southwest
@@ -137,7 +216,7 @@ cities2 <- us.cities %>%
 cities <- cities2  %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
-fossil.sites <- fossil.locs %>% 
+fossil.sites <- fossil.locs %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
 crs(temp.raster) <-
@@ -146,23 +225,21 @@ temperature <- as.data.frame(temp.raster, xy = TRUE)
 temperature_transformed <- usmap::usmap_transform(temperature)
 
 
-UUSS_bb_prism_fossil_sites <- ggplot() +
+ggplot() +
   geom_raster(
     data = temperature_transformed,
     aes(x = x, y = y, fill = PRISM_tavg_monthly_normals.7),
     alpha = 0.8,
     na.rm = TRUE
   ) +
-  scale_fill_gradientn(
-    colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-    #limits = c(-8, 8),
-    na.value = "transparent",
-    name = "Temperature °C"
-  ) +
+  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+                       #limits = c(-8, 8),
+                       na.value = "transparent",
+                       name = "Temperature °C") +
   coord_equal() +
   theme_classic() +
-  scale_x_continuous(breaks = seq(-115, -103, 2.0),
-                     limits = c(-115, -103.2)) +
+  scale_x_continuous(breaks = seq(-115,-103, 2.0),
+                     limits = c(-115,-103.2)) +
   scale_y_continuous(breaks = seq(31, 39, 2.0),
                      limits = c(31.25, 39)) +
   geom_sf(
@@ -171,7 +248,7 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
     fill = "transparent",
     size = 0.5
   ) +
-    geom_sf(
+  geom_sf(
     data = fossil.sites,
     shape = 20,
     fill = "blue",
@@ -183,18 +260,19 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
     fill = "blue",
     size = 3
   ) +
-    geom_sf(
+  geom_sf(
     data = bb,
     size = 1,
-    fill=NA,
-    colour="dark grey",
+    fill = NA,
+    colour = "dark grey",
     alpha = 0.3
   ) +
   shadowtext::geom_shadowtext(
     data = cities2,
     aes(x = long, y = lat, label = name),
-    nudge_y = 0.15,
-    color = "white"
+    nudge_y = 0.265,
+    color = "white",
+    size = 2.5
   ) +
   xlab("Longitude") +
   ylab("Latitude") +
@@ -202,12 +280,12 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 12,
+      size = 10,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 14,
+      size = 12,
       family = "Helvetica",
       margin = margin(
         t = 10,
@@ -217,7 +295,7 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
       )
     ),
     axis.title.x = element_text(
-      size = 14,
+      size = 12,
       family = "Helvetica",
       margin = margin(
         t = 4,
@@ -228,8 +306,8 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
     ),
     panel.grid.minor = element_line(colour = "light grey"),
     axis.line = element_line(colour = "black"),
-    legend.text = element_text(size = 12, family = "Helvetica"),
-    legend.title = element_text(size = 13, family = "Helvetica")
+    legend.text = element_text(size = 10, family = "Helvetica"),
+    legend.title = element_text(size = 11, family = "Helvetica")
   )
 
 
@@ -237,7 +315,7 @@ UUSS_bb_prism_fossil_sites <- ggplot() +
 ```
 
 
-```{r table1}
+```{r table1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
 fossil.locs2 <-
     readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
@@ -250,6 +328,9 @@ fossil.locs2 <-
   dplyr::arrange(site.name) %>% 
   dplyr::rename("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "Earliest date of core (BP)" = minAge, "Latest date of core (BP)" = maxAge, "Minimum Depth" = minDepth, "Maximum Depth" = maxDepth, "Longitude" = long, "Latitude" = lat, "Elevation (m)" = elev )
 
-write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
+#write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
+
+knitr::kable(fossil.locs2,
+             caption = "Metadata for the fossil pollen records used in this study.")
 
 ```
