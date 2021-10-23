@@ -746,4 +746,16 @@ anom_new <- purrr::map(tavg_idw, cellStats, mean) %>%
   geom_line(aes(x = name, y = value))
 
 
+poly1 <- c(
+  "xmin" = -113,
+  "ymin" = -23.5,
+  "xmax" = -34,
+  "ymax" = 23.5
+)  %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
+
 ```
