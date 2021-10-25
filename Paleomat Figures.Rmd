@@ -15,6 +15,8 @@ data(us.cities)
 
 ```
 
+# Figures
+
 ```{r fig1, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
@@ -314,6 +316,74 @@ ggplot() +
 
 ```
 
+```{r fig4, fig.cap="Low-frequency temperature reconstruction time series from this study of the UUSS.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+# tavg_rasters <- brick("./output/paleomat-rasters.tif") %>% 
+#   unstack()
+
+# Temperature anomaly across time for the spatial extent in each 100 year interval.
+read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
+  ggplot() +
+  geom_line(aes(x = year, y = anom), colour = "red", size = 1.0) +
+  xlab("Year BC/AD") +
+  ylab("July Temperature Anomaly (°C)") +
+  scale_x_continuous(breaks = seq(-1000, 1800, 200),
+                     minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
+  scale_y_continuous(breaks = seq(-2.5, 0.0, 0.5),
+                     limits = c(-2.5, 0.0)) +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 6,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 6,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black")
+  )
+
+
+```
+
+```{r fig5, fig.cap="Low-frequency temperature reconstruction spatial interpolation for this study of the UUSS.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+# tavg_rasters <- brick("./output/paleomat-rasters.tif") %>% 
+#   unstack()
+
+tavg_idw_stack
+
+gplot(tavg_idw_stack) + 
+  geom_tile(aes(fill = value)) +
+  facet_wrap(~ variable) +
+  scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)) +
+  coord_equal()
+
+```
+
+
+# Tables
 
 ```{r table1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 

@@ -805,6 +805,12 @@ tavg_idw <-
 tavg_idw_stack <- raster::stack(tavg_idw)
 names(tavg_idw_stack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 
+tavg_idw_brick <- raster::stack(tavg_idw)
+names(tavg_idw_brick) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+
+writeRaster(tavg_idw_brick, filename="./output/paleomat-rasters.tif", 
+						options="INTERLEAVE=BAND", overwrite=TRUE)
+
 plot(tavg_idw_stack[[1:16]], col = colors)
 plot(tavg_idw_stack[[17:28]], col = colors)
 
@@ -813,11 +819,10 @@ plot(tavg_idw_stack[[17:28]], col = colors)
 anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
   as.data.frame() %>% 
   tidyr::pivot_longer(cols = 1:28) %>% 
-  #cols = BC950:AD1750
   dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
-  ggplot() +
-  geom_line(aes(x = name, y = value))
+  dplyr::rename(year = name, anom = value)
 
+write.csv(anom_new, "./output/paleomat-temp-anomaly-final.csv", row.names = FALSE)
 
 
 ```
