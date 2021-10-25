@@ -148,7 +148,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
   )
 ```
 
-```{r fig3, fig.cap="Locations of fossil pollen samples used in this study and extent of the Upper United States Southwest (Bocinsky and Kohler 2014).", fig.width=6.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig3, fig.cap="Locations of fossil pollen samples used in this study and extent of the Upper United States Southwest (Bocinsky and Kohler 2014) over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution.", fig.width=6.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Showing extent of UUSS and the fossil pollen sites.
 
@@ -316,7 +316,7 @@ ggplot() +
 
 ```
 
-```{r fig4, fig.cap="Low-frequency temperature reconstruction time series from this study of the UUSS.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig4, fig.cap="Low-frequency temperature reconstruction time series of the UUSS for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # tavg_rasters <- brick("./output/paleomat-rasters.tif") %>% 
 #   unstack()
@@ -367,7 +367,7 @@ read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
 
 ```
 
-```{r fig5, fig.cap="Low-frequency temperature reconstruction spatial interpolation for this study of the UUSS.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig5, fig.cap="Low-frequency temperature reconstruction spatial interpolation of the UUSS for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # tavg_rasters <- brick("./output/paleomat-rasters.tif") %>% 
 #   unstack()
@@ -392,6 +392,57 @@ rasterVis::gplot(tavg_idw_stack) +
 
 
 ```
+
+
+```{r fig6, fig.cap="Comparison of low-frequency reconstruction from this study, crop productivity, and niche.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+years <- 1:1300
+
+paleomat <- read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>%
+  dplyr::filter(year >= 1 & year <= 1250)
+
+# Estimated potential average maize yield (kg) in the CMV region
+years_vep <- data.frame(Year = seq(1, 599, 1))
+vep_paleoprod_mean <- read.csv("./data-raw/vepiin_paleoprod_stats.csv")
+vep_paleoprod_mean <- dplyr::bind_rows(years_vep, vep_paleoprod_mean)
+
+
+# Proportion of the CMV region in the maize dry-farming niche
+vep_niche_percent <- read.csv("./data-raw/vepiin_niche_stats.csv")
+
+
+all_reconstructions <- vep_paleoprod_mean %>% 
+  dplyr::select(Year, `Average.prod..linear.lagged.`) %>% 
+  dplyr::rename("Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2) %>% 
+  dplyr::left_join(vep_niche_percent %>% dplyr::select(Year,`Prop.in.niche..linear.lagged.`) %>% dplyr::rename("Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2), by = "Year") %>% 
+  dplyr::left_join(paleomat %>% dplyr::rename("Year" = 1, "MAT - Temperature Anomaly °C (100-year Intervals)" = 2) , by = "Year") %>% 
+  tidyr::pivot_longer(!Year, "Measure", "value") %>% 
+  dplyr::filter(!is.na(value))
+
+all_reconstructions$Measure_f = factor(all_reconstructions$Measure , levels=c('Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])','Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])','MAT - Temperature Anomaly °C (100-year Intervals)'))
+
+
+ggplot(all_reconstructions, aes(x = Year #, 
+                          # color = Measure
+)) +
+  geom_line(aes(y = value)) + 
+  scale_x_continuous(breaks = c(1, seq(100, 1300, 100)), limits = c(1,1300), expand = c(0, 0)) +
+  # scale_y_continuous(limits = c(NA,NA), expand = c(0, 0)) +
+  ggplot2::xlab("Year CE") +
+  ggplot2::ylab("") +
+  ggplot2::theme_linedraw() +
+  facet_wrap("Measure_f",
+             ncol = 1,
+             scales = "free_y") +
+  guides(fill=FALSE, color=FALSE) +
+  theme(text = element_text(size=9.5), 
+        plot.margin = margin(10, 15, 10, 10))
+
+
+```
+
+
+
 
 
 # Tables

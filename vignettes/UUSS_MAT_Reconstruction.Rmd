@@ -787,6 +787,21 @@ site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
   tidyr::nest() %>%
   dplyr::rename(site.predictions = data)
 
+
+x_range <- as.numeric(c(-112.81446, -105.52416))  # min/max longitude of the interpolation area
+y_range <- as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
+# create an empty grid of values ranging from the xmin-xmax, ymin-ymax
+grd <- expand.grid(x = seq(from = x_range[1],
+                   to = x_range[2], 
+                   by = 0.1),
+                   y = seq(from = y_range[1], to = y_range[2], 
+                       by = 0.1))  # expand points to grid
+coordinates(grd) <- ~x + y
+# turn into a spatial pixels object
+gridded(grd) <- TRUE
+
+
+
 tavg_idw <-
   purrr::map(
     site.preds.unlisted.anom.nested$site.predictions,
