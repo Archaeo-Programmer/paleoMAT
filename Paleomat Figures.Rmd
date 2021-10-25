@@ -372,13 +372,24 @@ read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
 # tavg_rasters <- brick("./output/paleomat-rasters.tif") %>% 
 #   unstack()
 
-tavg_idw_stack
-
-gplot(tavg_idw_stack) + 
+rasterVis::gplot(tavg_idw_stack) +
   geom_tile(aes(fill = value)) +
-  facet_wrap(~ variable) +
-  scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)) +
-  coord_equal()
+  facet_wrap( ~ variable) +
+  scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255)) +
+  coord_equal() +
+  theme_bw()
+
+
+# names(tavg_idw) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+# 
+# anomaly_plots <-
+#   purrr::map2(
+#     .x = tavg_idw, .y = names(tavg_idw),
+#     .f =
+#       ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, cities = FALSE, animation = FALSE)
+#   )
+
+
 
 ```
 
