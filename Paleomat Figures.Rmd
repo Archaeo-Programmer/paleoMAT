@@ -17,7 +17,7 @@ data(us.cities)
 
 # Figures
 
-```{r fig1, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig1, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
 alley2000 <-
@@ -83,10 +83,23 @@ alley2000 %>%
 # 1514.860    -30.4060
 # 964.939    -30.4628
 
+
+
+alley2000 %>%
+  dplyr::filter(Age <= 3000) %>% 
+  dplyr::mutate(date = BPtoBCAD(Age)) %>% 
+  ggplot(aes(x = date, y = Temperature)) +
+  geom_line() +
+  scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
+  theme_classic() +
+  xlab("calibrated years BP") +
+  ylab("Temperature °C") 
+
+
 ```
 
 
-```{r fig2, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig2, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Moberg et al. 2005 low-frequency reconstruction (only).
 Moberg <-
@@ -148,7 +161,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
   )
 ```
 
-```{r fig3, fig.cap="Locations of fossil pollen samples used in this study and extent of the Upper United States Southwest (Bocinsky and Kohler 2014) over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution.", fig.width=6.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig3, fig.cap="Locations of fossil pollen samples used in this study and extent of the Upper United States Southwest (Bocinsky and Kohler 2014) over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Showing extent of UUSS and the fossil pollen sites.
 
@@ -226,6 +239,19 @@ crs(temp.raster) <-
 temperature <- as.data.frame(temp.raster, xy = TRUE)
 temperature_transformed <- usmap::usmap_transform(temperature)
 
+# Create a bounding box for limits of this study
+bb2 <-
+  c(
+    "xmin" = -112.81446,
+    "xmax" = -105.52416,
+    "ymin" = 32.65757,
+    "ymax" = 38.089
+  ) %>%
+  sf::st_bbox() %>%
+  sf::st_as_sfc() %>%
+  sf::st_as_sf(crs = 4326) %>%
+  sf::st_transform(crs = 4326)
+
 
 ggplot() +
   geom_raster(
@@ -267,6 +293,13 @@ ggplot() +
     size = 1,
     fill = NA,
     colour = "dark grey",
+    alpha = 0.3
+  ) +
+  geom_sf(
+    data = bb2,
+    size = 1,
+    fill = NA,
+    colour = "red",
     alpha = 0.3
   ) +
   shadowtext::geom_shadowtext(
