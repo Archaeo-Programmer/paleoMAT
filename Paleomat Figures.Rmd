@@ -113,6 +113,10 @@ Moberg <-
   dplyr::mutate(date = 1950 - date)
 
 
+Moberg_standard <- Moberg %>% 
+  dplyr::mutate(update = (LF - mean(Moberg$LF)) / sd(Moberg$LF)) %>% 
+  dplyr::mutate(year = BPtoBCAD(date))
+
 ggplot(data = Moberg, aes(x = date, y = LF)) +
   geom_line(size = 1.5) +
   xlab("calibrated years BP") +
@@ -353,7 +357,12 @@ ggplot() +
 
 
 # Temperature anomaly across time for the spatial extent in each 100 year interval.
-read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
+temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
+
+temp_anom_standard <- temp_anom %>% 
+  dplyr::mutate(update = (anom - mean(temp_anom$anom)) / sd(temp_anom$anom))
+
+temp_anom %>%
   ggplot() +
   geom_line(aes(x = year, y = anom), colour = "red", size = 1.0) +
   xlab("Year BC/AD") +
@@ -363,6 +372,36 @@ read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
   scale_y_continuous(breaks = seq(-2.5, 0.0, 0.5),
                      limits = c(-2.5, 0.0)) +
   theme_bw() +
+  annotate(
+    "rect",
+    xmin = 800,
+    xmax = 1200,
+    ymin = -2.5,
+    ymax = 0.0,
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 1000,
+    y = -0.25,
+    label = "Medieval Warm \n Period",
+    size = 4.5
+  ) +
+    annotate(
+    "rect",
+    xmin = 1400,
+    xmax = 1800,
+    ymin = -2.5,
+    ymax = 0.0,
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 1600,
+    y = -0.25,
+    label = "Little Ice \n Age",
+    size = 4.5
+  ) +
   theme(
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -394,6 +433,16 @@ read.csv("./output/paleomat-temp-anomaly-final.csv") %>%
     panel.grid.minor = element_line(colour = "light grey"),
     axis.line = element_line(colour = "black")
   )
+
+
+
+# Moberg LF and paleomat
+  ggplot() +
+  geom_line(data = temp_anom_standard, aes(x = year, y = update), colour = "red", size = 1.0) +
+  geom_line(data = Moberg_standard, aes(x = year, y = update)) +
+  xlab("Year BC/AD") +
+  ylab("July Temperature Anomaly (°C)") +
+  theme_bw()
 
 
 ```
