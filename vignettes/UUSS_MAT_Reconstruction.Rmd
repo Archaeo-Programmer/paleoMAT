@@ -831,7 +831,7 @@ plot(tavg_idw_stack[[17:28]], col = colors)
 
 
 # Calculate the anomaly across time for entire area (to produce line graph).
-anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
+anom_new <- purrr::map(tavg_idw_stack, cellStats, mean) %>% 
   as.data.frame() %>% 
   tidyr::pivot_longer(cols = 1:28) %>% 
   dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
