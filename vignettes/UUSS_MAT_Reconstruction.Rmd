@@ -793,9 +793,9 @@ y_range <- as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolat
 # create an empty grid of values ranging from the xmin-xmax, ymin-ymax
 grd <- expand.grid(x = seq(from = x_range[1],
                    to = x_range[2], 
-                   by = 0.1),
+                   by = 1.0),
                    y = seq(from = y_range[1], to = y_range[2], 
-                       by = 0.1))  # expand points to grid
+                       by = 1.0))  # expand points to grid
 coordinates(grd) <- ~x + y
 # turn into a spatial pixels object
 gridded(grd) <- TRUE
@@ -831,7 +831,7 @@ plot(tavg_idw_stack[[17:28]], col = colors)
 
 
 # Calculate the anomaly across time for entire area (to produce line graph).
-anom_new <- purrr::map(tavg_idw_stack, cellStats, mean) %>% 
+anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
   as.data.frame() %>% 
   tidyr::pivot_longer(cols = 1:28) %>% 
   dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
@@ -1228,7 +1228,7 @@ site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions) %>%
       x = temp.raster,
       y = site.preds.unlisted %>% ungroup() %>%
         dplyr::select(long, lat)
-    )
+    )z
   )) %>%
   dplyr::rename(modern = 11)
 
