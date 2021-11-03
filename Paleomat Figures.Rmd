@@ -84,16 +84,16 @@ alley2000 %>%
 # 964.939    -30.4628
 
 
-
-alley2000 %>%
-  dplyr::filter(Age <= 3000) %>% 
-  dplyr::mutate(date = BPtoBCAD(Age)) %>% 
-  ggplot(aes(x = date, y = Temperature)) +
-  geom_line() +
-  scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
-  theme_classic() +
-  xlab("calibrated years BP") +
-  ylab("Temperature °C") 
+# To visualize in BC/AD.
+# alley2000 %>%
+#   dplyr::filter(Age <= 3000) %>% 
+#   dplyr::mutate(date = BPtoBCAD(Age)) %>% 
+#   ggplot(aes(x = date, y = Temperature)) +
+#   geom_line() +
+#   scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
+#   theme_classic() +
+#   xlab("calibrated years BP") +
+#   ylab("Temperature °C") 
 
 
 ```
@@ -158,6 +158,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
       l = 5
     )
   )
+
 ```
 
 ```{r fig3, fig.cap="Locations of fossil pollen samples used in this study over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution. The grey box indicates the extent of the Upper United States Southwest (Bocinsky and Kohler 2014), and the red box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
@@ -350,7 +351,6 @@ ggplot() +
 
 ```{r fig4, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-
 # Temperature anomaly across time for the spatial extent in each 100 year interval.
 temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
 
@@ -361,8 +361,8 @@ temp_anom %>%
   ylab("July Temperature Anomaly (°C)") +
   scale_x_continuous(breaks = seq(-1000, 1800, 200),
                      minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
-  # scale_y_continuous(breaks = seq(-2.5, 0.0, 0.5),
-  #                    limits = c(-2.5, 0.0)) +
+  scale_y_continuous(breaks = seq(-2.5, 0.0, 0.5),
+                     limits = c(-2.5, 0.0)) +
   theme_bw() +
   annotate(
     "rect",
@@ -449,19 +449,49 @@ Moberg_paleomat <- rbind(temp_anom_standard, Moberg_standard)
 Moberg_paleomat %>% 
   dplyr::filter(year >= 133 & year <= 1800) %>% 
   ggplot(aes(x = year, y = update, colour = Series)) +
-  geom_line() +
+  geom_line(size = 1.0) +
   xlab("Year BC/AD") +
   ylab("Standardized July Temperature Anomaly") +
   theme_bw() +
-  scale_x_continuous(breaks = seq(100, 1800, 100))
+  scale_x_continuous(breaks = seq(100, 1800, 100)) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 6,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 6,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black")
+  )
 
 ```
 
 
 ```{r fig6, fig.cap="The spatial interpolation of the low-frequency temperature reconstruction for this study. The extent can be seen by the red box in Figure 3.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-# tavg_rasters <- brick("./output/paleomat-rasters.tif") %>%
-#   unstack()
+tavg_rasters <- stack("./output/paleomat-rasters.tif")
 
 # library(ggnewscale)
 # 
@@ -489,13 +519,16 @@ Moberg_paleomat %>%
 # colnames(hill_spdf) <- c("value", "x", "y")
 
 
-rasterVis::gplot(tavg_idw_stack) +
+rasterVis::gplot(tavg_rasters) +
   # geom_tile(data = hill_spdf, aes(x = x, y = y, fill = value)) +
   geom_tile(aes(fill = value)) +
   facet_wrap(~ variable) +
   scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255)) +
   coord_equal() +
-  theme_bw()
+  theme_bw() +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  labs(fill='Anomaly')
 
 
 # names(tavg_idw) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
@@ -745,54 +778,49 @@ ggplot(all_reconstructions, aes(x = Year)) +
 
 
 # plot together using the standardized values.
-all_reconstructions <- vep_paleoprod_mean %>%
-  dplyr::select(Year, updated) %>%
-  dplyr::rename(
-    "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-  ) %>%
-  dplyr::left_join(
-    vep_niche_percent %>% dplyr::select(Year, updated) %>% dplyr::rename(
-      "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-    ),
-    by = "Year"
-  ) %>%
-  dplyr::left_join(
-    paleomat %>% dplyr::select(year, updated) %>% 
-      dplyr::rename(
-      "Year" = 1,
-      "MAT - Temperature Anomaly °C (100-year Intervals)" = 2
-    ) ,
-    by = "Year"
-  ) %>%
-  tidyr::pivot_longer(!Year, "Measure", "value") %>%
-  dplyr::filter(!is.na(value))
-
-all_reconstructions$Measure_f = factor(
-  all_reconstructions$Measure ,
-  levels = c(
-    'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-    'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-    'MAT - Temperature Anomaly °C (100-year Intervals)'
-  )
-)
-
-ggplot(all_reconstructions, aes(x = Year, y = value, colour = Measure)) +
-  geom_line() +
-  scale_x_continuous(
-    breaks = c(1, seq(100, 1300, 100)),
-    limits = c(1, 1300),
-    expand = c(0, 0)
-  ) +
-  ggplot2::xlab("Year AD") +
-  ggplot2::ylab("") +
-  theme(legend.position = "none") +
-  ggplot2::theme_linedraw() +
-  facet_wrap("Measure_f",
-             ncol = 1,
-             scales = "free_y") +
-  guides(fill = FALSE, color = FALSE) +
-  theme(text = element_text(size = 15),
-        plot.margin = margin(10, 15, 10, 10))
+# all_reconstructions <- vep_paleoprod_mean %>%
+#   dplyr::select(Year, updated) %>%
+#   dplyr::rename(
+#     "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
+#   ) %>%
+#   dplyr::left_join(
+#     vep_niche_percent %>% dplyr::select(Year, updated) %>% dplyr::rename(
+#       "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
+#     ),
+#     by = "Year"
+#   ) %>%
+#   dplyr::left_join(
+#     paleomat %>% dplyr::select(year, updated) %>% 
+#       dplyr::rename(
+#       "Year" = 1,
+#       "MAT - Temperature Anomaly °C (100-year Intervals)" = 2
+#     ) ,
+#     by = "Year"
+#   ) %>%
+#   tidyr::pivot_longer(!Year, "Measure", "value") %>%
+#   dplyr::filter(!is.na(value))
+# 
+# all_reconstructions$Measure_f = factor(
+#   all_reconstructions$Measure ,
+#   levels = c(
+#     'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
+#     'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
+#     'MAT - Temperature Anomaly °C (100-year Intervals)'
+#   )
+# )
+# 
+# ggplot(all_reconstructions, aes(x = Year, y = value, colour = Measure)) +
+#   geom_line() +
+#   scale_x_continuous(
+#     breaks = c(1, seq(100, 1300, 100)),
+#     limits = c(1, 1300),
+#     expand = c(0, 0)
+#   ) +
+#   ggplot2::xlab("Year AD") +
+#   ggplot2::ylab("") +
+#   theme(legend.position = "none") +
+#   theme(text = element_text(size = 15),
+#         plot.margin = margin(10, 15, 10, 10))
 
 
 ```

@@ -32,16 +32,14 @@ library(paleomat)
 
 # Introduction
 
-Pollen data can be used to do paleo-temperature reconstructions. However, this type of modeling can be affected by a lot of different aspects, such as paleoecological processes, chronology, and topographic effects on communities and species. 
+Pollen data can be used to do paleo-temperature reconstructions. However, this type of modeling can be affected by a lot of different aspects, such as paleoecological processes, chronology, and topographic effects on communities and species. Improvements in these techniques and the increasing breadth of paleoclimatic proxies available, however, have furthered our understanding of the effects of climate-driven variability on past societies. 
 
-However, improvements in these techniques, and the increasing breadth of paleoclimatic proxies available have furthered our understanding of the effects of climate-driven variability on past societies. 
-
-This program allows you to reconstruct the climate for multiple locations across North America (when data are sufficient to do). In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008) so that there will be columns of taxa with counts, as well as metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too.
+This program allows you to reconstruct the climate for multiple locations across the southwestern United States. In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008), so that there will be columns of taxa with counts and associated metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too. Here, we use the Neotoma package, version 1.7.4.
 
 # Get fossil, modern, and coretop pollen data.
 ```{r function_model, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
 
-# Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then get the datasets for the pollen data from each of the gpids.
+# Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then, get the datasets for the pollen data from each of the gpids.
 
 # Retrieve the GeoPolitical Units table, which has country, state, and county level names with associated IDs.
 gpids <-
@@ -101,13 +99,13 @@ CT_metadata_counts <-
 
 ```
 
-The Neotoma Modern Pollen Database contains `r nrow(MP_counts)` samples, representing `r ncol(MP_counts)` different pollen taxa.
+The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples, representing `r ncol(MP_metadata_counts %>% dplyr::select(ABIES:tail(names(.), 1)))` different pollen taxa.
 
 ## Combine Core Top and Modern Pollen Data
 
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-# Now the two dataframes can be combined using the function, then sort the rows by dataset.id. The distinct function is used to make sure there is no duplicate data from combining the two dataframes. Then, we convert all NA values to zero.
+# Now, the two dataframes (i.e., the modern data and core top data) can be combined using this function, then sort the rows by dataset.id.
 MPCT_metadata_counts <-
   dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
   dplyr::arrange(dataset.id) %>%
@@ -119,17 +117,19 @@ MPCT_metadata_counts <-
   dplyr::filter(!is.na(long)) %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
-# Keep only modern sites in the United States.
+# Keep only modern sites in the continental United States.
 # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of continental United States.
 states <-
   rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp",
                  layer = 'statesp010g')
+
 # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
 states <-
   sp::spTransform(states,
                   sp::CRS(
                     "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
                   ))
+
 # Filter out non-continental states and territories.
 continental.states <-
   subset(
@@ -138,10 +138,13 @@ continental.states <-
       NAME != "Hawaii" &
       NAME != "Puerto Rico" & NAME != "U.S. Virgin Islands"
   )
+
 # Convert sp to sf.
 continental.states <- sf::st_as_sf(continental.states, crs = 4326)
+
 # Update projection to CRS 4326, which is WGS 84.
 continental.states <- sf::st_transform(continental.states, 4326)
+
 # Need to make the geometry valid for the states shapefile.
 continental.states <- sf::st_make_valid(continental.states)
 continental.states_union <- sf::st_union(continental.states)
@@ -158,26 +161,26 @@ MPCT_metadata_counts_final <- sites_in_states3
 
 # Keep only modern samples in the western United States. Here, I take the Williams and Shuman 2008 eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
 # Read in all the western shapefiles.
-temp = list.files(path = "/Users/andrew/Dropbox/WSU/SKOPEII/Articles/Williams and Shuman 2008 Supplementary",
+temp <- list.files(path = "vignettes/data/raw_data/Williams and Shuman 2008 Supplementary",
                   pattern = "*WEST.shp$",
                   full.names = TRUE)
 
 # Then, apply the st_read function to the list of shapefiles.
-myfiles = lapply(temp, st_read, crs = 4326)
+myfiles <- lapply(temp, st_read, crs = 4326)
 
 # Then, set the name of each list element (each shapefile) to its respective file name.
 names(myfiles) <- gsub(
   "*WEST.shp$",
   "",
   list.files(
-    "/Users/andrew/Dropbox/WSU/SKOPEII/Articles/Williams and Shuman 2008 Supplementary",
+    "vignettes/data/raw_data/Williams and Shuman 2008 Supplementary",
     pattern = "*WEST.shp$",
     full.names = FALSE
   ),
   fixed = TRUE
 )
 
-# This was for changing the crs of each of the shapefiles. But not using as am able to do it with first lapply above.
+# Change the crs of each shapefile. However, this is done with the lapply above.
 # myfiles = purrr::map(myfiles, ~ {
 #               st_crs(.x) <- 4326
 #               .x
@@ -197,6 +200,7 @@ west_in_states <-
   sf::read_sf("vignettes/data/raw_data/west_in_states.shp")
 
 
+# This was an alternative for doing reconstructions by ecoregion. However, this would have a major issue with stationarity, given that the ecoregions could have shifted over time. 
 # # Keep only modern samples in specific ecoregions. This is if the reconstructions are limited by their level 1 ecoregions.
 # # Read in the Level 1 ecoregions shapefile (https://gaftp.epa.gov/EPADataCommons/ORD/Ecoregions/cec_na/na_cec_eco_l1.zip), which will be used to filter out modern pollen sites that are outside of the given ecoregions.
 # ecoregions <- readOGR("/Volumes/PUCK_HD/Users/andrew/Downloads/na_cec_eco_l1/NA_CEC_Eco_Level1.shp")
@@ -234,7 +238,7 @@ fossil_metadata_counts <-
 # fossil_metadata_counts_final <- dplyr::select (fossil_sites_in_states,-c(NAME:PRIM_MILES))
 
 # Limit fossil sites to just the Southwest for reconstruction.
-# First, create a bounding box for the upper united states southwest
+# First, create a bounding box for the Upper United States Southwest (after Bocinsky and Kohler 2014).
 bb <-
   c(
     "xmin" = -113,
@@ -265,7 +269,7 @@ fossil_final <-
 
 ```
 
-# Load Prism Climate Data
+## Load Prism Climate Data
 
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).  
 
@@ -276,7 +280,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
 
-# Extract Prism Climate data for modern pollen.
+# Extract Prism climate data for modern pollen sites.
 MPCT_climate <-
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
@@ -300,7 +304,7 @@ MPCT_climate_final <-
 # Get the data into the final format used by the palaeoSig and rioja packages.
 MPCT_final <-
   MPCT_climate_final %>%
-  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
+  dplyr::mutate(
     # pollen =
     #   purrr::map(pollen,
     #     function(x){
@@ -328,157 +332,18 @@ MPCT_final <-
 
 ```
 
-## Checking the calibration data set
+# Reconstruction
 
-Need to change this into a function. **
-
-To test the model, I used the `palaeoSig` package's `randomTF()` function, which tests the models against randomly sorted data. If we get a significance for a climate variable, then we know that the model reconstruction is better than random. The model takes the proportion of variance accounted for by the actual data, and then compares it to the proportion of variance accounted for by the randomized data.
-
-The MAT method is testing whether the modern calibration is able to detect signals in each of the climate parameters. The example here uses the entire North American Modern Pollen Database, rather than a targeted data subset.
-
-
-### MAT - ten closest
-
-```{r MAT_sigTesting_init, results='asis', echo=FALSE, warning=FALSE}
-
-# Get the data into the final format used by the palaeoSig and rioja packages.
-MPCT_proportions <-
-  MPCT_climate_final %>%
-  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
-    pollen =
-      purrr::map(pollen,
-        function(x){
-          x/rowSums(x)
-        }),
-    climate =
-      purrr::map(climate,
-                 function(x) {
-                   x %>%
-                     dplyr::select(month,
-                                   ppt,
-                                   tavg,
-                                   gdd) %>%
-                     tidyr::pivot_longer(ppt:gdd,
-                                         names_to = "element") %>%
-                     tidyr::unite("element_month", element, month) %>%
-                     tidyr::pivot_wider(names_from = element_month,
-                                        values_from = value)
-                 })) %>% 
-  dplyr::select(-FID)
-
-# For some reason this fails consistently when we try to use the weighted MAT (col=2).
-modern_significance <- palaeoSig::randomTF(spp = 
-                      MPCT_proportions %>%
-                      dplyr::select(sample.id, pollen) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(pollen)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    env = 
-                      MPCT_proportions %>%
-                      dplyr::select(sample.id, climate) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(climate)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    fos = 
-                      MPCT_proportions %>%
-                      dplyr::select(sample.id, pollen) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(pollen)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    n = 99,
-                    fun = rioja::MAT,
-                    col = 1,
-                    k = 150) %$%
-  tibble::tibble("variable" = colnames(MPCT_proportions$climate[[1]]),
-                 "% Explained" = EX*100,
-                 "p-value" = sig)
-
-```
-
-The variance explained is very low for some variables, although the p value is very low. This highlights that in some cases you may not just want to rely on the p value. This also shows the issue with temporal autocorrelation on temperature and, to some extent also, on precipitation variables.
-
-# Reconstruction Statistics
-
-## Reconstruction Significance
-
-Now we can do a similar test on fossil assemblage reconstructions. This again uses the same `randomTF()` function, but the variance explained and significance will probably change given that we are using a slightly more constrained dataset.
-
-Now, we apply a reconstruction to a real dataset.
-
-#### MAT - ten closest
-
-```{r MAT_sigTesting_fossil, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-palaeoSig::randomTF(spp = 
-                      MPCT_final %>%
-                      dplyr::select(sample.id, pollen) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(pollen)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    env = 
-                      MPCT_final %>%
-                      dplyr::select(sample.id, climate) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(climate)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    fos = 
-                      fossil_final %>%
-                      dplyr::select(sample.id, pollen) %>%
-                      sf::st_drop_geometry() %>%
-                      tidyr::unnest(cols = c(pollen)) %>%
-                      tibble::column_to_rownames("sample.id"),
-                    n = 99,
-                    fun = rioja::MAT,
-                    col = 1,
-                    k = 10) %$%
-  tibble::tibble("variable" = colnames(MPCT_final[[3]][[1]]),
-                 "% Explained" = EX*100,
-                 "p-value" = sig)
-
-
-# Old
-# This is an altered wrapper for the randomTF function.
-# source('../R/sig_test2.R')
-# 
-# MP_counts_noNAs <- MPCT_metadata_counts_final %>% 
-#   dplyr::select(-site.id:-pub_year) %>% 
-#   mutate_all(funs(ifelse(is.na(.), 0, .)))
-# 
-# mat_reconst <- run_tf2(MP_counts_noNAs, fossil = fossil_data, 
-#                        climate = Clim_noNAs[,13:24],
-#                        func = MAT, col = 2, k = 10)
-# 
-# mat_reconst[[1]]
-
-# Create a list of all the fossil pollen sites to be reconstructed for the continental United States.
-# fossil_sites <- unique(fossil_metadata_counts_final$dataset.id)
-
-# for (i in 1:length(fossil_sites)) {
-#   nam <- paste("mat_reconst_", fossil_sites[[i]], sep = "")
-#   dat <- run_tf2(pollen = MP_counts_noNAs, fossil = get(fossil_sites[[i]]), 
-#                  climate = Temperature,
-#                  func = mat, col = 2, k = 10)
-#   assign(nam, dat)
-# }
-
-```
-
-Again, no significance for the model. This indicates that we are just not able to see a signal within the data, but this is probably due to the calibration dataset being too broad.
-
-## Reconstruction
-
-Once we have validated the methods, we re-run the analyses using MAT.
-
-### Model Summary
+## Model Summary
 
 ```{r clim_reconst, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Now, we carry out the reconstruction for all fossil pollen sites in the southwest US study area.
+# Now, we carry out the reconstruction for all fossil pollen sites in the Upper United States Southwest study area.
 
 # Average Temperature
-# The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error for each months.
+# The reconstructions are in one output file, which has the reconstructed mean temperature (tavg) and associated error for each month.
 
-# First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
+# First, to save time, check to see if the sites have already been reconstructed, if so, then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and re-run it.
 
 if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
   mat_models_temp_west_3 <- purrr::map(
@@ -521,56 +386,10 @@ if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
   
 }
 
-# GDD
-# The reconstructions are in one output file, which has the reconstructed gdd and associated error.
-
-# First, to save time, check to see if the sites have already been reconstructed, if so then this chunk will not run. If you would like to re-run the reconstructions, then simply delete the reconstruction .csv and it will run.
-
-if (!file.exists("./vignettes/data/reconst_gdd_west.rds")) {
-  mat_models_temp_west <- purrr::map(
-    1:12,
-    .f = function(j) {
-      rioja::MAT(
-        y = dplyr::bind_rows(MPCT_final$pollen),
-        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("gdd_", j)]],
-        k = 5,
-        dist.method = "sq.chord",
-        lean = FALSE
-      )
-    }
-  )
-  
-  reconst_gdd_west <- mat_models_temp_west %>%
-    purrr::map(
-      .f = function(the.model) {
-        # Create the MAT reconstruction.
-        predict(
-          object = the.model,
-          newdata = dplyr::bind_rows(fossil_final$pollen) %>%
-            as.data.frame() %>%
-            set_rownames(fossil_final$sample.id),
-          sse = TRUE
-        )
-      }
-    )
-  
-  readr::write_rds(reconst_gdd, "./vignettes/data/reconst_gdd_west.rds")
-  
-} else if (!exists("reconst_gdd_west")) {
-  reconst_gdd <-
-    readr::read_rds(here::here("./vignettes/data/reconst_gdd_west.rds"))
-  
-} else {
-  stop(
-    "The SWUS reconstruction is already completed. If you would like to re-run the reconstructions, then delete the file from the directory."
-  )
-  
-}
-
 
 ```
 
-### Apply Threshold to Reconstruction
+## Apply Threshold to Reconstruction
 
 ```{r clim_threshold, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -600,48 +419,24 @@ if (!file.exists("./vignettes/data/reconst_tavg_threshold_west_3.rds")) {
   )
   
 }
-
-
-#gdd
-if (!file.exists("./vignettes/data/reconst_gdd_threshold_west.rds")) {
-  reconst_gdd_threshold_west <-
-    reconst_gdd_west %>%
-    purrr::map(
-      .f = function(the.reconst) {
-        apply_threshold(x = the.reconst,
-                        qtile = .995)
-      }
-    )
-  
-  readr::write_rds(reconst_gdd_threshold_west,
-                   "./vignettes/data/reconst_gdd_threshold_west.rds")
-  
-} else if (!exists("reconst_gdd_threshold_west")) {
-  reconst_gdd_threshold_west <-
-    readr::read_rds(here::here("./vignettes/data/reconst_gdd_threshold_west.rds"))
-  
-} else {
-  stop(
-    "The SWUS reconstruction threshold has already been applied. If you would like to re-run the threshold, then delete the file from the directory."
-  )
-}
   
 ```
 
-### Simplify Reconstruction Output
+## Simplify Reconstruction Output
 
 ```{r clim_cleanup, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Simplify tavg
 
 # First, need to update 12 fossil pollen sites age models that have been done using Bacon. Here, we read in the updated age models from individual .csv files.
-setwd("/Volumes/VILLAGE/paleomat/vignettes/data/updated_age_models")
+setwd("./vignettes/data/updated_age_models")
 file_names <- dir()
 updated_age_models <- do.call(rbind,lapply(file_names,read.csv))
-setwd("/Volumes/VILLAGE/paleomat")
+# Return back to parent folder for the paleomat directory.
+setwd("./../../..")
   
 
-# Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
+# Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes two parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
 if (!file.exists("./vignettes/data/reconst_tavg_final_west_3.rds")) {
   reconst_tavg_final_west_3 <-
     simplify_reconstruction(reconstruction.data = reconst_tavg_threshold_west_3,
@@ -668,39 +463,14 @@ if (!file.exists("./vignettes/data/reconst_tavg_final_west_3.rds")) {
   
 }
 
-
-#Simplify GDD
-
-# Put the reconstructed climate data into a tibble, using the simplify_reconstruction function. The function takes to parameters, the full reconstruction dataset (reconstruction.data) and the fossil dataset (with metadata and counts) that was used initially loaded that has all of the metadata. The function will select only the metadata and ignore the pollen counts.
-if (!file.exists("./vignettes/data/reconst_gdd_final_west.rds")) {
-  reconst_gdd_final_west <-
-    simplify_reconstruction(reconstruction.data = reconst_gdd_threshold_west,
-                            fossil.metadata = fossil_metadata_counts_final) %>%
-    # Remove the rows that have NAs for the reconstructed value (i.e., this indicates that there were too few analogues to do a reconstruction). Also, remove rows that do not have an age chronology.
-    tidyr::drop_na(age, value)
-  
-  readr::write_rds(reconst_gdd_final_west,
-                   "./vignettes/data/reconst_gdd_final_west.rds")
-  
-} else if (!exists("reconst_gdd_final_west")) {
-  reconst_gdd_final_west <-
-    readr::read_rds(here::here("./vignettes/data/reconst_gdd_final_west.rds"))
-  
-} else {
-  stop(
-    "The SWUS reconstruction has already been simplified. If you would like to re-run the code, then delete the file from the directory."
-  )
-  
-}
-
 ```
 
 
-### Spatial and Temporal Interpolation
+# Spatial and Temporal Interpolation
 
 ```{r spatiotemporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-#Just temporary as this number is actually calculated in the Data_visualization.rmd
+#Just temporary as the anomaly is actually calculated at the bottom of this code chunk.
 warmest.month = 15.6182926829268
 
 # Put lat and long into individual columns.
@@ -709,14 +479,14 @@ tavg <- reconst_tavg_final_west_3 %>%
   dplyr::group_by(sample.id, month) %>%
   dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
   tidyr::spread(key = col, value = geometry) %>%
-  dplyr::rename(long = "1", lat = "2") %>% 
+  dplyr::rename(long = "1", lat = "2") %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
   dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
   dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
   dplyr::mutate(anom = value - warmest.month)
-  
 
-# After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
+
+# After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not any farther back in time).
 # Also, filter out the earliest date for Sagehen Marsh as there is too large of a time gap between the first point and the next point (about 1102 years [i.e., 600 to 1702]).
 tavg_predicted_west <- tavg %>%
   dplyr::filter(date >= -1400 & date <= 2000) %>%
@@ -749,16 +519,18 @@ tavg_predicted_west <- tavg %>%
   dplyr::select(-site.data) %>%
   dplyr::arrange(site.name) %>%
   unnest_wider(mean_100yrs) %>%
-  dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8)
+  dplyr::rename(mean_100yrs = 6,
+                model_fit = 7,
+                plot_fit = 8)
 
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs <- tavg_predicted_west %>% 
-  dplyr::select(-model_fit, -plot_fit) %>% 
-  tidyr::unnest(mean_100yrs) %>% 
-  dplyr::filter(date >= -1000 & date <= 1800) %>% 
-  dplyr::group_by(date) %>% 
-  tidyr::nest() %>% 
+tavg_100yrs <- tavg_predicted_west %>%
+  dplyr::select(-model_fit,-plot_fit) %>%
+  tidyr::unnest(mean_100yrs) %>%
+  dplyr::filter(date >= -1000 & date <= 1800) %>%
+  dplyr::group_by(date) %>%
+  tidyr::nest() %>%
   dplyr::rename(site.predictions = data)
 
 # Extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
@@ -780,7 +552,7 @@ site.preds.unlisted <-
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
   dplyr::mutate(anom = value - modern)
-    
+
 # here, we nest the data into each time bin.
 site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
   dplyr::group_by(date) %>%
@@ -788,31 +560,40 @@ site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
   dplyr::rename(site.predictions = data)
 
 
-x_range <- as.numeric(c(-112.81446, -105.52416))  # min/max longitude of the interpolation area
-y_range <- as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
+x_range <-
+  as.numeric(c(-112.81446,-105.52416))  # min/max longitude of the interpolation area
+y_range <-
+  as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
 # create an empty grid of values ranging from the xmin-xmax, ymin-ymax
-grd <- expand.grid(x = seq(from = x_range[1],
-                   to = x_range[2], 
-                   by = 1.0),
-                   y = seq(from = y_range[1], to = y_range[2], 
-                       by = 1.0))  # expand points to grid
-coordinates(grd) <- ~x + y
+grd <- expand.grid(
+  x = seq(from = x_range[1],
+          to = x_range[2],
+          by = 0.1),
+  y = seq(from = y_range[1], to = y_range[2],
+          by = 1.0)
+)  
+
+# expand points to grid
+coordinates(grd) <- ~ x + y
 # turn into a spatial pixels object
 gridded(grd) <- TRUE
 
 
-
+# Do the interpolation using the inverse distance weighted method from gstat.
 tavg_idw <-
   purrr::map(
     site.preds.unlisted.anom.nested$site.predictions,
     .f = function(x) {
-      coordinates(x) <- ~long + lat
-      idw_pow2 <- gstat::idw(formula = anom ~ 1,
-                locations = x,
-                newdata = grd,
-                idp = 1)
+      coordinates(x) <- ~ long + lat
+      idw_pow2 <- gstat::idw(
+        formula = anom ~ 1,
+        locations = x,
+        newdata = grd,
+        idp = 1
+      )
       idw_pow3 <- raster(idw_pow2)
-      crs(idw_pow3) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+      crs(idw_pow3) <-
+        "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
       return(idw_pow3)
     }
   )
@@ -823,27 +604,36 @@ names(tavg_idw_stack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "B
 tavg_idw_brick <- raster::stack(tavg_idw)
 names(tavg_idw_brick) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 
-writeRaster(tavg_idw_brick, filename="./output/paleomat-rasters.tif", 
-						options="INTERLEAVE=BAND", overwrite=TRUE)
+writeRaster(
+  tavg_idw_brick,
+  filename = "./output/paleomat-rasters.tif",
+  options = "INTERLEAVE=BAND",
+  overwrite = TRUE
+)
 
-plot(tavg_idw_stack[[1:16]], col = colors)
-plot(tavg_idw_stack[[17:28]], col = colors)
+# plot(tavg_idw_stack[[1:16]], col = colors)
+# plot(tavg_idw_stack[[17:28]], col = colors)
 
 
 # Calculate the anomaly across time for entire area (to produce line graph).
-anom_new <- purrr::map(tavg_idw, cellStats, mean) %>% 
-  as.data.frame() %>% 
-  tidyr::pivot_longer(cols = 1:28) %>% 
-  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
+anom_new <- purrr::map(tavg_idw, cellStats, mean) %>%
+  as.data.frame() %>%
+  tidyr::pivot_longer(cols = 1:28) %>%
+  dplyr::mutate(name = seq(-950, 1750, 100)) %>%
   dplyr::rename(year = name, anom = value)
 
-write.csv(anom_new, "./output/paleomat-temp-anomaly-final.csv", row.names = FALSE)
+# Write results to a csv.
+write.csv(anom_new,
+          "./output/paleomat-temp-anomaly-final.csv",
+          row.names = FALSE)
 
+
+# For figures for journal article, please see "Paleomat Figures.Rmd".
 
 ```
 
 
-
+# END OF SCRIPT
 
 
 
@@ -851,406 +641,404 @@ write.csv(anom_new, "./output/paleomat-temp-anomaly-final.csv", row.names = FALS
 
 
 # Old Stuff
-
-
-### Temporal Interpolation
-
-```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-# Determine what sites have multiple datasets.
-# unique_datasets <- unique(tavg[c("dataset.id", "site.name")])
-# duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>%
-#   unique()
-#list1[!list1 %in% list2]
-
-#Just temporary as this number is actually calculated in the Data_visualization.rmd
-warmest.month = 15.6182926829268
-
-# Put lat and long into individual columns.
-tavg <- reconst_tavg_final_west_3 %>%
-  tidyr::unnest(geometry) %>%
-  dplyr::group_by(sample.id, month) %>%
-  dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
-  tidyr::spread(key = col, value = geometry) %>%
-  dplyr::rename(long = "1", lat = "2") %>%
-  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  dplyr::filter(age < 5950 & age >= 0 & month == 7) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
-  dplyr::mutate(anom = value - warmest.month)
-
-
-# After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time).
-# Also, filter out the earliest date for Sagehen Marsh as there is too large of a time gap between the first point and the next point (about 1102 years [i.e., 600 to 1702]).
-tavg_predicted_west <- tavg %>%
-  dplyr::filter(date >= -1400 & date <= 2000) %>%
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-  dplyr::filter(!(site.id == 2241 & date <= 1600)) %>%
-  dplyr::group_by(site.id, site.name, elev, long, lat) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.data = data) %>%
-  dplyr::mutate(site.data = purrr::map(site.data,
-                                       function(x) {
-                                         x %>%
-                                           dplyr::group_by(age) %>%
-                                           dplyr::mutate(
-                                             value = mean(value),
-                                             error = mean(error),
-                                             anom = mean(anom)
-                                           ) %>%
-                                           dplyr::distinct(age, .keep_all = TRUE) %>%
-                                           dplyr::arrange(age)
-                                       })) %>%
-  # sf::st_as_sf(coords = c("long", "lat"),
-  #                crs = 4326) %>%
-  dplyr::mutate(mean_100yrs = purrr::map(
-    site.data,
-    .f = function(x) {
-      interpolate_time(temp_data = x,
-                       model = "tps")
-    }
-  )) %>%
-  dplyr::select(-site.data) %>%
-  dplyr::arrange(site.name) %>%
-  unnest_wider(mean_100yrs) %>%
-  dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8)
-
-# Plot results in one PDF.
-plot_objects <- tavg_predicted_west$plot_fit
-names(plot_objects) <- c(tavg_predicted_west$site.name)
-
-plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=1, ncol=1, top=quote(names(plot_objects)[g]))
-
-# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/site_temporal_interpolation_west.pdf", plot_objects_arranged, scale = 1.5)
-
-
-# Get number of samples for each site.
-no.samples <- tavg %>%
-  dplyr::filter(date >= -1400 & date <= 2000) %>%
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-  dplyr::group_by(site.id, site.name, elev, long, lat) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.data = data) %>%
-  dplyr::mutate(samples = purrr::map(
-    site.data,
-    .f = function(x) {
-      nrow(x)
-    }
-  ))
-
-
-```
-
-
-### Thin Plate Spline Regression (TPS) and Mapping
-
-```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-# Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs <- tavg_predicted_west %>%
-  dplyr::select(-model_fit, -plot_fit) %>%
-  tidyr::unnest(mean_100yrs) %>%
-  dplyr::filter(date >= -1000 & date <= 1800) %>%
-  dplyr::group_by(date) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.predictions = data)
-
-# Get site locations.
-fossil.locs <- tavg %>%
-  dplyr::group_by(site.name) %>%
-  dplyr::slice(1) %>%
-  dplyr::filter(date >= -1400 & date <= 2000) %>%
-  dplyr::select(site.id, site.name, long, lat)
-
-#Get the elevation dataset.
-NED <-
-  raster::raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif")
-# Temporarily re-projecting at a lower resolution that the code runs faster.
-NED <- raster::aggregate(NED, fact = 10)
-NED <-
-  raster::projectRaster(NED, crs = CRS("+init=epsg:4326"))
-
-# Get the PRISM modern July temperature dataset.
-modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>%
-  raster::subset(7)
-
-temp.raster <-
-  raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
-
-# Resample NED so that it is the same resolution and scale as temp.raster.
-bbox_buffer <- c(
-  "xmin" = min(fossil.locs$long) - 1,
-  "ymin" = min(fossil.locs$lat) - 1,
-  "xmax" = max(fossil.locs$long) + 1,
-  "ymax" = max(fossil.locs$lat) + 1
-)  %>%
-  sf::st_bbox() %>%
-  sf::st_as_sfc() %>%
-  sf::st_as_sf(crs = 4326) %>%
-  sf::st_transform(crs = 4326)
-
-temp.raster.cropped <- raster::crop(temp.raster, bbox_buffer)
-NED.raster.cropped <- raster::crop(NED, bbox_buffer)
-
-NED.raster.cropped <- projectRaster(NED.raster.cropped, temp.raster.cropped, method = 'ngb')
-
-# Do the thin plate spline regression and return interpolated temperature raster and standard error raster for each time period.
-tavg_preds_refined <-
-  purrr::map(
-    tavg_100yrs$site.predictions,
-    .f = function(x) {
-      map_predictions(
-        site.preds = tavg_100yrs$site.predictions[[1]],
-        site.locs = fossil.locs,
-        raster.data = temp.raster.cropped,
-        nfraction.df = NA,
-        rast.extrap = FALSE
-      )
-    }
-  )
-
-# Save the data as RDS files.
-saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west.RDS")
-
-# Calculate anomaly for each time period using the modern PRISM data for July.
-tavg_preds_temp <- purrr::map(tavg_preds, 1)
-tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - raster(raster.data.list)})
-
-# Save the anomaly data as RDS files.
-saveRDS(tavg_preds_anom, file = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west_anomaly.RDS")
-
-# Create a raster stack.
-tavg_rstack <- raster::stack(tavg_preds_anom)
-# Create a raster brick.
-tavg_rbrick <- raster::brick(tavg_preds_anom)
-
-# Rename the layers.
-names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-# names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD")
-
-# Define custom color palette.
-colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255)
-plot(tavg_preds_anom[[1]], col=colors)
-
-# Create maps from ggplot
-library(maps)
-data(us.cities)
-
-names(tavg_preds_anom) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-
-anomaly_plots <-
-  purrr::map2(
-    .x = tavg_preds_anom, .y = names(tavg_preds_anom),
-    .f =
-      ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE)
-  )
-
-# Arrange all of the plots, then can output below as PDF.
-anomaly_plots_arranged <- gridExtra::marrangeGrob(anomaly_plots, nrow=2, ncol=1, top=NULL)
-
-# Save as one pdf. Use scale here in order for the multi-plots to fit on each page.
-ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_west.pdf", anomaly_plots_arranged, scale = 1.5,
-       width = 210,
-       height = 297,
-       units = "mm")
-
-# Do quick animation with raster::animate.
-tavg_animated <- raster::animate(tavg_rbrick, n =2, col = colors)
-
-# Quick visualization plotting.
-# Levelplot visualization (will put all in the plots viewer side by side, etc.).
-rasterVis::levelplot(tavg_rstack,
-          margin=FALSE,
-          colorkey=list(
-            space='bottom',
-            labels=list(at=-5:5, font=4),
-            axis.line=list(col='black'),
-            width=0.75
-          ),
-          par.settings=list(
-            strip.border=list(col='transparent'),
-            strip.background=list(col='transparent'),
-            axis.line=list(col='transparent')
-          ),
-          scales=list(draw=FALSE),
-          col.regions=colors,
-          at=seq(-5, 5, len=101))
-
-rasterVis::gplot(tavg_rbrick) +
-    geom_tile(aes(fill = value)) +
-    facet_wrap(~ variable) +
-    scale_fill_gradientn(colours = colors) +
-    coord_equal() + theme_classic()
-
-# Visualizing maize over the reconstructions.
-tavg_rbrick3 <- tavg_rbrick[[1:15]]
-usa <- map("state", fill = TRUE, plot = FALSE)
-par(mfrow=c(5,3), mai = c(.2, .35, .3, .3))
-for (ii in 1:nlayers(tavg_rbrick3)){
-  plot(subset(tavg_rbrick3,ii), main=names(tavg_rbrick3)[ii])
-  plot(MDB[[ii]], main=names(tavg_rbrick3)[ii], pch = 19, cex = 1, add=T)
-  polygon(usa$x, usa$y)
-}
-dev.off()
-
-#Gif animation
-## list file names and read in
-imgs <- list.files("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2/", full.names = TRUE)
-# index = c(28:24, 22:19, 23, 13, 6, 10:12, 14:18, 1:5, 7:9)
-# index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
-# imgs = imgs[order(index)]
-img_list <- lapply(imgs, magick::image_read)
-
-## join the images together
-img_joined <- magick::image_join(img_list)
-
-## animate at 2 frames per second
-img_animated <- magick::image_animate(img_joined, fps = 2)
-
-## view animated image
-img_animated
-
-## save to disk
-magick::image_write(image = img_animated,
-            path = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_NEW.gif")
-
-
-# Calculate the anomaly across time for entire area (to produce line graph).
-anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>%
-  as.data.frame() %>%
-  tidyr::pivot_longer(cols = BC950:AD1750) %>%
-  dplyr::mutate(name = seq(-950, 1750, 100)) %>%
-  ggplot() +
-  geom_line(aes(x = name, y = value))
-
-
-# Get number of samples per time period for each site.
-no.samples <- tavg %>%
-  dplyr::filter(date >= -1400 & date <= 2000) %>%
-  dplyr::filter(!(dataset.id == 250 & date >= 0)) %>%
-  dplyr::group_by(site.name, period) %>%
-  dplyr::mutate(no.samples = length(anom)) %>%
-  dplyr::slice(1) %>%
-  dplyr::select(site.id, site.name, date, period, no.samples) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(-period, -site.name) %>%
-  dplyr::mutate(date = DescTools::RoundTo(x = date, multiple = 100, FUN = floor)) %>%
-  dplyr::group_by(site.id, date) %>%
-  dplyr::mutate(no.samples = sum(no.samples)) %>%
-  dplyr::slice(1)
-
-ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep = FALSE) %>%
-  dplyr::mutate(no.samples = dplyr::coalesce(no.samples, 0))
-
-
-
-temp_extract <- tavg_100yrs %>%
-  ungroup() %>%
-  dplyr::mutate(preds_anom = tavg_preds_anom) %>%
-  rowwise() %>%
-  dplyr::mutate(new_anom = raster::extract(preds_anom, site.predictions %>% dplyr::select(long, lat)) %>% list())
-
-
-  dplyr::mutate(new = purrr::map2(.x = site.predictions, .y = tavg_preds_anom, function(x, y){
-  raster::extract(x = y, y = x %>% dplyr::select(long, lat))
-}))
-
-raster.anom <- temp_extract %>%
-  ungroup() %>%
-  unnest(cols = new_anom) %>%
-  dplyr::select(new_anom)
-
-temp_extract2 <- tavg_100yrs %>%
-  ungroup() %>%
-  unnest(cols = site.predictions)
-
-raster.anom <- cbind(temp_extract2, raster.anom)
-
-
-# BC950 <- tavg_preds_anom[[1]]
-# BC950_points <- tavg_100yrs[1,]$site.predictions[[1]]
-#
-# new <- raster::extract(BC950, BC950_points %>% dplyr::select(long, lat))
-
-
-
-# Alternative for getting anomaly. Here, I extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
-site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions)
-modern_temperature <-
-  as.data.frame(
-    raster::extract(
-      x = temp.raster,
-      y = site.preds.unlisted %>% ungroup() %>%
-        dplyr::select(long, lat)
-    )
-  ) %>%
-  dplyr::rename(modern = 1)
-
-site.preds.unlisted <-
-  cbind(site.preds.unlisted, modern_temperature$modern) %>%
-  dplyr::rename(modern = 11)
-
-site.preds.unlisted.anom <- site.preds.unlisted %>%
-  rowwise() %>%
-  dplyr::mutate(anom = value - modern)
-
-# here, we nest the data into each time bin.
-site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
-  dplyr::group_by(date) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.predictions = data)
-
-
-site.preds3 <- site.preds.unlisted.anom.nested$site.predictions[[1]]
-
-
-temp_extract <- tavg_100yrs %>%
-  ungroup() %>%
-  dplyr::mutate(preds_anom = tavg_preds_anom) %>%
-  rowwise() %>%
-  dplyr::mutate(new_anom = raster::extract(preds_anom, site.predictions %>% dplyr::select(long, lat)) %>% list())
-
-
-  dplyr::mutate(new = purrr::map2(.x = site.predictions, .y = tavg_preds_anom, function(x, y){
-  raster::extract(x = y, y = x %>% dplyr::select(long, lat))
-}))
-
-raster.anom <- tavg_100yrs %>%
-  unnest(cols = site.predictions)
-
-
-
-# Alternative for getting anomaly.
-site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions) %>%
-  ungroup() %>%
-  dplyr::mutate(modern = as.data.frame(
-    raster::extract(
-      x = temp.raster,
-      y = site.preds.unlisted %>% ungroup() %>%
-        dplyr::select(long, lat)
-    )z
-  )) %>%
-  dplyr::rename(modern = 11)
-
-site.preds.unlisted.anom <- site.preds.unlisted %>%
-  rowwise() %>%
-  dplyr::mutate(anom = value - modern)
-
-
-# Both.
-anoms_evaluated <- cbind(raster.anom, dplyr::select(site.preds.unlisted.anom, anom)) %>%
-  rowwise() %>%
-  dplyr::mutate(difference = new_anom - anom) %>%
-  ungroup() %>%
-  as.data.frame()
-
-
-dplyr::select(anoms_evaluated, difference) %>% as.data.frame() %>%
-  unlist() %>%
-  as.data.frame() %>%
-  dplyr::rename(anom = 1) %>%
-  ggplot(aes(anom)) +
-    geom_histogram()
-
-
-```
+<!-- ### Temporal Interpolation -->
+
+<!-- ```{r temporal_interpolation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE} -->
+
+<!-- # Determine what sites have multiple datasets. -->
+<!-- # unique_datasets <- unique(tavg[c("dataset.id", "site.name")]) -->
+<!-- # duplicated_sites <- unique_datasets$site.name[duplicated(unique_datasets$site.name, fromLast = TRUE)] %>% -->
+<!-- #   unique() -->
+<!-- #list1[!list1 %in% list2] -->
+
+<!-- #Just temporary as this number is actually calculated in the Data_visualization.rmd -->
+<!-- warmest.month = 15.6182926829268 -->
+
+<!-- # Put lat and long into individual columns. -->
+<!-- tavg <- reconst_tavg_final_west_3 %>% -->
+<!--   tidyr::unnest(geometry) %>% -->
+<!--   dplyr::group_by(sample.id, month) %>% -->
+<!--   dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator -->
+<!--   tidyr::spread(key = col, value = geometry) %>% -->
+<!--   dplyr::rename(long = "1", lat = "2") %>% -->
+<!--   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>% -->
+<!--   dplyr::filter(age < 5950 & age >= 0 & month == 7) %>% -->
+<!--   dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>% -->
+<!--   dplyr::mutate(anom = value - warmest.month) -->
+
+
+<!-- # After more closely examining the Beef Pasture data, the spline was heavily impacted by Petersen's Beef Pasture data. The data more or less produced an extremely smooth spline that led to underfitting. This could be the result of the age model on the Petersen data, which has way fewer dates than the Wright Beef Pasture data. Therefore, I use the Wright data for 1-2000 AD and the Petersen data for the time before 1AD (as the Wright data does not go any farther back in time). -->
+<!-- # Also, filter out the earliest date for Sagehen Marsh as there is too large of a time gap between the first point and the next point (about 1102 years [i.e., 600 to 1702]). -->
+<!-- tavg_predicted_west <- tavg %>% -->
+<!--   dplyr::filter(date >= -1400 & date <= 2000) %>% -->
+<!--   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% -->
+<!--   dplyr::filter(!(site.id == 2241 & date <= 1600)) %>% -->
+<!--   dplyr::group_by(site.id, site.name, elev, long, lat) %>% -->
+<!--   tidyr::nest() %>% -->
+<!--   dplyr::rename(site.data = data) %>% -->
+<!--   dplyr::mutate(site.data = purrr::map(site.data, -->
+<!--                                        function(x) { -->
+<!--                                          x %>% -->
+<!--                                            dplyr::group_by(age) %>% -->
+<!--                                            dplyr::mutate( -->
+<!--                                              value = mean(value), -->
+<!--                                              error = mean(error), -->
+<!--                                              anom = mean(anom) -->
+<!--                                            ) %>% -->
+<!--                                            dplyr::distinct(age, .keep_all = TRUE) %>% -->
+<!--                                            dplyr::arrange(age) -->
+<!--                                        })) %>% -->
+<!--   # sf::st_as_sf(coords = c("long", "lat"), -->
+<!--   #                crs = 4326) %>% -->
+<!--   dplyr::mutate(mean_100yrs = purrr::map( -->
+<!--     site.data, -->
+<!--     .f = function(x) { -->
+<!--       interpolate_time(temp_data = x, -->
+<!--                        model = "tps") -->
+<!--     } -->
+<!--   )) %>% -->
+<!--   dplyr::select(-site.data) %>% -->
+<!--   dplyr::arrange(site.name) %>% -->
+<!--   unnest_wider(mean_100yrs) %>% -->
+<!--   dplyr::rename(mean_100yrs = 6, model_fit = 7, plot_fit = 8) -->
+
+<!-- # Plot results in one PDF. -->
+<!-- plot_objects <- tavg_predicted_west$plot_fit -->
+<!-- names(plot_objects) <- c(tavg_predicted_west$site.name) -->
+
+<!-- plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=1, ncol=1, top=quote(names(plot_objects)[g])) -->
+
+<!-- # Save as one pdf. Use scale here in order for the multi-plots to fit on each page. -->
+<!-- ggsave("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/Misc/site_temporal_interpolation_west.pdf", plot_objects_arranged, scale = 1.5) -->
+
+
+<!-- # Get number of samples for each site. -->
+<!-- no.samples <- tavg %>% -->
+<!--   dplyr::filter(date >= -1400 & date <= 2000) %>% -->
+<!--   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% -->
+<!--   dplyr::group_by(site.id, site.name, elev, long, lat) %>% -->
+<!--   tidyr::nest() %>% -->
+<!--   dplyr::rename(site.data = data) %>% -->
+<!--   dplyr::mutate(samples = purrr::map( -->
+<!--     site.data, -->
+<!--     .f = function(x) { -->
+<!--       nrow(x) -->
+<!--     } -->
+<!--   )) -->
+
+
+<!-- ``` -->
+
+
+<!-- ### Thin Plate Spline Regression (TPS) and Mapping -->
+
+<!-- ```{r mapping_tps, cache=TRUE, results='asis', echo=FALSE, warning=FALSE} -->
+
+<!-- # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years. -->
+<!-- tavg_100yrs <- tavg_predicted_west %>% -->
+<!--   dplyr::select(-model_fit, -plot_fit) %>% -->
+<!--   tidyr::unnest(mean_100yrs) %>% -->
+<!--   dplyr::filter(date >= -1000 & date <= 1800) %>% -->
+<!--   dplyr::group_by(date) %>% -->
+<!--   tidyr::nest() %>% -->
+<!--   dplyr::rename(site.predictions = data) -->
+
+<!-- # Get site locations. -->
+<!-- fossil.locs <- tavg %>% -->
+<!--   dplyr::group_by(site.name) %>% -->
+<!--   dplyr::slice(1) %>% -->
+<!--   dplyr::filter(date >= -1400 & date <= 2000) %>% -->
+<!--   dplyr::select(site.id, site.name, long, lat) -->
+
+<!-- #Get the elevation dataset. -->
+<!-- NED <- -->
+<!--   raster::raster("/Volumes/DATA/NED/EXTRACTIONS/UUSS_NED_1.tif") -->
+<!-- # Temporarily re-projecting at a lower resolution that the code runs faster. -->
+<!-- NED <- raster::aggregate(NED, fact = 10) -->
+<!-- NED <- -->
+<!--   raster::projectRaster(NED, crs = CRS("+init=epsg:4326")) -->
+
+<!-- # Get the PRISM modern July temperature dataset. -->
+<!-- modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>% -->
+<!--   raster::subset(7) -->
+
+<!-- temp.raster <- -->
+<!--   raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326")) -->
+
+<!-- # Resample NED so that it is the same resolution and scale as temp.raster. -->
+<!-- bbox_buffer <- c( -->
+<!--   "xmin" = min(fossil.locs$long) - 1, -->
+<!--   "ymin" = min(fossil.locs$lat) - 1, -->
+<!--   "xmax" = max(fossil.locs$long) + 1, -->
+<!--   "ymax" = max(fossil.locs$lat) + 1 -->
+<!-- )  %>% -->
+<!--   sf::st_bbox() %>% -->
+<!--   sf::st_as_sfc() %>% -->
+<!--   sf::st_as_sf(crs = 4326) %>% -->
+<!--   sf::st_transform(crs = 4326) -->
+
+<!-- temp.raster.cropped <- raster::crop(temp.raster, bbox_buffer) -->
+<!-- NED.raster.cropped <- raster::crop(NED, bbox_buffer) -->
+
+<!-- NED.raster.cropped <- projectRaster(NED.raster.cropped, temp.raster.cropped, method = 'ngb') -->
+
+<!-- # Do the thin plate spline regression and return interpolated temperature raster and standard error raster for each time period. -->
+<!-- tavg_preds_refined <- -->
+<!--   purrr::map( -->
+<!--     tavg_100yrs$site.predictions, -->
+<!--     .f = function(x) { -->
+<!--       map_predictions( -->
+<!--         site.preds = tavg_100yrs$site.predictions[[1]], -->
+<!--         site.locs = fossil.locs, -->
+<!--         raster.data = temp.raster.cropped, -->
+<!--         nfraction.df = NA, -->
+<!--         rast.extrap = FALSE -->
+<!--       ) -->
+<!--     } -->
+<!--   ) -->
+
+<!-- # Save the data as RDS files. -->
+<!-- saveRDS(tavg_preds, file = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west.RDS") -->
+
+<!-- # Calculate anomaly for each time period using the modern PRISM data for July. -->
+<!-- tavg_preds_temp <- purrr::map(tavg_preds, 1) -->
+<!-- tavg_preds_anom <- purrr::map(tavg_preds_temp, function(x){x - raster(raster.data.list)}) -->
+
+<!-- # Save the anomaly data as RDS files. -->
+<!-- saveRDS(tavg_preds_anom, file = "/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/temp_rasters_convex_west_anomaly.RDS") -->
+
+<!-- # Create a raster stack. -->
+<!-- tavg_rstack <- raster::stack(tavg_preds_anom) -->
+<!-- # Create a raster brick. -->
+<!-- tavg_rbrick <- raster::brick(tavg_preds_anom) -->
+
+<!-- # Rename the layers. -->
+<!-- names(tavg_rstack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750") -->
+<!-- # names(tavg_preds) <- c("1000BC","900BC","800BC", "700BC", "600BC","500BC", "400BC", "300BC", "200BC", "100BC", "1AD", "100AD", "200AD", "300AD", "400AD", "500AD", "600AD", "700AD", "800AD","900AD", "100AD0", "1100AD", "1200AD", "1300AD", "1400AD", "1500AD", "1600AD", "1700AD", "1800AD") -->
+
+<!-- # Define custom color palette. -->
+<!-- colors <- colorRampPalette(rev(RColorBrewer::brewer.pal(11,"RdBu")))(255) -->
+<!-- plot(tavg_preds_anom[[1]], col=colors) -->
+
+<!-- # Create maps from ggplot -->
+<!-- library(maps) -->
+<!-- data(us.cities) -->
+
+<!-- names(tavg_preds_anom) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750") -->
+
+<!-- anomaly_plots <- -->
+<!--   purrr::map2( -->
+<!--     .x = tavg_preds_anom, .y = names(tavg_preds_anom), -->
+<!--     .f = -->
+<!--       ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, animation = FALSE) -->
+<!--   ) -->
+
+<!-- # Arrange all of the plots, then can output below as PDF. -->
+<!-- anomaly_plots_arranged <- gridExtra::marrangeGrob(anomaly_plots, nrow=2, ncol=1, top=NULL) -->
+
+<!-- # Save as one pdf. Use scale here in order for the multi-plots to fit on each page. -->
+<!-- ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_west.pdf", anomaly_plots_arranged, scale = 1.5, -->
+<!--        width = 210, -->
+<!--        height = 297, -->
+<!--        units = "mm") -->
+
+<!-- # Do quick animation with raster::animate. -->
+<!-- tavg_animated <- raster::animate(tavg_rbrick, n =2, col = colors) -->
+
+<!-- # Quick visualization plotting. -->
+<!-- # Levelplot visualization (will put all in the plots viewer side by side, etc.). -->
+<!-- rasterVis::levelplot(tavg_rstack, -->
+<!--           margin=FALSE, -->
+<!--           colorkey=list( -->
+<!--             space='bottom', -->
+<!--             labels=list(at=-5:5, font=4), -->
+<!--             axis.line=list(col='black'), -->
+<!--             width=0.75 -->
+<!--           ), -->
+<!--           par.settings=list( -->
+<!--             strip.border=list(col='transparent'), -->
+<!--             strip.background=list(col='transparent'), -->
+<!--             axis.line=list(col='transparent') -->
+<!--           ), -->
+<!--           scales=list(draw=FALSE), -->
+<!--           col.regions=colors, -->
+<!--           at=seq(-5, 5, len=101)) -->
+
+<!-- rasterVis::gplot(tavg_rbrick) + -->
+<!--     geom_tile(aes(fill = value)) + -->
+<!--     facet_wrap(~ variable) + -->
+<!--     scale_fill_gradientn(colours = colors) + -->
+<!--     coord_equal() + theme_classic() -->
+
+<!-- # Visualizing maize over the reconstructions. -->
+<!-- tavg_rbrick3 <- tavg_rbrick[[1:15]] -->
+<!-- usa <- map("state", fill = TRUE, plot = FALSE) -->
+<!-- par(mfrow=c(5,3), mai = c(.2, .35, .3, .3)) -->
+<!-- for (ii in 1:nlayers(tavg_rbrick3)){ -->
+<!--   plot(subset(tavg_rbrick3,ii), main=names(tavg_rbrick3)[ii]) -->
+<!--   plot(MDB[[ii]], main=names(tavg_rbrick3)[ii], pch = 19, cex = 1, add=T) -->
+<!--   polygon(usa$x, usa$y) -->
+<!-- } -->
+<!-- dev.off() -->
+
+<!-- #Gif animation -->
+<!-- ## list file names and read in -->
+<!-- imgs <- list.files("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2/", full.names = TRUE) -->
+<!-- # index = c(28:24, 22:19, 23, 13, 6, 10:12, 14:18, 1:5, 7:9) -->
+<!-- # index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15) -->
+<!-- # imgs = imgs[order(index)] -->
+<!-- img_list <- lapply(imgs, magick::image_read) -->
+
+<!-- ## join the images together -->
+<!-- img_joined <- magick::image_join(img_list) -->
+
+<!-- ## animate at 2 frames per second -->
+<!-- img_animated <- magick::image_animate(img_joined, fps = 2) -->
+
+<!-- ## view animated image -->
+<!-- img_animated -->
+
+<!-- ## save to disk -->
+<!-- magick::image_write(image = img_animated, -->
+<!--             path = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_NEW.gif") -->
+
+
+<!-- # Calculate the anomaly across time for entire area (to produce line graph). -->
+<!-- anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>% -->
+<!--   as.data.frame() %>% -->
+<!--   tidyr::pivot_longer(cols = BC950:AD1750) %>% -->
+<!--   dplyr::mutate(name = seq(-950, 1750, 100)) %>% -->
+<!--   ggplot() + -->
+<!--   geom_line(aes(x = name, y = value)) -->
+
+
+<!-- # Get number of samples per time period for each site. -->
+<!-- no.samples <- tavg %>% -->
+<!--   dplyr::filter(date >= -1400 & date <= 2000) %>% -->
+<!--   dplyr::filter(!(dataset.id == 250 & date >= 0)) %>% -->
+<!--   dplyr::group_by(site.name, period) %>% -->
+<!--   dplyr::mutate(no.samples = length(anom)) %>% -->
+<!--   dplyr::slice(1) %>% -->
+<!--   dplyr::select(site.id, site.name, date, period, no.samples) %>% -->
+<!--   dplyr::ungroup() %>% -->
+<!--   dplyr::select(-period, -site.name) %>% -->
+<!--   dplyr::mutate(date = DescTools::RoundTo(x = date, multiple = 100, FUN = floor)) %>% -->
+<!--   dplyr::group_by(site.id, date) %>% -->
+<!--   dplyr::mutate(no.samples = sum(no.samples)) %>% -->
+<!--   dplyr::slice(1) -->
+
+<!-- ok3 <- dplyr::left_join(tavg_100yrs, no.samples, by = c("site.id", "date"), keep = FALSE) %>% -->
+<!--   dplyr::mutate(no.samples = dplyr::coalesce(no.samples, 0)) -->
+
+
+
+<!-- temp_extract <- tavg_100yrs %>% -->
+<!--   ungroup() %>% -->
+<!--   dplyr::mutate(preds_anom = tavg_preds_anom) %>% -->
+<!--   rowwise() %>% -->
+<!--   dplyr::mutate(new_anom = raster::extract(preds_anom, site.predictions %>% dplyr::select(long, lat)) %>% list()) -->
+
+
+<!--   dplyr::mutate(new = purrr::map2(.x = site.predictions, .y = tavg_preds_anom, function(x, y){ -->
+<!--   raster::extract(x = y, y = x %>% dplyr::select(long, lat)) -->
+<!-- })) -->
+
+<!-- raster.anom <- temp_extract %>% -->
+<!--   ungroup() %>% -->
+<!--   unnest(cols = new_anom) %>% -->
+<!--   dplyr::select(new_anom) -->
+
+<!-- temp_extract2 <- tavg_100yrs %>% -->
+<!--   ungroup() %>% -->
+<!--   unnest(cols = site.predictions) -->
+
+<!-- raster.anom <- cbind(temp_extract2, raster.anom) -->
+
+
+<!-- # BC950 <- tavg_preds_anom[[1]] -->
+<!-- # BC950_points <- tavg_100yrs[1,]$site.predictions[[1]] -->
+<!-- # -->
+<!-- # new <- raster::extract(BC950, BC950_points %>% dplyr::select(long, lat)) -->
+
+
+
+<!-- # Alternative for getting anomaly. Here, I extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample. -->
+<!-- site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions) -->
+<!-- modern_temperature <- -->
+<!--   as.data.frame( -->
+<!--     raster::extract( -->
+<!--       x = temp.raster, -->
+<!--       y = site.preds.unlisted %>% ungroup() %>% -->
+<!--         dplyr::select(long, lat) -->
+<!--     ) -->
+<!--   ) %>% -->
+<!--   dplyr::rename(modern = 1) -->
+
+<!-- site.preds.unlisted <- -->
+<!--   cbind(site.preds.unlisted, modern_temperature$modern) %>% -->
+<!--   dplyr::rename(modern = 11) -->
+
+<!-- site.preds.unlisted.anom <- site.preds.unlisted %>% -->
+<!--   rowwise() %>% -->
+<!--   dplyr::mutate(anom = value - modern) -->
+
+<!-- # here, we nest the data into each time bin. -->
+<!-- site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>% -->
+<!--   dplyr::group_by(date) %>% -->
+<!--   tidyr::nest() %>% -->
+<!--   dplyr::rename(site.predictions = data) -->
+
+
+<!-- site.preds3 <- site.preds.unlisted.anom.nested$site.predictions[[1]] -->
+
+
+<!-- temp_extract <- tavg_100yrs %>% -->
+<!--   ungroup() %>% -->
+<!--   dplyr::mutate(preds_anom = tavg_preds_anom) %>% -->
+<!--   rowwise() %>% -->
+<!--   dplyr::mutate(new_anom = raster::extract(preds_anom, site.predictions %>% dplyr::select(long, lat)) %>% list()) -->
+
+
+<!--   dplyr::mutate(new = purrr::map2(.x = site.predictions, .y = tavg_preds_anom, function(x, y){ -->
+<!--   raster::extract(x = y, y = x %>% dplyr::select(long, lat)) -->
+<!-- })) -->
+
+<!-- raster.anom <- tavg_100yrs %>% -->
+<!--   unnest(cols = site.predictions) -->
+
+
+
+<!-- # Alternative for getting anomaly. -->
+<!-- site.preds.unlisted <- unnest(tavg_100yrs, cols = site.predictions) %>% -->
+<!--   ungroup() %>% -->
+<!--   dplyr::mutate(modern = as.data.frame( -->
+<!--     raster::extract( -->
+<!--       x = temp.raster, -->
+<!--       y = site.preds.unlisted %>% ungroup() %>% -->
+<!--         dplyr::select(long, lat) -->
+<!--     ) -->
+<!--   )) %>% -->
+<!--   dplyr::rename(modern = 11) -->
+
+<!-- site.preds.unlisted.anom <- site.preds.unlisted %>% -->
+<!--   rowwise() %>% -->
+<!--   dplyr::mutate(anom = value - modern) -->
+
+
+<!-- # Both. -->
+<!-- anoms_evaluated <- cbind(raster.anom, dplyr::select(site.preds.unlisted.anom, anom)) %>% -->
+<!--   rowwise() %>% -->
+<!--   dplyr::mutate(difference = new_anom - anom) %>% -->
+<!--   ungroup() %>% -->
+<!--   as.data.frame() -->
+
+
+<!-- dplyr::select(anoms_evaluated, difference) %>% as.data.frame() %>% -->
+<!--   unlist() %>% -->
+<!--   as.data.frame() %>% -->
+<!--   dplyr::rename(anom = 1) %>% -->
+<!--   ggplot(aes(anom)) + -->
+<!--     geom_histogram() -->
+
+
+<!-- ``` -->

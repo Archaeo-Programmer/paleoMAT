@@ -36,4 +36,5 @@ Imports:
     units,
     rcarbon, 
     DescTools, 
-    fields
+    fields,
+    sf
