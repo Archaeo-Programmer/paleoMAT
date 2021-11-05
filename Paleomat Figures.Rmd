@@ -17,151 +17,7 @@ data(us.cities)
 
 # Figures
 
-```{r fig1, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-# Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
-
-alley2000 <-
-  read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
-  dplyr::mutate(Age = Age * 1000)  %>%
-  dplyr::filter(Age <= 20000)
-
-alley2000 %>%
-  ggplot(aes(x = Age, y = Temperature)) +
-  geom_line() +
-  scale_x_reverse(breaks = seq(0, 20000, 2500)) +
-  theme_classic() +
-  xlab("calibrated years BP") +
-  ylab("Temperature °C") +
-  annotate(
-    "rect",
-    xmin = 11500,
-    xmax = 12800,
-    ymin = min(alley2000$Temperature) - 0.5,
-    ymax = max(alley2000$Temperature),
-    alpha = .2
-  ) +
-  annotate(
-    "text",
-    x = 12150,
-    y = -27.25,
-    label = "Younger \n Dryas",
-    size = 3.5
-  ) +
-  geom_segment(aes(
-    x = 8200,
-    y = -36.5,
-    xend = 8200,
-    yend = -33
-  ),
-  arrow = arrow(length = unit(0.3, "cm"))) +
-  annotate(
-    "text",
-    x = 8200,
-    y = -38,
-    label = "8200 cal yr BP \n cold event",
-    size = 3
-  ) +
-  annotate(
-    "rect",
-    xmin = 4000,
-    xmax = 6000,
-    ymin = min(alley2000$Temperature) - 0.5,
-    ymax = max(alley2000$Temperature),
-    alpha = .2
-  ) +
-  annotate(
-    "text",
-    x = 5000,
-    y = -27.25,
-    label = "northward expansion \n of agriculture",
-    size = 3
-  ) 
-
-# Warmest periods following 5000 BP.
-# 3297.07     -28.748
-# 2068.24    -29.5708
-# 1514.860    -30.4060
-# 964.939    -30.4628
-
-
-# To visualize in BC/AD.
-# alley2000 %>%
-#   dplyr::filter(Age <= 3000) %>% 
-#   dplyr::mutate(date = BPtoBCAD(Age)) %>% 
-#   ggplot(aes(x = date, y = Temperature)) +
-#   geom_line() +
-#   scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
-#   theme_classic() +
-#   xlab("calibrated years BP") +
-#   ylab("Temperature °C") 
-
-
-```
-
-
-```{r fig2, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-# Moberg et al. 2005 low-frequency reconstruction (only).
-Moberg <-
-  read.delim(
-    "./data-raw/nhtemp-moberg2005.txt",
-    header = TRUE,
-    sep = "\t",
-    dec = "."
-  ) [, 1:3] %>%
-  dplyr::filter(LF != -9.9999 & date <= 2000) %>%
-  dplyr::mutate(date = 1950 - date)
-
-ggplot(data = Moberg, aes(x = date, y = LF)) +
-  geom_line(size = 1.5) +
-  xlab("calibrated years BP") +
-  ylab("Temperature Anomaly (°C)") +
-  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
-  scale_x_reverse(breaks = seq(0, 2000, 200),
-                  minor_breaks = seq(100, 1900, 200)) +
-  scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
-  theme_bw() +
-  theme(
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 12,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 14,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 4,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 14,
-      family = "Helvetica",
-      margin = margin(
-        t = 4,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_line(colour = "grey 70"),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 10,
-      b = 5,
-      l = 5
-    )
-  )
-
-```
-
-```{r fig3, fig.cap="Locations of fossil pollen samples used in this study over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution. The grey box indicates the extent of the Upper United States Southwest (Bocinsky and Kohler 2014), and the red box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig1, fig.cap="Locations of fossil pollen samples used in this study over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution. The grey box indicates the extent of the Upper United States Southwest (Bocinsky and Kohler 2014), and the red box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Showing extent of UUSS and the fossil pollen sites.
 
@@ -349,6 +205,151 @@ ggplot() +
 
 ```
 
+```{r fig2, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+# Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
+
+alley2000 <-
+  read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
+  dplyr::mutate(Age = Age * 1000)  %>%
+  dplyr::filter(Age <= 20000)
+
+alley2000 %>%
+  ggplot(aes(x = Age, y = Temperature)) +
+  geom_line() +
+  scale_x_reverse(breaks = seq(0, 20000, 2500)) +
+  theme_classic() +
+  xlab("calibrated years BP") +
+  ylab("Temperature °C") +
+  annotate(
+    "rect",
+    xmin = 11500,
+    xmax = 12800,
+    ymin = min(alley2000$Temperature) - 0.5,
+    ymax = max(alley2000$Temperature),
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 12150,
+    y = -27.25,
+    label = "Younger \n Dryas",
+    size = 3.5
+  ) +
+  geom_segment(aes(
+    x = 8200,
+    y = -36.5,
+    xend = 8200,
+    yend = -33
+  ),
+  arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate(
+    "text",
+    x = 8200,
+    y = -38,
+    label = "8200 cal yr BP \n cold event",
+    size = 3
+  ) +
+  annotate(
+    "rect",
+    xmin = 4000,
+    xmax = 6000,
+    ymin = min(alley2000$Temperature) - 0.5,
+    ymax = max(alley2000$Temperature),
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 5000,
+    y = -27.25,
+    label = "northward expansion \n of agriculture",
+    size = 3
+  ) 
+
+# Warmest periods following 5000 BP.
+# 3297.07     -28.748
+# 2068.24    -29.5708
+# 1514.860    -30.4060
+# 964.939    -30.4628
+
+
+# To visualize in BC/AD.
+# alley2000 %>%
+#   dplyr::filter(Age <= 3000) %>% 
+#   dplyr::mutate(date = BPtoBCAD(Age)) %>% 
+#   ggplot(aes(x = date, y = Temperature)) +
+#   geom_line() +
+#   scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
+#   theme_classic() +
+#   xlab("calibrated years BP") +
+#   ylab("Temperature °C") 
+
+
+```
+
+
+```{r fig3, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+# Moberg et al. 2005 low-frequency reconstruction (only).
+Moberg <-
+  read.delim(
+    "./data-raw/nhtemp-moberg2005.txt",
+    header = TRUE,
+    sep = "\t",
+    dec = "."
+  ) [, 1:3] %>%
+  dplyr::filter(LF != -9.9999 & date <= 2000) %>%
+  dplyr::mutate(date = 1950 - date)
+
+ggplot(data = Moberg, aes(x = date, y = LF)) +
+  geom_line(size = 1.5) +
+  xlab("calibrated years BP") +
+  ylab("Temperature Anomaly (°C)") +
+  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
+  scale_x_reverse(breaks = seq(0, 2000, 200),
+                  minor_breaks = seq(100, 1900, 200)) +
+  scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
+  theme_bw() +
+  geom_vline(xintercept = c(1067, 800, 660, 360)) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 4,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 4,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_line(colour = "grey 70"),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 10,
+      b = 5,
+      l = 5
+    )
+  )
+
+```
+
 ```{r fig4, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Temperature anomaly across time for the spatial extent in each 100 year interval.
@@ -364,6 +365,7 @@ temp_anom %>%
   scale_y_continuous(breaks = seq(-2.5, 0.0, 0.5),
                      limits = c(-2.5, 0.0)) +
   theme_bw() +
+  geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
   annotate(
     "rect",
     xmin = 800,
