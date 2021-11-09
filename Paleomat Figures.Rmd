@@ -3,6 +3,8 @@ title: "Paleomat Figures"
 author: "Andrew Gillreath-Brown"
 date: "10/20/2021"
 output: bookdown::word_document2
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -84,6 +86,9 @@ cities2 <- us.cities %>%
                  long = -108.463050,
                  lat = 37.230299)
 
+cities3 <- cities2
+cities3$name <- trimws(gsub(pattern = "NM|AZ|CO",replacement = "", cities3$name, perl = T))
+
 cities <- cities2  %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
@@ -148,18 +153,23 @@ ggplot() +
     data = bb,
     size = 1,
     fill = NA,
-    colour = "dark grey",
-    alpha = 0.3
+    aes(colour = "darkgrey"),
+    alpha = 0.3,
+    show.legend = "line"
   ) +
   geom_sf(
     data = bb2,
     size = 1,
     fill = NA,
-    colour = "red",
-    alpha = 0.3
+    aes(colour = "red2"),
+    alpha = 0.3,
+    show.legend = "line"
   ) +
+    scale_color_manual(values = c("red2" = "red2", "darkgrey" = "darkgrey"), 
+                       labels = c("This Study", "Bocinsky and Kohler 2014"),
+                       name = "Data Extent") +
   shadowtext::geom_shadowtext(
-    data = cities2,
+    data = cities3,
     aes(x = long, y = lat, label = name),
     nudge_y = 0.265,
     color = "white",
@@ -167,6 +177,11 @@ ggplot() +
   ) +
   xlab("Longitude") +
   ylab("Latitude") +
+  labs(colour = "") 
+  annotate("text", x=-109.75, y=37.25, label= "UTAH", size = 5, fontface = 2, hjust = 1) +
+  annotate("text", x=-108.25, y=37.25, label= "COLORADO", size = 5, fontface = 2, hjust = 0) +
+  annotate("text", x=-109.75, y=36.5, label= "ARIZONA", size = 5, fontface = 2, hjust = 1) +
+  annotate("text", x=-108.25, y=36.5, label= "NEW MEXICO", size = 5, fontface = 2, hjust = 0) +
   theme(
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
