@@ -570,7 +570,7 @@ grd <- expand.grid(
           to = x_range[2],
           by = 0.1),
   y = seq(from = y_range[1], to = y_range[2],
-          by = 1.0)
+          by = 0.1)
 )  
 
 # expand points to grid
