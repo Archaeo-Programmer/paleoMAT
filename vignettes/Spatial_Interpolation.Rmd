@@ -876,7 +876,8 @@ map_predictions2 <-
         # Accepts points but expects them as matrix.
         x = as.matrix(site.preds[, c("long", "lat")]),
         # The dependent variable.
-        Y = site.preds$anom
+        Y = site.preds$anom,
+        df = no.sites * nfraction.df
       )
     }
 
@@ -935,7 +936,7 @@ tavg_preds_new <-
         site.preds = x,
         site.locs = fossil.locs,
         raster.data = ras,
-        nfraction.df = NA,
+        nfraction.df = 0.6,
         rast.extrap = FALSE
       )
     }
