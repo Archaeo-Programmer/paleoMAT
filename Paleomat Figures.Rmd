@@ -865,3 +865,103 @@ knitr::kable(fossil.locs2,
              caption = "Metadata for the fossil pollen records used in this study.")
 
 ```
+
+
+
+# Supplementary Figures
+
+```{r supp_fig1, fig.cap="Temporal interpolation of temperature reconstruction for each fossil pollen site.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+temporal_interpolations <- readRDS("./output/temporal_interpolations.rds")
+
+# Plot results in one PDF.
+plot_objects <- temporal_interpolations$plot_fit
+names(plot_objects) <- c(temporal_interpolations$site.name)
+
+ok <- ggpubr::ggarrange(plotlist= plot_objects,
+                    labels = c(names(plot_objects)),
+                    ncol = 4, nrow = 9, vjust = -0.5)
+
+annotate_figure(ok, top = text_grob("", 
+               color = "red", face = "bold", size = 14))
+
+# plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=7, ncol=5, top=quote(names(plot_objects)[g]))
+# ggsave("./output/temporal_interpolations_plots.pdf", plot_objects_arranged, scale = 1.5)
+
+
+# Plot anomaly through time for each site.
+site_anomaly <- site.preds.unlisted.anom %>% 
+  dplyr::group_by(site.id) %>%
+  tidyr::nest()
+
+
+int_anom_plot <- function(x) {
+  ggplot(data = x,
+         aes(x = date,
+             y = anom)) +
+    geom_line(colour = "red", size = 1.0) +
+    xlab("Year BC/AD") +
+    ylab("Temperature Anomaly (°C)") +
+    scale_x_continuous(breaks = seq(-1000, 1800, 200),
+                       minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
+    # scale_y_continuous(breaks = seq((
+    #   DescTools::RoundTo(min(fit$value), multiple = 0.5, FUN = floor)
+    # ), (
+    #   DescTools::RoundTo(max(fit$value), multiple = 0.5, FUN = ceiling)
+    # ), 0.5)) +
+    theme_bw() +
+    theme(
+      panel.border = element_blank(),
+      panel.grid.major = element_blank(),
+      axis.text = element_text(
+        size = 10,
+        colour = "black",
+        family = "Helvetica"
+      ),
+      axis.title.y = element_text(
+        size = 12,
+        family = "Helvetica",
+        margin = margin(
+          t = 10,
+          r = 20,
+          b = 10,
+          l = 10
+        )
+      ),
+      axis.title.x = element_text(
+        size = 12,
+        family = "Helvetica",
+        margin = margin(
+          t = 20,
+          r = 10,
+          b = 10,
+          l = 10
+        )
+      ),
+      panel.grid.minor = element_line(colour = "light grey"),
+      axis.line = element_line(colour = "black"),
+      legend.text = element_text(size = 10, family = "Helvetica"),
+      legend.title = element_text(size = 11, family = "Helvetica")
+    )
+}
+
+
+plot_objects2 <- purrr::map(site_anomaly$data, int_anom_plot)
+
+ok3 <- purrr::map(plot_objects2, 1) 
+ok3 <- lapply(ok3, `[[`, 2)
+ok3 <- lapply(ok3, `[`, 1) %>% unlist()
+
+names(plot_objects2) <- c(ok3)
+
+
+ok2 <- ggpubr::ggarrange(plotlist= plot_objects2,
+                    labels = c(names(plot_objects2)),
+                    ncol = 4, nrow = 9, vjust = -0.5)
+
+annotate_figure(ok2, top = text_grob("", 
+               color = "red", face = "bold", size = 14))
+
+```
+
+

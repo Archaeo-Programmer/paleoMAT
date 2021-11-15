@@ -523,6 +523,7 @@ tavg_predicted_west <- tavg %>%
                 model_fit = 7,
                 plot_fit = 8)
 
+saveRDS(tavg_predicted_west, "./output/temporal_interpolations.rds")
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
 tavg_100yrs <- tavg_predicted_west %>%
