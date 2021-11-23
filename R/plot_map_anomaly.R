@@ -43,7 +43,7 @@ plot_map_anomaly <-
         geom_raster(
           data = temperature_transformed,
           aes(x = x, y = y, fill = layer),
-          alpha = 0.5,
+          alpha = 0.55,
           na.rm = TRUE
         ) +
         scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
@@ -56,12 +56,12 @@ plot_map_anomaly <-
                            limits = c(-113,-105.5)) +
         scale_y_continuous(breaks = seq(33.5, 38.0, 0.5),
                            limits = c(33.5, 38.0)) +
-        geom_sf(
-          data = usa,
-          color = "#2b2b2b",
-          fill = "transparent",
-          size = 0.25
-        ) +
+        # geom_sf(
+        #   data = usa,
+        #   color = "#2b2b2b",
+        #   fill = "transparent",
+        #   size = 0.25
+        # ) +
         xlab("Longitude") +
         ylab("Latitude") +
         ggtitle(title.name) +
@@ -98,7 +98,7 @@ plot_map_anomaly <-
             size = 18,
             family = "Helvetica"
           ),
-          panel.grid.minor = element_line(colour = "light grey"),
+          panel.grid.minor = element_blank(),
           axis.line = element_line(colour = "black"),
           legend.text = element_text(size = 13, family = "Helvetica"),
           legend.title = element_text(size = 14, family = "Helvetica")
@@ -118,7 +118,7 @@ plot_map_anomaly <-
         geom_raster(
           data = temperature_transformed,
           aes(x = x, y = y, fill = layer),
-          alpha = 0.8,
+          alpha = 0.55,
           na.rm = TRUE
         ) +
         scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
@@ -131,12 +131,12 @@ plot_map_anomaly <-
                            limits = c(-113,-105.5)) +
         scale_y_continuous(breaks = seq(33.5, 38.0, 0.5),
                            limits = c(33.5, 38.0)) +
-        geom_sf(
-          data = usa,
-          color = "#2b2b2b",
-          fill = "transparent",
-          size = 0.5
-        ) +
+        # geom_sf(
+        #   data = usa,
+        #   color = "#2b2b2b",
+        #   fill = "transparent",
+        #   size = 0.5
+        # ) +
         geom_sf(
           data = cities_sf,
           shape = 23,

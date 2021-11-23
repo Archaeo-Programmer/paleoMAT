@@ -855,8 +855,12 @@ NED.raster.cropped2 <- raster::crop(NED, bbox_buffer2)
 
 NED.raster.cropped2 <-  projectRaster(NED.raster.cropped2,tavg_preds_anom2_stdz[[1]],method = 'ngb')
 
-slope <- terrain(vep3_ned, opt='slope')
-aspect <- terrain(vep3_ned, opt='aspect')
+vep3_ned2 <- raster("EXTRACTIONS/vep3/NED/vep3_NED_1.tif")
+vep3_ned2 <- raster::aggregate(vep3_ned2, fact = 3)
+vep3_ned2 <-  projectRaster(vep3_ned2,tavg_preds_anom2_stdz[[1]],method = 'ngb')
+
+slope <- terrain(vep3_ned2, opt='slope')
+aspect <- terrain(vep3_ned2, opt='aspect')
 dsm.hill <- hillShade(slope, aspect,
                       angle=40,
                       direction=270)
@@ -882,6 +886,8 @@ ggsave("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_a
        width = 210,
        height = 297,
        units = "mm")
+
+transition_manual(date)
 
 # Do quick animation with raster::animate.
 tavg_animated <- raster::animate(tavg_rbrick, n =2, col = colors)
@@ -924,7 +930,16 @@ dev.off()
 
 #Gif animation
 ## list file names and read in
-imgs <- list.files("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2/", full.names = TRUE)
+imgs <- list.files("/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_3/", full.names = TRUE)
+
+# Put them in the correct order.
+bfile.names <- sub("\\..*$", "", basename(imgs))
+year.names <-
+ c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+year.number <- match(bfile.names, year.names)
+imgs <- imgs[ order(year.number) ]
+
+
 # index = c(28:24, 22:19, 23, 13, 6, 10:12, 14:18, 1:5, 7:9)
 # index = c(4, 3, 2, 1, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15)
 # imgs = imgs[order(index)]
@@ -934,23 +949,99 @@ img_list <- lapply(imgs, magick::image_read)
 img_joined <- magick::image_join(img_list)
 
 ## animate at 2 frames per second
-img_animated <- magick::image_animate(img_joined, fps = 2)
+img_animated2 <- magick::image_animate(img_joined, fps = 20)
 
 ## view animated image
 img_animated
 
 ## save to disk
-magick::image_write(image = img_animated,
-                    path = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_NEW.gif")
+magick::image_write(image = img_animated2,
+                    path = "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/anomaly_plots_arranged_USGS2.gif")
+
+
 
 
 # Calculate the anomaly across time for entire area (to produce line graph).
-anom <- purrr::map(tavg_preds_anom, cellStats, mean) %>%
+anom2 <- purrr::map(tavg_preds_anom2_stdz, cellStats, mean, na.rm = TRUE) %>%
   as.data.frame() %>%
   tidyr::pivot_longer(cols = BC950:AD1750) %>%
   dplyr::mutate(name = seq(-950, 1750, 100)) %>%
+  dplyr::mutate(value = (value - mean(value)) / sd(value)) %>% 
   ggplot() +
   geom_line(aes(x = name, y = value))
+
+anom2 %>%
+  ggplot() +
+  geom_line(aes(x = name, y = value), colour = "red", size = 1.0) +
+  xlab("Year BC/AD") +
+  ylab("July Temperature Anomaly (°C)") +
+  scale_x_continuous(breaks = seq(-1000, 1800, 200),
+                     minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
+  scale_y_continuous(breaks = seq(-2.0, 2.5, 0.5),
+                     limits = c(-2.0, 2.5)) +
+  theme_bw() +
+  # geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
+  annotate(
+    "rect",
+    xmin = 800,
+    xmax = 1200,
+    ymin = -2.0,
+    ymax = 2.5,
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 1000,
+    y = 2.25,
+    label = "Medieval Warm \n Period",
+    size = 4.5
+  ) +
+    annotate(
+    "rect",
+    xmin = 1400,
+    xmax = 1800,
+    ymin = -2.0,
+    ymax = 2.5,
+    alpha = .2
+  ) +
+  annotate(
+    "text",
+    x = 1600,
+    y = 2.25,
+    label = "Little Ice \n Age",
+    size = 4.5
+  ) +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 12,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 6,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 14,
+      family = "Helvetica",
+      margin = margin(
+        t = 6,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black")
+  )
 
 
 # Get number of samples per time period for each site.
