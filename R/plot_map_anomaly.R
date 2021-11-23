@@ -1,5 +1,5 @@
 plot_map_anomaly <-
-  function(x, x.name, us.cities, cities = FALSE, animation = FALSE) {
+  function(x, x.name, us.cities, hillshade, cities = FALSE, animation = FALSE) {
     title.name <- x.name
     temperature <- x
 
@@ -21,7 +21,7 @@ plot_map_anomaly <-
                      long = -108.463050,
                      lat = 37.230299)
 
-    cities <- cities2  %>%
+    cities_sf <- cities2  %>%
       sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
     crs(temperature) <-
@@ -31,16 +31,23 @@ plot_map_anomaly <-
 
 
     if (cities == FALSE) {
-
       anomaly_plots <- ggplot() +
+        ggplot2::geom_raster(data = hillshade,
+                             mapping = aes(x = x,
+                                           y = y,
+                                           alpha = value),
+                             na.rm = TRUE) +
+        # use the "alpha hack"
+        scale_alpha(name = "", range = c(0.8, 0),
+                    na.value = 0, guide = "none")  +
         geom_raster(
           data = temperature_transformed,
-          aes(x = x, y = y, fill = var1.pred),
-          alpha = 0.8,
+          aes(x = x, y = y, fill = layer),
+          alpha = 0.5,
           na.rm = TRUE
         ) +
         scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-                             limits = c(-5,5),
+                             limits = c(-4.5 ,4.5),
                              na.value = "transparent",
                              name = "Anomaly °C") +
         coord_equal() +
@@ -53,7 +60,7 @@ plot_map_anomaly <-
           data = usa,
           color = "#2b2b2b",
           fill = "transparent",
-          size = 0.5
+          size = 0.25
         ) +
         xlab("Longitude") +
         ylab("Latitude") +
@@ -67,7 +74,7 @@ plot_map_anomaly <-
             family = "Helvetica"
           ),
           axis.title.y = element_text(
-            size = 20,
+            size = 15,
             family = "Helvetica",
             margin = margin(
               t = 10,
@@ -77,7 +84,7 @@ plot_map_anomaly <-
             )
           ),
           axis.title.x = element_text(
-            size = 20,
+            size = 15,
             family = "Helvetica",
             margin = margin(
               t = 10,
@@ -88,26 +95,34 @@ plot_map_anomaly <-
           ),
           plot.title = element_text(
             hjust = 0.5,
-            size = 24,
+            size = 18,
             family = "Helvetica"
           ),
           panel.grid.minor = element_line(colour = "light grey"),
           axis.line = element_line(colour = "black"),
           legend.text = element_text(size = 13, family = "Helvetica"),
-          legend.title = element_text(size = 15, family = "Helvetica")
+          legend.title = element_text(size = 14, family = "Helvetica")
         )
 
     } else {
 
       anomaly_plots <- ggplot() +
+        ggplot2::geom_raster(data = hillshade,
+                             mapping = aes(x = x,
+                                           y = y,
+                                           alpha = value),
+                             na.rm = TRUE) +
+        # use the "alpha hack"
+        scale_alpha(name = "", range = c(0.8, 0),
+                    na.value = 0, guide = "none")  +
         geom_raster(
           data = temperature_transformed,
-          aes(x = x, y = y, fill = var1.pred),
+          aes(x = x, y = y, fill = layer),
           alpha = 0.8,
           na.rm = TRUE
         ) +
         scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-                             limits = c(-8,8),
+                             limits = c(-4.5 ,4.5),
                              na.value = "transparent",
                              name = "Anomaly °C") +
         coord_equal() +
@@ -123,7 +138,7 @@ plot_map_anomaly <-
           size = 0.5
         ) +
         geom_sf(
-          data = cities,
+          data = cities_sf,
           shape = 23,
           fill = "blue",
           size = 3
@@ -146,7 +161,7 @@ plot_map_anomaly <-
             family = "Helvetica"
           ),
           axis.title.y = element_text(
-            size = 20,
+            size = 15,
             family = "Helvetica",
             margin = margin(
               t = 10,
@@ -156,7 +171,7 @@ plot_map_anomaly <-
             )
           ),
           axis.title.x = element_text(
-            size = 20,
+            size = 15,
             family = "Helvetica",
             margin = margin(
               t = 10,
@@ -167,100 +182,22 @@ plot_map_anomaly <-
           ),
           plot.title = element_text(
             hjust = 0.5,
-            size = 24,
+            size = 18,
             family = "Helvetica"
           ),
           panel.grid.minor = element_line(colour = "light grey"),
           axis.line = element_line(colour = "black"),
           legend.text = element_text(size = 13, family = "Helvetica"),
-          legend.title = element_text(size = 15, family = "Helvetica")
+          legend.title = element_text(size = 14, family = "Helvetica")
         )
 
 
     }
 
-    anomaly_plots <- ggplot() +
-      geom_raster(
-        data = temperature_transformed,
-        aes(x = x, y = y, fill = var1.pred),
-        alpha = 0.8,
-        na.rm = TRUE
-      ) +
-      scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-                           limits = c(-8,8),
-                           na.value = "transparent",
-                           name = "Anomaly °C") +
-      coord_equal() +
-      theme_classic() +
-      scale_x_continuous(breaks = seq(-113,-105.5, 1.0),
-                         limits = c(-113,-105.5)) +
-      scale_y_continuous(breaks = seq(33.5, 38.0, 0.5),
-                         limits = c(33.5, 38.0)) +
-      geom_sf(
-        data = usa,
-        color = "#2b2b2b",
-        fill = "transparent",
-        size = 0.5
-      ) +
-      geom_sf(
-        data = cities,
-        shape = 23,
-        fill = "blue",
-        size = 3
-      ) +
-      shadowtext::geom_shadowtext(
-        data = cities2,
-        aes(x = long, y = lat, label = name),
-        nudge_y = 0.15,
-        color = "white"
-      ) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      ggtitle(title.name) +
-      theme(
-        panel.border = element_blank(),
-        panel.grid.major = element_blank(),
-        axis.text = element_text(
-          size = 12,
-          colour = "black",
-          family = "Helvetica"
-        ),
-        axis.title.y = element_text(
-          size = 20,
-          family = "Helvetica",
-          margin = margin(
-            t = 10,
-            r = 10,
-            b = 10,
-            l = 10
-          )
-        ),
-        axis.title.x = element_text(
-          size = 20,
-          family = "Helvetica",
-          margin = margin(
-            t = 10,
-            r = 10,
-            b = 10,
-            l = 10
-          )
-        ),
-        plot.title = element_text(
-          hjust = 0.5,
-          size = 24,
-          family = "Helvetica"
-        ),
-        panel.grid.minor = element_line(colour = "light grey"),
-        axis.line = element_line(colour = "black"),
-        legend.text = element_text(size = 13, family = "Helvetica"),
-        legend.title = element_text(size = 15, family = "Helvetica")
-      )
-
-
     if (animation == TRUE) {
       fp <-
         file.path(
-          "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_2",
+          "/Users/andrew/Dropbox/WSU/SKOPEII/Figures/animation_anomaly/animation_3",
           paste0(title.name, ".png")
         )
 
