@@ -974,9 +974,50 @@ library(rnaturalearth)
 library(sf)
 library(ggtext)
 
-dat <- MP_metadata_counts %>% 
-  dplyr::select(c(dataset.id, long, lat, PINUSX)) %>% 
+dat <- MPCT_metadata_counts_final %>% 
+  dplyr::select(c(dataset.id, geometry, PINUSX)) %>% 
   filter(!is.na(PINUSX))
+
+usa2 <- st_cast(usa, "POLYGON") %>%
+  mutate(mapcolor7 = sample(1:7, n(), replace = TRUE))
+
+
+usa2$fill <- as.factor(usa2$ID)
+usa2$fill <- c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")[usa2$mapcolor7]
+usa2$stroke <- 2
+usa2$fillweight <- 4.0
+
+# MULTIPOLYGON (and also MULTILINESTRING) are not supported
+usa2 <- st_cast(usa2, "POLYGON")
+
+
+dat <- st_sf(dat)
+st_crs(dat) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+dat$size <- 8
+dat$color <- "#000000"
+# dat$label <- cities$name
+# dat$label_pos <- "e"
+
+
+dat1 <- dat
+dat1$size <- ambient::normalise((dat1$PINUSX))
+dat1$radius <- dat1$size / 10
+st_crs(dat1) <- st_crs(usa)
+dat1$size <- ambient::normalise(dat1$size, to = c(10, 30))
+st_crs(dat1) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+dat1$color <- "red"
+
+
+roughsf_map <- roughsf::roughsf(list(usa2, dat1),
+                 title = "Modern Pine Pollen Samples across the United States", caption = "*Points are scaled based on the count of pine pollen grains at each site. Data are from the Neotoma Paleoecology Database.",
+                 title_font = "48px Pristina", font = "30px Pristina", caption_font = "18px Pristina",
+                 roughness = 1, bowing = 1, simplification = 1,
+                 width = 1600, height = 1000, 
+)
+
+roughsf::save_roughsf(roughsf_map, "roughsf_map.png")
+
+
 europe <- ne_countries(scale = 50, continent = "North America", returnclass = "sf")
 
 europe$fill <- as.factor(europe$mapcolor7)

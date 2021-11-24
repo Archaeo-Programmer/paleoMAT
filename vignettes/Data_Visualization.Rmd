@@ -966,17 +966,18 @@ maize_plot <- ggplot(MDB_FULL, aes(x = date, y = Latitude)) +
 
 
 # Use faceting to plot together.
-t1 <- fit %>% 
-  dplyr::select(date, anom) %>%
+t1 <- anom_new %>% 
+  dplyr::select(year, anom) %>%
   reshape2::melt(measure.vars = c("anom")) %>% 
-  dplyr::mutate(variable = "Anomaly")
+  dplyr::mutate(variable = "Anomaly") %>% 
+  dplyr::rename(date = 1)
 t2 <- MDB_FULL %>% 
   dplyr::select(date, Latitude) %>% 
   reshape2::melt(measure.vars = c("Latitude"))
 multi.plot <- rbind(t1, t2)
 
 scales_y <- list(
-  `Anomaly` = scale_y_continuous(limits = c(-1.5, 0.5), breaks = seq(-1.5, 0.5, 0.25)),
+  `Anomaly` = scale_y_continuous(limits = c(-2.5, 0.5), breaks = seq(-2.5, 0.5, 0.25)),
   `Latitude` = scale_y_continuous(limits = c(31.5, 37.5), breaks = seq(31.5, 37.5, 0.5))
 )
 
@@ -996,6 +997,7 @@ ggplot(multi.plot, mapping = aes(x = date, y = value)) +
   #scale_y_continuous(breaks = seq(31.5, 38, 0.5)) +
   theme_bw() +
   theme(
+    strip.text.y = element_text(size = 12),
     panel.grid.major = element_blank(),
     axis.text = element_text(
       size = 14,
