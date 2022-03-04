@@ -19,7 +19,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-  ```{r setup, include=FALSE, results='hide'}
+```{r setup, include=FALSE, results='hide'}
 
 knitr::opts_chunk$set(echo = TRUE,
                       cache = TRUE)
@@ -332,6 +332,115 @@ MPCT_final <-
 
 ```
 
+
+# Testing
+```{r testing, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+MPCT_proportions <-
+  MPCT_climate_final %>%
+  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
+    pollen =
+      purrr::map(pollen,
+        function(x){
+          x/rowSums(x)
+        }),
+    climate =
+      purrr::map(climate,
+                 function(x) {
+                   x %>%
+                     dplyr::select(month,
+                                   ppt,
+                                   tavg,
+                                   gdd) %>%
+                     tidyr::pivot_longer(ppt:gdd,
+                                         names_to = "element") %>%
+                     tidyr::unite("element_month", element, month) %>%
+                     tidyr::pivot_wider(names_from = element_month,
+                                        values_from = value)
+                 })) %>% 
+  dplyr::select(-FID)
+
+
+# For some reason this fails consistently when we try to use the weighted MAT (col=2).
+modern_significance <- palaeoSig::randomTF(spp = 
+                      MPCT_proportions %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    env = 
+                      MPCT_proportions %>%
+                      dplyr::select(sample.id, climate) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(climate)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    fos = 
+                      MPCT_proportions %>%
+                      dplyr::select(sample.id, pollen) %>%
+                      sf::st_drop_geometry() %>%
+                      tidyr::unnest(cols = c(pollen)) %>%
+                      tibble::column_to_rownames("sample.id"),
+                    n = 99,
+                    fun = rioja::MAT,
+                    col = 1,
+                    k = 150) %$%
+  tibble::tibble("variable" = colnames(MPCT_proportions$climate[[1]]),
+                 "% Explained" = EX*100,
+                 "p-value" = sig)
+
+
+
+
+july_prop <- 
+      rioja::MAT(
+        y = dplyr::bind_rows(MPCT_proportions$pollen),
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+        k = 15,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
+
+pollen_reduced <- dplyr::bind_rows(MPCT_final$pollen)
+pollen_reduced <- pollen_reduced[, which(colSums(pollen_reduced) != 0)]
+
+july_after <- 
+      rioja::MAT(
+        y = pollen_reduced,
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+        k = 5,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
+
+#which.min(as.data.frame(rioja::performance(july)[["object"]])$RMSE[1:15])
+
+  reconst_tavg_west_3 <- mat_models_temp_west_3 %>%
+    purrr::map(
+      .f = function(the.model) {
+        # Create the MAT reconstruction.
+        predict(
+          object = the.model,
+          newdata = dplyr::bind_rows(fossil_final$pollen) %>%
+            as.data.frame() %>%
+            set_rownames(fossil_final$sample.id),
+          k = which.min(as.data.frame(rioja::performance(july)[["object"]])$RMSE[1:15]),
+          sse = TRUE
+        )
+      }
+    )
+
+
+
+
+
+
+```
+
+
+
+
+
+
 # Reconstruction
 
 ## Model Summary
@@ -351,8 +460,8 @@ if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
     .f = function(j) {
       rioja::MAT(
         y = dplyr::bind_rows(MPCT_final$pollen),
-        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", j)]],
-        k = 5,
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+        k = 20,
         dist.method = "sq.chord",
         lean = FALSE
       )
@@ -368,6 +477,7 @@ if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
           newdata = dplyr::bind_rows(fossil_final$pollen) %>%
             as.data.frame() %>%
             set_rownames(fossil_final$sample.id),
+          k = 3,
           sse = TRUE
         )
       }
