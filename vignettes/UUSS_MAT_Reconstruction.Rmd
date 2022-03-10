@@ -500,12 +500,18 @@ if (!file.exists("./vignettes/data/reconst_tavg_west_3.rds")) {
 
 # Here, I use the analogue package rather than rioja. Also able to remove the dissimilarities when greater than 5%.
 
+remove_older <- fossil_metadata_counts_final %>% 
+  filter(age >= 5500 | is.na(age)) %>% 
+  pull(sample.id)
+
 modern_p <- bind_rows(MPCT_climate_final$pollen)
 modern_p2 <- select(modern_p, which(colSums(modern_p) > 0))
 modern_p_prop <- modern_p2/rowSums(modern_p2)
 
-fossil_p <- data.frame(bind_rows(fossil_final$pollen))
-row.names(fossil_p) <- fossil_final$sample.id
+fossil_final_reduced <- fossil_final %>% 
+  filter(!sample.id %in% remove_older)
+fossil_p <- data.frame(bind_rows(fossil_final_reduced$pollen))
+row.names(fossil_p) <- fossil_final_reduced$sample.id
 fossil_p2 <- select(fossil_p, which(colSums(fossil_p) > 0))
 fossil_p_prop <- fossil_p2/rowSums(fossil_p2)
 
@@ -535,6 +541,20 @@ mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
   rename(value = 2)
 
 rlgh.mdc <- minDC(rlgh.mat2)
+
+# This is to change the names from sample.id to age in order to get the min. dissimilarity plot.
+rename_mindc <- fossil_metadata_counts_final %>% 
+  filter(sample.id %in% names(rlgh.mdc$minDC)) %>% 
+  select(sample.id, age) %>% 
+  sf::st_drop_geometry()
+
+rlgh.mdc2 <- rlgh.mdc
+names(rlgh.mdc2$minDC) <- rename_mindc$age[match(names(rlgh.mdc2$minDC),rename_mindc$sample.id)]
+rlgh.mdc2$minDC <- rlgh.mdc2$minDC[order(as.numeric(names(rlgh.mdc2$minDC)))]
+
+plot(rlgh.mdc2, use.labels = TRUE, xlab = "Age (Years BP)")
+# End diss. plot with percentiles.
+
 
 remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
   tibble::rownames_to_column("sample.id") %>%
@@ -627,19 +647,7 @@ newoutput <- left_join(mat_prediction_cleaned %>% mutate(sample.id = as.integer(
     dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
     dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
     dplyr::select(-age.y, -age.x) %>%
-    dplyr::mutate(age = round(age)) %>% 
-  arrange(age)
-
-tavg_new <- newoutput %>%
-  tidyr::unnest(geometry) %>%
-  dplyr::group_by(sample.id) %>%
-  dplyr::mutate(col = seq_along(sample.id)) %>% #add a column indicator
-  #tidyr::spread(key = col, value = geometry) %>%
-  #dplyr::rename(long = "1", lat = "2") %>%
-  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  dplyr::filter(age < 5950 & age >= 0) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-4000, 2000, 100))) %>%
-  dplyr::mutate(anom = value - warmest.month)
+    dplyr::mutate(age = round(age))
 
 
 
@@ -813,6 +821,218 @@ write.csv(anom_new,
 
 ```
 
+
+
+
+# Spatial and Temporal Interpolation for analogue package
+
+```{r spatiotemporal_interpolation2, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+get_midpoints <- function(x, dp=2){
+    lower <- as.numeric(gsub(",.*","",gsub("\\(|\\[|\\)|\\]","", x)))
+    upper <- as.numeric(gsub(".*,","",gsub("\\(|\\[|\\)|\\]","", x)))
+    return(round(lower+(upper-lower)/2, dp))
+}
+
+#Just temporary as the anomaly is actually calculated at the bottom of this code chunk.
+warmest.month = 15.6182926829268
+
+# Put lat and long into individual columns.
+tavg_new <- newoutput %>%
+  mutate(long = unlist(map(.$geometry,1)),
+           lat = unlist(map(.$geometry,2))) %>% 
+  select(-geometry) %>% 
+  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
+  dplyr::filter(age < 5500) %>%
+  dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
+  summarise(observ = n())
+  mutate(mid_period = get_midpoints(period)) %>% 
+  dplyr::mutate(anom = value - warmest.month)
+  
+
+# These samples are not close to other samples; therefore, I pull them out for the temporal interpolation, then they will be readded later.
+sample_filter <- c(41285, 41284, 34305, 31510, 31511, 21844, 21845, 21846, 21847, 21848,
+                   11534, 11535, 11536, 11537, 11538, 11539, 62039, 62041, 
+                   57919, 57920, 57921, 57922, 57923, 57924, 57925, 57926, 57927,
+                   58052, 58053, 58054, 58055, 58056, 58057, 58058, 58215, 58216, 58217,
+                   61609, 61610, 61636, 61637, 62179, 62180, 62181, 62183, 62184,
+                   136828, 136827, 154427, 154428, 192219)
+
+individual_samples_filtered <- tavg_new %>% 
+  filter(sample.id %in% sample_filter)
+
+# The results for this one are extremely odd, so just removing it completely
+remove_site <- c(9830)
+
+# tavg_new %>% 
+#   group_by(site.id) %>% 
+#   arrange(site.id, age) %>% 
+#   filter(site.id == 9830) %>% 
+#   mutate(cumbbb = date - lag(date)) %>% 
+#   ggplot(aes(x = date, y = value)) +
+#   geom_point() +
+#   geom_line()
+
+
+  # mutate(cumbbb = date - lag(date))
+  #          cumsum((row_number() > 1) * bbb))
+
+
+# 
+tavg_predicted_west_new <- tavg_new %>%
+  filter(!sample.id %in% sample_filter) %>% 
+  filter(site.id != 9830) %>% 
+  dplyr::group_by(site.id, site.name, elev, long, lat) %>%
+  tidyr::nest() %>%
+  dplyr::rename(site.data = data) %>%
+  dplyr::mutate(site.data = purrr::map(site.data,
+                                       function(x) {
+                                         x %>%
+                                           dplyr::group_by(age) %>%
+                                           dplyr::mutate(
+                                             value = mean(value),
+                                             anom = mean(anom)
+                                           ) %>%
+                                           dplyr::distinct(age, .keep_all = TRUE) %>%
+                                           dplyr::arrange(age)
+                                       })) %>%
+  # sf::st_as_sf(coords = c("long", "lat"),
+  #                crs = 4326) %>%
+  dplyr::mutate(mean_100yrs = purrr::map(
+    site.data,
+    .f = function(x) {
+      interpolate_time(temp_data = x,
+                       model = "tps")
+    }
+  )) %>% 
+  dplyr::select(-site.data) %>%
+  dplyr::arrange(site.name) %>% 
+  dplyr::mutate(mean_100yrs = purrr::map(mean_100yrs, setNames, c("mean_100yrs","model_fit", "plot_fit"))) %>%
+  mutate(mean_100yrs = map(mean_100yrs, as.list)) %>% 
+  unnest(mean_100yrs) %>%
+  group_by(site.id) %>% 
+  mutate(col = row_number()) %>% 
+  pivot_wider(names_from = col, values_from = mean_100yrs) %>% 
+  dplyr::rename(mean_100yrs = 6,
+                model_fit = 7,
+                plot_fit = 8)
+
+saveRDS(tavg_predicted_west_new, "./output/temporal_interpolations_new.rds")
+
+# Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
+tavg_100yrs_new <- tavg_predicted_west_new %>%
+  dplyr::select(-model_fit,-plot_fit) %>%
+  tidyr::unnest(mean_100yrs) %>%
+  bind_rows(., individual_samples_filtered %>% ungroup %>% select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
+  #dplyr::filter(date >= -3550 & date <= 1800) %>%
+  dplyr::group_by(date) %>%
+  tidyr::nest() %>%
+  dplyr::rename(site.predictions = data)
+
+# Extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
+site.preds.unlisted <- unnest(tavg_100yrs_new, cols = site.predictions)
+modern_temperature <-
+  as.data.frame(
+    raster::extract(
+      x = temp.raster,
+      y = site.preds.unlisted %>% ungroup() %>%
+        dplyr::select(long, lat)
+    )
+  ) %>%
+  dplyr::rename(modern = 1)
+
+site.preds.unlisted <-
+  cbind(site.preds.unlisted, modern_temperature$modern) %>%
+  dplyr::rename(modern = 9)
+
+site.preds.unlisted.anom <- site.preds.unlisted %>%
+  rowwise() %>%
+  dplyr::mutate(anom = value - modern)
+
+# Look at the distribution:
+# ggplot(site.preds.unlisted.anom, aes(x = anom)) + geom_density(aes(y = ..count..), fill = "lightgray") +
+#     geom_vline(aes(xintercept = mean(anom)), 
+#                linetype = "dashed", size = 0.6,
+#                color = "#FC4E07")
+
+# here, we nest the data into each time bin.
+site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
+  dplyr::group_by(mid_period) %>%
+  tidyr::nest() %>%
+  dplyr::rename(site.predictions = data)
+
+
+x_range <-
+  as.numeric(c(-112.81446,-105.52416))  # min/max longitude of the interpolation area
+y_range <-
+  as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
+# create an empty grid of values ranging from the xmin-xmax, ymin-ymax
+grd <- expand.grid(
+  x = seq(from = x_range[1],
+          to = x_range[2],
+          by = 0.1),
+  y = seq(from = y_range[1], to = y_range[2],
+          by = 0.1)
+)
+
+# expand points to grid
+coordinates(grd) <- ~ x + y
+# turn into a spatial pixels object
+gridded(grd) <- TRUE
+
+
+# Do the interpolation using the inverse distance weighted method from gstat.
+tavg_idw <-
+  purrr::map(
+    site.preds.unlisted.anom.nested$site.predictions,
+    .f = function(x) {
+      coordinates(x) <- ~ long + lat
+      idw_pow2 <- gstat::idw(
+        formula = anom ~ 1,
+        locations = x,
+        newdata = grd,
+        idp = 1
+      )
+      idw_pow3 <- raster(idw_pow2)
+      crs(idw_pow3) <-
+        "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
+      return(idw_pow3)
+    }
+  )
+
+tavg_idw_stack <- raster::stack(tavg_idw)
+names(tavg_idw_stack) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+
+tavg_idw_brick <- raster::stack(tavg_idw)
+names(tavg_idw_brick) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
+
+writeRaster(
+  tavg_idw_brick,
+  filename = "./output/paleomat-rasters.tif",
+  options = "INTERLEAVE=BAND",
+  overwrite = TRUE
+)
+
+# plot(tavg_idw_stack[[1:16]], col = colors)
+# plot(tavg_idw_stack[[17:28]], col = colors)
+
+
+# Calculate the anomaly across time for entire area (to produce line graph).
+anom_new <- purrr::map(tavg_idw, cellStats, mean) %>%
+  as.data.frame() %>%
+  tidyr::pivot_longer(cols = 1:28) %>%
+  dplyr::mutate(name = seq(-950, 1750, 100)) %>%
+  dplyr::rename(year = name, anom = value)
+
+# Write results to a csv.
+write.csv(anom_new,
+          "./output/paleomat-temp-anomaly-final.csv",
+          row.names = FALSE)
+
+
+# For figures for journal article, please see "Paleomat Figures.Rmd".
+
+```
 
 # END OF SCRIPT
 

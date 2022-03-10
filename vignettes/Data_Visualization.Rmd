@@ -409,12 +409,12 @@ names(predict.points)[1] <- "date"
 
 # GAM
 model_gam <-
-  mgcv::gam(anom ~ s(date, bs = "cp", k = 32),
-            data = tavg_100yrs_all,
+  mgcv::gam(anom ~ s(date, bs = "cr", k = 50),
+            data = site.preds.unlisted.anom,
             family = gaussian())
 plot(model_gam)
 gam_knots <-
-  model_fit$smooth[[1]]$xp  ## extract knots locations
+  model_gam$smooth[[1]]$xp  ## extract knots locations
 # Can also get more basic data for plot by saving the plot.gam as an object. Then, could save something like the standard error.
 plot_gam <- plot.gam(model_gam)
 plot_gam[[1]]$se
@@ -422,9 +422,12 @@ plot_gam[[1]]$se
 predict.points <- as.data.frame(predict.points) %>%
   dplyr::rename(date = predict.points)
 
+predict.points <- unique(site.preds.unlisted.anom$mid_period) %>% 
+  sort()
+
 predict.anom <-
   as.data.frame(mgcv::predict.gam(model_gam,
-                                  predict.points,
+                                  predict.points[-1,],
                                   type = 'response',
                                   se.fit = TRUE)) %>%
   dplyr::rename(anom = 1)

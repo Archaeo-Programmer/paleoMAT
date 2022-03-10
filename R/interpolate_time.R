@@ -8,19 +8,21 @@ interpolate_time <-
                   probs = c(.01, .99),
                   na.rm = FALSE)
 
-    if (anyNA(Q) == TRUE) {
-      eliminated <- as.data.frame(temp_data)
+    # if (anyNA(Q) == TRUE) {
+    #   eliminated <- as.data.frame(temp_data)
+    #
+    # } else {
+    #   iqr <- IQR(temp_data$value)
+    #   up <-  Q[2] + 1.5 * iqr # Upper Range
+    #   low <- Q[1] - 1.5 * iqr # Lower Range
+    #   eliminated <-
+    #     subset(temp_data,
+    #            temp_data$value > (Q[1] - 1.5 * iqr) &
+    #              temp_data$value < (Q[2] + 1.5 * iqr))
+    #
+    # }
 
-    } else {
-      iqr <- IQR(temp_data$value)
-      up <-  Q[2] + 1.5 * iqr # Upper Range
-      low <- Q[1] - 1.5 * iqr # Lower Range
-      eliminated <-
-        subset(temp_data,
-               temp_data$value > (Q[1] - 1.5 * iqr) &
-                 temp_data$value < (Q[2] + 1.5 * iqr))
-
-    }
+    eliminated <- as.data.frame(temp_data)
 
     # Here, we set up the midpoint years of each century from the minimum to maximum year represented by each site.
     agemax <- max(eliminated$date)
