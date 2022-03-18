@@ -5,17 +5,16 @@ run_tf <-
            func,
            ...) {
 
-    # This function allows us to clean up the randomRF method, providing the option to
-    # serialize the process of analyzing multi-model outputs.  It makes sure that
+    # This function allows us to clean up the randomTF method, providing the option to
+    # serialize the process of analyzing multi-model outputs. It makes sure that
     # datasets use consistent columns, accept extra inputs, and returns a consistent
     # table for output.
 
-
     # First, convert all pollen values to proportions, using only taxa which have some
-    #  presence in the dataset.  This is the result of an error that is returned some times
-    #  from methods with all zeros for a taxon.  This may be problematic for datasets where
-    #  the calibration dataset has absences but the focal dataset has presence for a
-    #  particular taxon.
+    # presence in the dataset.  This is the result of an error that is returned some times
+    # from methods with all zeros for a taxon. This may be problematic for datasets where
+    # the calibration dataset has absences but the focal dataset has presence for a
+    # particular taxon.
 
     pollen_pct_p <- pollen %>%
       dplyr::select(which(colSums(pollen) > 0)) %>%

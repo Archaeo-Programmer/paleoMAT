@@ -372,53 +372,68 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
 # Temperature anomaly across time for the spatial extent in each 100 year interval.
 temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
 
+#samples <- data.frame(x = c(0, 100, 500, 1000), y = c(-3.5, -3.5, -3.5, -3.5))
+samples <- tavg_new %>%
+  ungroup %>%
+  dplyr::select(date) %>%
+  mutate(y = -2.5) %>%
+  rename(x = date)
 
+  
 site.preds.unlisted.anom %>% 
+  filter(site.id != 1710) %>% 
   group_by(date) %>% 
-  dplyr::summarise(temp = mean(anom)) %>%
+  #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>% 
+  dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>% 
   #mutate(anom = temp - warmest.month) %>% 
-  ggplot() +
+  ggplot(aes(x = date, y = temp)) +
+  #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") +
+  geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") +
   geom_line(aes(x = date, y = temp), colour = "red", size = 1.0) +
+  #geom_point() +
   xlab("Year BC/AD") +
   ylab("July Temperature Anomaly (°C)") +
   # scale_x_continuous(breaks = seq(-1000, 1800, 200),
   #                    minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
-  scale_y_continuous(breaks = seq(-2.0, 0.0, 0.25),
-                     limits = c(-2.0, 0.0)) +
+  # scale_y_continuous(breaks = seq(10, 18, 1),
+  #                   limits = c(10, 18)) +
   scale_x_continuous(breaks = seq(-3200, 2000, 300),
                      minor_breaks = seq(-3100, 1900, 300),
-                     limits = c(-3100, 2000)) +
-  # scale_y_continuous(breaks = seq(-1.25, 0.0, 0.25),
-  #                    limits = c(-1.25, 0.0)) +
+                     limits = c(-3000, 2000)) +
+  scale_y_continuous(breaks = seq(-2.5, 1.5, 0.5),
+                     limits = c(-2.5, 1.5),
+                     expand = c(0.01,0)) +
   theme_bw() +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
-  annotate(
-    "rect",
-    xmin = 800,
-    xmax = 1200,
-    ymin = -2.0,
-    ymax = 0.0,
-    alpha = .2
-  ) +
+  geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
+  geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
+  # annotate(
+  #   "rect",
+  #   xmin = 800,
+  #   xmax = 1200,
+  #   ymin = -2.0,
+  #   ymax = 0.0,
+  #   alpha = .2
+  # ) +
   annotate(
     "text",
     x = 1000,
-    y = -0.25,
+    y = 0.5,
     label = "Medieval \n Warm \n Period",
     size = 5.25
   ) +
-    annotate(
-    "rect",
-    xmin = 1400,
-    xmax = 1800,
-    ymin = -2.0,
-    ymax = 0.0,
-    alpha = .2
-  ) +
+  #   annotate(
+  #   "rect",
+  #   xmin = 1400,
+  #   xmax = 1800,
+  #   ymin = -2.0,
+  #   ymax = 0.0,
+  #   alpha = .2
+  # ) +
   annotate(
     "text",
     x = 1600,
-    y = -0.25,
+    y = 0.5,
     label = "Little \n Ice \n Age",
     size = 5.25
   ) +
@@ -454,7 +469,7 @@ site.preds.unlisted.anom %>%
     axis.line = element_line(colour = "black")
   )
 
-ggsave("new_anom.png", width = 13.3, height = 7.5, units = "in", dpi = 600  )
+ggsave("new_anom2.png", width = 13.3, height = 7.5, units = "in", dpi = 600)
 
 
 ```
