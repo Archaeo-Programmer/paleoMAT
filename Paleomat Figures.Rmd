@@ -115,16 +115,16 @@ bb2 <-
 
 
 ggplot() +
-  geom_raster(
-    data = temperature_transformed,
-    aes(x = x, y = y, fill = PRISM_tavg_monthly_normals.7),
-    alpha = 0.8,
-    na.rm = TRUE
-  ) +
-  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-                       #limits = c(-8, 8),
-                       na.value = "transparent",
-                       name = "Temperature °C") +
+  # geom_raster(
+  #   data = temperature_transformed,
+  #   aes(x = x, y = y, fill = PRISM_tavg_monthly_normals.7),
+  #   alpha = 0.8,
+  #   na.rm = TRUE
+  # ) +
+  # scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+  #                      #limits = c(-8, 8),
+  #                      na.value = "transparent",
+  #                      name = "Temperature °C") +
   coord_equal() +
   theme_classic() +
   scale_x_continuous(breaks = seq(-115,-103, 2.0),
@@ -137,47 +137,48 @@ ggplot() +
     fill = "transparent",
     size = 0.5
   ) +
-  geom_sf(
-    data = fossil.sites,
-    shape = 20,
-    fill = "blue",
-    size = 3
-  ) +
-  geom_sf(
-    data = cities,
-    shape = 23,
-    fill = "blue",
-    size = 3
-  ) +
-  geom_sf(
-    data = bb,
-    size = 1,
-    fill = NA,
-    aes(colour = "darkgrey"),
-    alpha = 0.3,
-    show.legend = "line"
-  ) +
+  # geom_sf(
+  #   data = fossil.sites,
+  #   shape = 20,
+  #   fill = "blue",
+  #   size = 3
+  # ) +
+  # geom_sf(
+  #   data = cities,
+  #   shape = 23,
+  #   fill = "blue",
+  #   size = 3
+  # ) +
+  # geom_sf(
+  #   data = bb,
+  #   size = 1,
+  #   fill = NA,
+  #   aes(colour = "darkgrey"),
+  #   alpha = 0.3,
+  #   show.legend = "line"
+  # ) +
   geom_sf(
     data = bb2,
     size = 1,
     fill = NA,
-    aes(colour = "red2"),
+    colour = "black",
+    #aes(colour = "red2"),
     alpha = 0.3,
     show.legend = "line"
   ) +
-    scale_color_manual(values = c("red2" = "red2", "darkgrey" = "darkgrey"), 
-                       labels = c("This Study", "Bocinsky and Kohler 2014"),
-                       name = "Data Extent") +
-  shadowtext::geom_shadowtext(
-    data = cities3,
-    aes(x = long, y = lat, label = name),
-    nudge_y = 0.265,
-    color = "white",
-    size = 2.5
-  ) +
+    # scale_color_manual(values = c("red2" = "red2", "darkgrey" = "darkgrey"), 
+    #                    labels = c("This Study", "Bocinsky and Kohler 2014"),
+    #                    name = "Data Extent") +
+  # shadowtext::geom_shadowtext(
+  #   data = cities3,
+  #   aes(x = long, y = lat, label = name),
+  #   nudge_y = 0.265,
+  #   color = "white",
+  #   size = 2.5
+  # ) +
   xlab("Longitude") +
   ylab("Latitude") +
-  labs(colour = "") 
+  labs(colour = "") +
   annotate("text", x=-109.75, y=37.25, label= "UTAH", size = 5, fontface = 2, hjust = 1) +
   annotate("text", x=-108.25, y=37.25, label= "COLORADO", size = 5, fontface = 2, hjust = 0) +
   annotate("text", x=-109.75, y=36.5, label= "ARIZONA", size = 5, fontface = 2, hjust = 1) +
@@ -216,6 +217,7 @@ ggplot() +
     legend.title = element_text(size = 11, family = "Helvetica")
   )
 
+ggsave("LF_reconstruction_extent.png", dpi = 600)
 
 
 ```
@@ -376,20 +378,22 @@ temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
 samples <- tavg_new %>%
   ungroup %>%
   dplyr::select(date) %>%
-  mutate(y = -2.5) %>%
+  mutate(y = -3.0) %>%
   rename(x = date)
 
   
 site.preds.unlisted.anom %>% 
-  filter(site.id != 1710) %>% 
+  #filter(site.id != 1710) %>% 
   group_by(date) %>% 
   #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>% 
   dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>% 
   #mutate(anom = temp - warmest.month) %>% 
+  #bp_95 %>% 
   ggplot(aes(x = date, y = temp)) +
   #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") +
   geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") +
-  geom_line(aes(x = date, y = temp), colour = "red", size = 1.0) +
+  geom_line(colour = "red", size = 1.0) +
+  #geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95) +
   #geom_point() +
   xlab("Year BC/AD") +
   ylab("July Temperature Anomaly (°C)") +
@@ -397,16 +401,20 @@ site.preds.unlisted.anom %>%
   #                    minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
   # scale_y_continuous(breaks = seq(10, 18, 1),
   #                   limits = c(10, 18)) +
-  scale_x_continuous(breaks = seq(-3200, 2000, 300),
-                     minor_breaks = seq(-3100, 1900, 300),
-                     limits = c(-3000, 2000)) +
-  scale_y_continuous(breaks = seq(-2.5, 1.5, 0.5),
-                     limits = c(-2.5, 1.5),
-                     expand = c(0.01,0)) +
   theme_bw() +
+  scale_x_continuous(breaks = seq(-3000, 2000, 500),
+                     #minor_breaks = seq(-3100, 1900, 200),
+                     minor_breaks = NULL,
+                     limits = c(-3000, 2000)) +
+  scale_y_continuous(breaks = seq(-4.0, 2.0, 1.0),
+                     limits = c(-4.0, 2.0),
+                     expand = c(0.01,0)) +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
   geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
+  geom_vline(xintercept = c(570, 1280)) +
+  geom_hline(yintercept = 0, colour = "grey40", linetype = "dashed", size=1.5) +
   geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
+  #geom_rug(data = samples, aes(x = x, y = y)) +
   # annotate(
   #   "rect",
   #   xmin = 800,
@@ -415,13 +423,13 @@ site.preds.unlisted.anom %>%
   #   ymax = 0.0,
   #   alpha = .2
   # ) +
-  annotate(
-    "text",
-    x = 1000,
-    y = 0.5,
-    label = "Medieval \n Warm \n Period",
-    size = 5.25
-  ) +
+  # annotate(
+  #   "text",
+  #   x = 1000,
+  #   y = 0.5,
+  #   label = "Medieval \n Warm \n Period",
+  #   size = 5.25
+  # ) +
   #   annotate(
   #   "rect",
   #   xmin = 1400,
@@ -430,23 +438,26 @@ site.preds.unlisted.anom %>%
   #   ymax = 0.0,
   #   alpha = .2
   # ) +
-  annotate(
-    "text",
-    x = 1600,
-    y = 0.5,
-    label = "Little \n Ice \n Age",
-    size = 5.25
-  ) +
+  # annotate(
+  #   "text",
+  #   x = 1600,
+  #   y = 0.5,
+  #   label = "Little \n Ice \n Age",
+  #   size = 5.25
+  # ) +
+ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Technique") +
   theme(
     panel.border = element_blank(),
-    panel.grid.major = element_blank(),
+    #panel.grid.major = element_blank(),
+    panel.grid.minor.y = element_blank(),
+    #panel.grid.major.y = element_blank(),
     axis.text = element_text(
-      size = 14,
+      size = 22,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 16,
+      size = 23,
       family = "Helvetica",
       margin = margin(
         t = 10,
@@ -456,7 +467,7 @@ site.preds.unlisted.anom %>%
       )
     ),
     axis.title.x = element_text(
-      size = 16,
+      size = 23,
       family = "Helvetica",
       margin = margin(
         t = 6,
@@ -465,11 +476,12 @@ site.preds.unlisted.anom %>%
         l = 10
       )
     ),
-    panel.grid.minor = element_line(colour = "light grey"),
-    axis.line = element_line(colour = "black")
+    #panel.grid.minor = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    plot.title = element_text(size = 24, face = "bold", family = "Helvetica")
   )
 
-ggsave("new_anom2.png", width = 13.3, height = 7.5, units = "in", dpi = 600)
+ggsave("new_anom_SAA_lines.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 
 
 ```

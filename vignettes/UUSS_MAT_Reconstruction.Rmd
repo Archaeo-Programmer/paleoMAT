@@ -258,13 +258,15 @@ fossil_metadata_counts_final <-
 
 fossil_final <-
   fossil_metadata_counts_final %>%
-  dplyr::select(!c(dataset.id, site.id, site.name:pub_year)) %>%
+  filter(age <= 4500 | !is.na(age)) %>% 
+  dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
-  dplyr::mutate_all(tidyr::replace_na, 0) %>%
-  dplyr::mutate(dplyr::across(!c(sample.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
-  tidyr::nest(pollen.counts = c(-sample.id,-geometry)) %>%
+  dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
+  dplyr::mutate(dplyr::across(!c(dataset.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
+  #tibble::column_to_rownames("sample.id") %>% 
+  tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
   sf::st_as_sf() %>%
-  dplyr::select(sample.id,
+  dplyr::select(dataset.id,
                 pollen = pollen.counts)
 
 ```
@@ -338,27 +340,194 @@ MPCT_final <-
 
 MPCT_proportions <-
   MPCT_climate_final %>%
-  dplyr::mutate(# Proportional data is only needed for the significance testing and the proportion are calculated within the palaeoSig::randomTF function.
+  dplyr::mutate(
     pollen =
       purrr::map(pollen,
-        function(x){
-          x/rowSums(x)
-        }),
+                 function(x) {
+                   x / rowSums(x)
+                 }),
     climate =
       purrr::map(climate,
                  function(x) {
                    x %>%
-                     dplyr::select(month,
-                                   ppt,
-                                   tavg,
-                                   gdd) %>%
-                     tidyr::pivot_longer(ppt:gdd,
-                                         names_to = "element") %>%
-                     tidyr::unite("element_month", element, month) %>%
-                     tidyr::pivot_wider(names_from = element_month,
-                                        values_from = value)
-                 })) %>% 
-  dplyr::select(-FID)
+                     filter(month == 7) %>% 
+                     dplyr::select(tavg)
+                 })
+  )
+
+spp <- bind_rows(MPCT_proportions$pollen)
+
+env <- bind_rows(MPCT_proportions$climate) %>% 
+  pull(tavg)
+
+
+fossil_final$pollen <- map(fossil_final$pollen, ~ tibble::column_to_rownames(.x, "sample.id"))
+
+fossil_pollen <- fossil_final %>% 
+    dplyr::mutate(
+    pollen =
+      purrr::map(pollen,
+                 function(x) {
+                   x / rowSums(x)
+                 }))
+
+
+rlen_removal <- map(fossil_pollen$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
+                    names(which(rlen$passive > quantile(rlen$train, probs = 0.9)))}) %>% 
+  flatten_chr() %>% 
+  as.numeric()
+
+fos <- fossil_pollen
+fos$pollen <- map(fos$pollen, ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id"))
+
+fos <- fos %>% 
+  mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
+  filter(rows != 0)
+
+sig_results1 <-
+  map2(fos$pollen, fos$dataset.id, function(x, y) {
+    output <- randomTF(
+      spp = spp * 100,
+      env = data.frame(tjul = env),
+      fos = x * 100,
+      n = 10000,
+      fun = MAT,
+      col = 1
+    )
+    sig_out <- output$sig
+    names(sig_out) <- y
+    return(sig_out)
+  })
+
+sum(as.numeric(flatten(sig_results1))<=0.05)
+# 0.05
+# 11
+sum(as.numeric(flatten(sig_results1))<=0.1)
+# 0.1
+# 19
+
+sig_results2 <-
+  map2(fos$pollen, fos$dataset.id, function(x, y) {
+    output <- randomTF(
+      spp = spp,
+      env = data.frame(tjul = env),
+      fos = x,
+      n = 10000,
+      fun = MAT,
+      col = 1
+    )
+    sig_out <- output$sig
+    names(sig_out) <- y
+    return(sig_out)
+  })
+
+
+All_sig_tests <- read.csv("All_sig_tests.csv", header = T, row.names = NULL)[,1:10]
+names(All_sig_tests) <- c(names(All_sig_tests)[-1], "drop")
+All_sig_tests <- All_sig_tests[, -ncol(All_sig_tests)]
+  
+
+
+only_95 <- All_sig_tests %>%
+  select(dataset.id, sig_results2) %>% 
+  mutate(sig_results2 = case_when(sig_results2 <= 0.051 ~ TRUE,
+                                                       sig_results2 > 0.05 & sig_results2 <= 0.1 ~ FALSE,
+                                                       TRUE ~ FALSE)) %>% 
+  filter(sig_results2 == TRUE) %>% 
+  pull(dataset.id)
+
+fos2_95 <- fos %>% 
+  filter(dataset.id %in% only_95)
+
+
+only_90 <- All_sig_tests %>%
+  select(dataset.id, sig_results2) %>% 
+  mutate(sig_results2 = case_when(sig_results2 <= 0.1 ~ TRUE,
+                                                       TRUE ~ FALSE)) %>% 
+  filter(sig_results2 == TRUE) %>% 
+  pull(dataset.id)
+
+fos3_90 <- fos %>% 
+  filter(dataset.id %in% only_90)
+  
+
+full_fos <- randomTF(
+      spp = spp,
+      env = data.frame(tjul = env),
+      fos = bind_rows(fos3_90$pollen),
+      n = 1000,
+      fun = MAT,
+      col = 1
+    )
+
+sum(as.numeric(flatten(sig_results2))<=0.05)
+# 0.05
+# 11
+sum(as.numeric(flatten(sig_results2))<=0.1)
+# 0.1
+# 19
+
+sig_results3 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp*100, env = data.frame(tjul = env),
+   fos = x*100, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
+
+sum(as.numeric(flatten(sig_results3))<=0.05)
+# 0.05
+# 10
+sum(as.numeric(flatten(sig_results3))<=0.1)
+# 0.1
+# 19
+
+sig_results4 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp, env = data.frame(tjul = env),
+   fos = x, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
+
+sum(as.numeric(flatten(sig_results4))<=0.05)
+# 0.05
+# 11
+sum(as.numeric(flatten(sig_results4))<=0.1)
+# 0.1
+# 19
+
+fos_meta <- fossil_metadata_counts_final %>% 
+  select(dataset.id, site.id, site.name) %>% 
+  distinct()
+
+All_temp <- cbind(sig_results1 = unlist(flatten(sig_results1)), sig_results2 = unlist(flatten(sig_results2)), sig_results3 = unlist(flatten(sig_results3)),sig_results4 = unlist(flatten(sig_results4))) %>% 
+  data.frame()
+
+All <- All_temp %>% 
+  mutate("95%" = ifelse(rowSums(All_temp <= 0.05) > 0, TRUE, FALSE),
+         "90%" = ifelse(rowSums(All_temp <= 0.1) > 0, TRUE, FALSE)) %>% 
+  tibble::rownames_to_column("dataset.id") %>% 
+  mutate(dataset.id = as.integer(dataset.id)) %>% 
+  left_join(., fos_meta, by = "dataset.id")
+
+write.csv(All, "All_sig_tests.csv", row.names = FALSE)
+
+
+rlghr <- randomTF(spp = spp*100, env = data.frame(tjul = env),
+   fos = fos$pollen[[1]]*100, n = 100, fun = MAT, col = 1)
+
+
+
+rlghr <- randomTF(spp = modern_p_prop*100, env = data.frame(tjul = climate_input[,"tjul"]),
+   fos = fossil_p_prop2*100, n = 10000, fun = MAT, col = 1)
+
+
+
+
+rlen<-residLen(spp, env, fos, method="cca")
+plot(rlen) # distribution of modern and fossil residual lengths
+plot(1:nrow(fos$pollen[[1]]), rlen$passive, ylab="Squared residual length", xlab="Depth")
+abline(h=quantile(rlen$train, probs = c(0.9,0.95)), col=c("orange", "red"))
+
+
+
+
+model_test <- suppressWarnings(randomTF(spp = pollen_input,
+                                        env = climate_input,
+                                        fos = fossil_input,
+                                        n = 99,
+                                        fun = MAT, col = 1, k = 4))
 
 model_test <- suppressWarnings(randomTF(spp = pollen_input,
                                         env = climate_input,
@@ -368,17 +537,37 @@ model_test <- suppressWarnings(randomTF(spp = pollen_input,
 
 mat_reconst <- run_tf(modern_p,
        climate = as.data.frame(climate_input),
-       func = MAT, col = 2, k = 4)
+       func = MAT, col = 1, k = 5)
 
+mat_sig <- run_tf(pollen = modern_p, 
+                  climate = climate_input, 
+                  func = MAT, col = 1, k = 5)
 
-rlghr <- randomTF(spp = modern_p_prop, env = data.frame(pH = climate_input),
-   fos = modern_p_prop, n = 99, fun = MAT, col = 2)
+mat_sig2 <- run_tf(pollen = Pollen[,2:ncol(Pollen)], 
+                  climate = Climate[,2:13], 
+                  func = MAT, col = 1, k = 10)
+
+mat_sig3 <- run_tf(pollen = SWAP$spec, 
+                  climate = SWAP$pH, 
+                  func = MAT, col = 1, k = 10)
+
+temp <- rowMeans(climate_input[,c(5:8)])
+fossil_p_prop2 <- fossil_p_prop[-c(12:13),]
+
+rlghr <- randomTF(spp = modern_p_prop*100, env = data.frame(tjul = climate_input[,"tjul"]),
+   fos = fossil_p_prop2*100, n = 10000, fun = MAT, col = 1)
 
 rlghr <- randomTF(spp = sqrt(modern_p_prop), env = data.frame(pH = climate_input),
    fos = sqrt(fossil_p_prop), n = 99, fun = MAT, col = 1)
 
 rlghr <- randomTF(spp = sqrt(SWAP$spec), env = data.frame(pH = SWAP$pH),
    fos = sqrt(RLGH$spec), n = 99, fun = WA, col = 1)
+
+
+spp<-modern_p_prop*100
+env<-climate_input[,"tjun"] %>% pull(tjun)
+fos<-fossil_p_prop*100
+depths<-as.numeric(rownames(fossil_p_prop))
 
 # For some reason this fails consistently when we try to use the weighted MAT (col=2).
 modern_significance <- palaeoSig::randomTF(spp = 
@@ -410,28 +599,24 @@ modern_significance <- palaeoSig::randomTF(spp =
 
 
 
-july_prop <- 
-      rioja::MAT(
-        y = dplyr::bind_rows(MPCT_proportions$pollen),
-        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
-        k = 15,
-        dist.method = "sq.chord",
-        lean = FALSE
-      )
 
-pollen_reduced <- dplyr::bind_rows(MPCT_final$pollen)
-pollen_reduced <- pollen_reduced[, which(colSums(pollen_reduced) != 0)]
 
-july_after <- 
-      rioja::MAT(
-        y = pollen_reduced,
-        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
-        k = 5,
-        dist.method = "sq.chord",
-        lean = FALSE
-      )
 
-#which.min(as.data.frame(rioja::performance(july)[["object"]])$RMSE[1:15])
+
+# pollen_reduced <- dplyr::bind_rows(MPCT_final$pollen)
+# pollen_reduced <- pollen_reduced[, which(colSums(pollen_reduced) != 0)]
+# 
+# july_after <- 
+#       rioja::MAT(
+#         y = pollen_reduced,
+#         x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+#         k = 5,
+#         dist.method = "sq.chord",
+#         lean = FALSE
+#       )
+
+
+
 
   reconst_tavg_west_3 <- mat_models_temp_west_3 %>%
     purrr::map(
@@ -448,9 +633,96 @@ july_after <-
       }
     )
 
+#which.min(as.data.frame(rioja::performance(july)[["object"]])$RMSE[1:15])
+
+# new_output_recont <-
+#   predict(
+#     object = july_after,
+#     newdata = dplyr::bind_rows(fos3_90$pollen),
+#     k = 3,
+#     sse = TRUE
+#   )
+
+july_modern_calibration <- dplyr::bind_rows(MPCT_proportions$pollen) %>% 
+  select(which(colSums(.) > 0))
+
+# Run for 90%
+foss_pct_p <- dplyr::bind_rows(fos3_90$pollen) %>% 
+  select(which(colSums(.) > 0))
+
+keep_cols <- colnames(july_modern_calibration[colSums(july_modern_calibration) > 0])
+keep_cols <- keep_cols[keep_cols %in% colnames(foss_pct_p)]
+
+pollen_input <- july_modern_calibration[, keep_cols]
+fossil_input <- foss_pct_p[, keep_cols]
+
+july_prop <- 
+      rioja::MAT(
+        y = pollen_input,
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+        k = 10,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
 
 
+new_output_recont_fos3_90 <-
+  rioja:::predict.MAT(
+    object = july_prop,
+    newdata = fossil_input,
+    k = 4,
+    sse = TRUE
+  )
 
+
+# new_output_recont_fos2_95 <-
+#   predict(
+#     object = july_after,
+#     newdata = dplyr::bind_rows(fos2_95$pollen),
+#     k = 3,
+#     sse = TRUE
+#   )
+
+# Run for 95%
+foss_pct_p <- dplyr::bind_rows(fos2_95$pollen) %>% 
+  select(which(colSums(.) > 0))
+
+keep_cols <- colnames(july_modern_calibration[colSums(july_modern_calibration) > 0])
+keep_cols <- keep_cols[keep_cols %in% colnames(foss_pct_p)]
+
+pollen_input <- july_modern_calibration[, keep_cols]
+fossil_input <- foss_pct_p[, keep_cols]
+
+july_prop <- 
+      rioja::MAT(
+        y = pollen_input,
+        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
+        k = 10,
+        dist.method = "sq.chord",
+        lean = FALSE
+      )
+
+new_output_recont_fos2_95 <-
+  predict(
+    object = july_prop,
+    newdata = fossil_input,
+    k = 4,
+    sse = TRUE
+  )
+
+
+spp<-modern_p_prop
+env<-climate_input
+fos<-fossil_p_prop
+age<-depth
+
+plot(depths, pred$dist.n[,5], ylab="Squared chord distance", xlab="Depth")
+#goodpoorbad<-quantile(paldist(spp), prob=c(0.05, 0.1))
+abline(h=goodpoorbad, col=c("orange", "red"))
+
+
+new_output_recont_fos3_90
+new_output_recont_fos2_95
 
 
 ```
@@ -525,8 +797,14 @@ ok <- tavg_new %>%
   pull(sample.id)
 
 depth <- tavg_new %>% 
+    filter(age <= 5500 | !is.na(age)) %>% 
     filter(dataset.id == 25551) %>% 
     pull(depth)
+
+# keep <- tavg_new %>% 
+#     filter(age <= 5500 | !is.na(age)) %>% 
+#     #filter(dataset.id == 25551) %>% 
+#     pull(sample.id)
   
 remove_older <- fossil_metadata_counts_final %>% 
   filter(age >= 5500 | is.na(age)) %>% 
@@ -539,6 +817,7 @@ modern_p2 <- dplyr::select(modern_p, which(colSums(modern_p) > 0))
 modern_p_prop <- modern_p2/rowSums(modern_p2)
 
 fossil_final_reduced <- fossil_final %>% 
+  #filter(sample.id %in% keep) #%>% 
   filter(!sample.id %in% remove_older) %>% 
   filter(sample.id %in% ok)
 fossil_p <- data.frame(bind_rows(fossil_final_reduced$pollen))
@@ -556,7 +835,16 @@ pollen_input <- modern_p_prop[, keep_cols]
 
 fossil_input <- fossil_p_prop[, keep_cols]
 
-climate_input <- bind_rows(MPCT_climate_final$climate)
+month_name <- data.frame(month = c(1:12), labels = c("tjan", "tfeb", "tmar", "tapr", "tmay", "tjun", "tjul", "taug", "tsep", "toct", "tnov", "tdec"))
+
+climate_input <- bind_rows(MPCT_climate_final$climate) %>% 
+  select(month, tavg) %>% 
+  left_join(., month_name, by = "month") %>% 
+  select(month = labels, tavg) %>% 
+  group_by(grp = as.integer(gl(n(), 12, n()))) %>% 
+  pivot_wider(names_from = "month", values_from = "tavg") %>% 
+  ungroup %>% 
+  select(-grp)
 climate_input <- filter(climate_input, month == 7)
 climate_input <- select(climate_input, tavg)
 climate_input <- pull(climate_input, tavg)
@@ -681,6 +969,49 @@ newoutput <- left_join(mat_prediction_cleaned %>% mutate(sample.id = as.integer(
     dplyr::mutate(age = round(age))
 
 
+
+
+# Working on the 90% and 95% reconstructions.
+new_output_recont_fos3_90
+new_output_recont_fos2_95
+
+fossil_metadata_counts_final
+
+fos_90 <- new_output_recont_fos3_90$fit[, "MAT"] %>% 
+  stack() %>% 
+  tibble::as_tibble() %>% 
+  mutate(ind = as.numeric(levels(ind))[ind]) %>% 
+  rename(sample.id = ind) %>% 
+  dplyr::left_join(., fossil_metadata_counts_final %>% 
+  dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
+  dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
+  filter(age <= 5500) %>% 
+  dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
+  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
+  dplyr::select(-age.y, -age.x) %>%
+  dplyr::mutate(age = round(age)) %>% 
+  # filter(site.id == 246) %>% 
+  sf::st_as_sf() #%>% 
+  # mutate(date = BPtoBCAD(age)) %>% 
+  # mutate(anom = values - 14.569209613)
+
+fos_95 <- new_output_recont_fos2_95$fit[, "MAT"] %>% 
+  stack() %>% 
+  tibble::as_tibble() %>% 
+  mutate(ind = as.numeric(levels(ind))[ind]) %>% 
+  rename(sample.id = ind) %>% 
+  dplyr::left_join(., fossil_metadata_counts_final %>% 
+  dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
+  dplyr::mutate(error = new_output_recont_fos2_95$SEP.boot[, "MAT"])  %>% 
+  filter(age <= 5500) %>% 
+  dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
+  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
+  dplyr::select(-age.y, -age.x) %>%
+  dplyr::mutate(age = round(age)) %>% 
+  # filter(site.id == 246) %>% 
+  sf::st_as_sf() #%>% 
+  # mutate(date = BPtoBCAD(age)) %>% 
+  # mutate(anom = values - 14.569209613)
 
 ```
 
@@ -859,17 +1190,17 @@ write.csv(anom_new,
 
 ```{r spatiotemporal_interpolation2, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-get_midpoints <- function(x, dp=2){
-    lower <- as.numeric(gsub(",.*","",gsub("\\(|\\[|\\)|\\]","", x)))
-    upper <- as.numeric(gsub(".*,","",gsub("\\(|\\[|\\)|\\]","", x)))
-    return(round(lower+(upper-lower)/2, dp))
-}
+# get_midpoints <- function(x, dp=2){
+#     lower <- as.numeric(gsub(",.*","",gsub("\\(|\\[|\\)|\\]","", x)))
+#     upper <- as.numeric(gsub(".*,","",gsub("\\(|\\[|\\)|\\]","", x)))
+#     return(round(lower+(upper-lower)/2, dp))
+# }
 
 #Just temporary as the anomaly is actually calculated at the bottom of this code chunk.
 warmest.month = 15.6182926829268
 
 # Put lat and long into individual columns.
-tavg_new <- newoutput %>%
+tavg_new_90 <- fos_90 %>%
   mutate(long = unlist(map(.$geometry,1)),
            lat = unlist(map(.$geometry,2))) %>% 
   dplyr::select(-geometry) %>% 
@@ -878,22 +1209,29 @@ tavg_new <- newoutput %>%
   dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
   #summarise(observ = n())
   mutate(mid_period = get_midpoints(period)) %>% 
-  dplyr::mutate(anom = value - warmest.month)
+  dplyr::mutate(anom = values - warmest.month)
+
+# tavg_new_90 %>% 
+#   filter(date >= -1000) %>% 
+# ggplot(., aes(x=date, y=values, group=site.name)) + 
+#   geom_line(aes(color=site.name)) +
+#   #geom_smooth(method="auto", se=TRUE, fullrange=TRUE, level=0.95) +
+#   facet_wrap(~ site.name, ncol=4)
   
 
 # These samples are not close to other samples; therefore, I pull them out for the temporal interpolation, then they will be readded later.
-sample_filter <- c(41285, 41284, 34305, 31510, 31511, 21844, 21845, 21846, 21847, 21848,
-                   11534, 11535, 11536, 11537, 11538, 11539, 62039, 62041, 
-                   57919, 57920, 57921, 57922, 57923, 57924, 57925, 57926, 57927,
-                   58052, 58053, 58054, 58055, 58056, 58057, 58058, 58215, 58216, 58217,
-                   61609, 61610, 61636, 61637, 62179, 62180, 62181, 62182, 62183, 62184,
-                   136828, 136827, 154427, 154428, 192219)
-
-individual_samples_filtered <- tavg_new %>% 
-  filter(sample.id %in% sample_filter)
-
-# The results for this one are extremely odd, so just removing it completely
-remove_site <- c(9830)
+# sample_filter <- c(41285, 41284, 34305, 31510, 31511, 21844, 21845, 21846, 21847, 21848,
+#                    11534, 11535, 11536, 11537, 11538, 11539, 62039, 62041, 
+#                    57919, 57920, 57921, 57922, 57923, 57924, 57925, 57926, 57927,
+#                    58052, 58053, 58054, 58055, 58056, 58057, 58058, 58215, 58216, 58217,
+#                    61609, 61610, 61636, 61637, 62179, 62180, 62181, 62182, 62183, 62184,
+#                    136828, 136827, 154427, 154428, 192219)
+# 
+# individual_samples_filtered <- tavg_new %>% 
+#   filter(sample.id %in% sample_filter)
+# 
+# # The results for this one are extremely odd, so just removing it completely
+# remove_site <- c(9830)
 
 # tavg_new %>% 
 #   group_by(site.id) %>% 
@@ -910,9 +1248,12 @@ remove_site <- c(9830)
 
 
 # 
-tavg_predicted_west_new <- tavg_new %>%
-  filter(!sample.id %in% sample_filter) %>% 
-  filter(site.id != 9830) %>% 
+tavg_predicted_west_new_90 <- tavg_new_90 %>%
+  # group_by(site.name) %>% 
+  # summarise(observ = n())
+  # filter(!sample.id %in% sample_filter) %>% 
+  # filter(site.id != 9830) %>% 
+  filter(!site.id %in% c(2260, 1661)) %>% 
   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
   tidyr::nest() %>%
   dplyr::rename(site.data = data) %>%
@@ -921,7 +1262,7 @@ tavg_predicted_west_new <- tavg_new %>%
                                          x %>%
                                            dplyr::group_by(age) %>%
                                            dplyr::mutate(
-                                             value = mean(value),
+                                             value = mean(values),
                                              anom = mean(anom)
                                            ) %>%
                                            dplyr::distinct(age, .keep_all = TRUE) %>%
@@ -948,13 +1289,14 @@ tavg_predicted_west_new <- tavg_new %>%
                 model_fit = 7,
                 plot_fit = 8)
 
-saveRDS(tavg_predicted_west_new, "./output/temporal_interpolations_new.rds")
+#saveRDS(tavg_predicted_west_new, "./output/temporal_interpolations_new.rds")
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs_new <- tavg_predicted_west_new %>%
+tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
   dplyr::select(-model_fit,-plot_fit) %>%
   tidyr::unnest(mean_100yrs) %>%
-  bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
+  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(2260, 1661)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value" = "values") %>% sf::st_drop_geometry() ) %>% 
+  # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
   #dplyr::filter(date >= -3550 & date <= 1800) %>%
   dplyr::group_by(date) %>%
   tidyr::nest() %>%
@@ -973,12 +1315,14 @@ modern_temperature <-
   dplyr::rename(modern = 1)
 
 site.preds.unlisted <-
-  cbind(site.preds.unlisted, modern_temperature$modern) %>%
-  dplyr::rename(modern = 9)
+  cbind(site.preds.unlisted, modern = modern_temperature$modern)
+
 
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
   dplyr::mutate(anom = value - modern)
+
+write.csv(site.preds.unlisted.anom, "./vignettes/data/output/site.preds.unlisted.anom_90.csv", row.names = FALSE)
 
 # Look at the distribution:
 # ggplot(site.preds.unlisted.anom, aes(x = anom)) + geom_density(aes(y = ..count..), fill = "lightgray") +
