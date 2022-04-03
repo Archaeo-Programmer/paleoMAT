@@ -255,10 +255,11 @@ bb <-
 fossil_metadata_counts_final <-
   sf::st_intersection(fossil_metadata_counts, bb)
 
+# age <= 8000 & 
 
 fossil_final <-
   fossil_metadata_counts_final %>%
-  filter(age <= 4500 | !is.na(age)) %>% 
+  filter(!is.na(age)) %>% 
   dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
   dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
@@ -267,7 +268,8 @@ fossil_final <-
   tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(dataset.id,
-                pollen = pollen.counts)
+                pollen = pollen.counts) %>% 
+  mutate(n_samples = map_dbl(pollen, nrow))
 
 ```
 
@@ -350,15 +352,28 @@ MPCT_proportions <-
       purrr::map(climate,
                  function(x) {
                    x %>%
-                     filter(month == 7) %>% 
-                     dplyr::select(tavg)
+                     #filter(month == 7) %>% 
+                     dplyr::select(month, tavg)
                  })
   )
 
 spp <- bind_rows(MPCT_proportions$pollen)
 
-env <- bind_rows(MPCT_proportions$climate) %>% 
+climate_full <- MPCT_proportions %>% 
+  select(sample.id, climate) %>% 
+  unnest(climate) %>% 
+  filter(month %in% c(5:9))
+
+env <- climate_full %>%
+  filter(month == 7) %>%
   pull(tavg)
+
+# env <- climate_full %>%
+#   group_by(sample.id) %>% 
+#   mutate(tavg = mean(tavg)) %>% 
+#   select(-month) %>% 
+#   distinct() %>% 
+#   pull(tavg)
 
 
 fossil_final$pollen <- map(fossil_final$pollen, ~ tibble::column_to_rownames(.x, "sample.id"))
@@ -371,48 +386,70 @@ fossil_pollen <- fossil_final %>%
                    x / rowSums(x)
                  }))
 
+fossil_pollen2 <- fossil_pollen %>% 
+  mutate(rows = map_dbl(pollen, nrow)) %>% 
+  filter(!rows %in% c(0, 1))
 
-rlen_removal <- map(fossil_pollen$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
-                    names(which(rlen$passive > quantile(rlen$train, probs = 0.9)))}) %>% 
+
+rlen_removal <- map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
+                    names(which(rlen$passive > quantile(rlen$train, probs = 0.90)))}) %>% 
   flatten_chr() %>% 
   as.numeric()
+
+
+rlen_results <- map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
+stack(rlen$passive)}) %>% 
+  bind_rows() %>% 
+  rename("Squared_res_lengths" = 1, "sample.id" = 2)
+  
+
+# depths <- fossil_metadata_counts_final %>%
+#   #filter(!is.na(age) & !sample.id %in% rlen_removal) %>%
+#   filter(!is.na(age)) %>%
+#   pull(depth)
+# 
+# rlen<-residLen(spp, env, bind_rows(fossil_pollen$pollen), method="cca")
+# plot(rlen) # distribution of modern and fossil residual lengths
+# plot(depths, rlen$passive, ylab="Squared residual length", xlab="Depth")
+# abline(h=quantile(rlen$train, probs = c(0.9,0.95)), col=c("orange", "red"))
 
 fos <- fossil_pollen
 fos$pollen <- map(fos$pollen, ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id"))
 
-fos <- fos %>% 
+fos2 <- fos %>% 
+  select(-n_samples) %>% 
   mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
-  filter(rows != 0)
+  filter(!rows %in% c(0, 1))
 
-sig_results1 <-
-  map2(fos$pollen, fos$dataset.id, function(x, y) {
-    output <- randomTF(
-      spp = spp * 100,
-      env = data.frame(tjul = env),
-      fos = x * 100,
-      n = 10000,
-      fun = MAT,
-      col = 1
-    )
-    sig_out <- output$sig
-    names(sig_out) <- y
-    return(sig_out)
-  })
-
-sum(as.numeric(flatten(sig_results1))<=0.05)
-# 0.05
-# 11
-sum(as.numeric(flatten(sig_results1))<=0.1)
-# 0.1
-# 19
+# sig_results1 <-
+#   map2(fos$pollen, fos$dataset.id, function(x, y) {
+#     output <- randomTF(
+#       spp = spp * 100,
+#       env = data.frame(tjul = env),
+#       fos = x * 100,
+#       n = 1000,
+#       fun = MAT,
+#       col = 1
+#     )
+#     sig_out <- output$sig
+#     names(sig_out) <- y
+#     return(sig_out)
+#   })
+# 
+# sum(as.numeric(flatten(sig_results1))<=0.05)
+# # 0.05
+# # 11
+# sum(as.numeric(flatten(sig_results1))<=0.1)
+# # 0.1
+# # 19
 
 sig_results2 <-
-  map2(fos$pollen, fos$dataset.id, function(x, y) {
+  map2(fos2$pollen, fos2$dataset.id, function(x, y) {
     output <- randomTF(
       spp = spp,
       env = data.frame(tjul = env),
       fos = x,
-      n = 10000,
+      n = 1000,
       fun = MAT,
       col = 1
     )
@@ -421,31 +458,72 @@ sig_results2 <-
     return(sig_out)
   })
 
+# sig_results2b <-
+#   map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+#     output <- randomTF(
+#       spp = spp,
+#       env = data.frame(tjul = env),
+#       fos = x,
+#       n = 1000,
+#       fun = MAT,
+#       col = 2
+#     )
+#     sig_out <- output$sig
+#     names(sig_out) <- y
+#     return(sig_out)
+#   })
 
-All_sig_tests <- read.csv("All_sig_tests.csv", header = T, row.names = NULL)[,1:10]
-names(All_sig_tests) <- c(names(All_sig_tests)[-1], "drop")
-All_sig_tests <- All_sig_tests[, -ncol(All_sig_tests)]
+sum(as.numeric(flatten(sig_results2))<=0.05)
+# 0.05
+# 11
+sum(as.numeric(flatten(sig_results2))<=0.1)
+# 0.1
+# 19
+
+# ok %>% 
+#   filter(values < 0.05) %>% 
+#   mutate(test = values <= 0.05 & values2 <= 0.05) %>% view
+
+
+# All_sig_tests <- read.csv("All_sig_tests.csv", header = T, row.names = NULL)[,1:10]
+# names(All_sig_tests) <- c(names(All_sig_tests)[-1], "drop")
+# All_sig_tests <- All_sig_tests[, -ncol(All_sig_tests)]
   
 
 
-only_95 <- All_sig_tests %>%
-  select(dataset.id, sig_results2) %>% 
-  mutate(sig_results2 = case_when(sig_results2 <= 0.051 ~ TRUE,
-                                                       sig_results2 > 0.05 & sig_results2 <= 0.1 ~ FALSE,
+# only_95 <- All_sig_tests %>%
+#   select(dataset.id, sig_results2) %>% 
+#   mutate(sig_results2 = case_when(sig_results2 <= 0.051 ~ TRUE,
+#                                                        sig_results2 > 0.05 & sig_results2 <= 0.1 ~ FALSE,
+#                                                        TRUE ~ FALSE)) %>% 
+#   filter(sig_results2 == TRUE) %>% 
+#   pull(dataset.id)
+
+only_95 <- stack(unlist(sig_results2)) %>%
+  mutate(sig_results2 = case_when(values <= 0.051 ~ TRUE,
+                                                       values > 0.05 & values <= 0.1 ~ FALSE,
                                                        TRUE ~ FALSE)) %>% 
   filter(sig_results2 == TRUE) %>% 
-  pull(dataset.id)
+  pull(ind) %>% 
+  as.numeric(levels(.))[.]
 
 fos2_95 <- fos %>% 
   filter(dataset.id %in% only_95)
 
 
-only_90 <- All_sig_tests %>%
-  select(dataset.id, sig_results2) %>% 
-  mutate(sig_results2 = case_when(sig_results2 <= 0.1 ~ TRUE,
+# only_90 <- All_sig_tests %>%
+#   select(dataset.id, sig_results2) %>% 
+#   mutate(sig_results2 = case_when(sig_results2 <= 0.1 ~ TRUE,
+#                                                        TRUE ~ FALSE)) %>% 
+#   filter(sig_results2 == TRUE) %>% 
+#   pull(dataset.id)
+
+only_90 <- stack(unlist(sig_results2)) %>%
+  mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
                                                        TRUE ~ FALSE)) %>% 
   filter(sig_results2 == TRUE) %>% 
-  pull(dataset.id)
+  pull(ind) %>% 
+  as.numeric(levels(.))[.]
 
 fos3_90 <- fos %>% 
   filter(dataset.id %in% only_90)
@@ -455,53 +533,47 @@ full_fos <- randomTF(
       spp = spp,
       env = data.frame(tjul = env),
       fos = bind_rows(fos3_90$pollen),
-      n = 1000,
+      n = 100,
       fun = MAT,
-      col = 1
+      col = 2
     )
 
-sum(as.numeric(flatten(sig_results2))<=0.05)
-# 0.05
-# 11
-sum(as.numeric(flatten(sig_results2))<=0.1)
-# 0.1
-# 19
 
-sig_results3 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp*100, env = data.frame(tjul = env),
-   fos = x*100, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
+# sig_results3 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp*100, env = data.frame(tjul = env),
+#    fos = x*100, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
+# 
+# sum(as.numeric(flatten(sig_results3))<=0.05)
+# # 0.05
+# # 10
+# sum(as.numeric(flatten(sig_results3))<=0.1)
+# # 0.1
+# # 19
+# 
+# sig_results4 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp, env = data.frame(tjul = env),
+#    fos = x, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
+# 
+# sum(as.numeric(flatten(sig_results4))<=0.05)
+# # 0.05
+# # 11
+# sum(as.numeric(flatten(sig_results4))<=0.1)
+# # 0.1
+# # 19
 
-sum(as.numeric(flatten(sig_results3))<=0.05)
-# 0.05
-# 10
-sum(as.numeric(flatten(sig_results3))<=0.1)
-# 0.1
-# 19
-
-sig_results4 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp, env = data.frame(tjul = env),
-   fos = x, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
-
-sum(as.numeric(flatten(sig_results4))<=0.05)
-# 0.05
-# 11
-sum(as.numeric(flatten(sig_results4))<=0.1)
-# 0.1
-# 19
-
-fos_meta <- fossil_metadata_counts_final %>% 
-  select(dataset.id, site.id, site.name) %>% 
-  distinct()
-
-All_temp <- cbind(sig_results1 = unlist(flatten(sig_results1)), sig_results2 = unlist(flatten(sig_results2)), sig_results3 = unlist(flatten(sig_results3)),sig_results4 = unlist(flatten(sig_results4))) %>% 
-  data.frame()
-
-All <- All_temp %>% 
-  mutate("95%" = ifelse(rowSums(All_temp <= 0.05) > 0, TRUE, FALSE),
-         "90%" = ifelse(rowSums(All_temp <= 0.1) > 0, TRUE, FALSE)) %>% 
-  tibble::rownames_to_column("dataset.id") %>% 
-  mutate(dataset.id = as.integer(dataset.id)) %>% 
-  left_join(., fos_meta, by = "dataset.id")
-
-write.csv(All, "All_sig_tests.csv", row.names = FALSE)
+# fos_meta <- fossil_metadata_counts_final %>% 
+#   select(dataset.id, site.id, site.name) %>% 
+#   distinct()
+# 
+# All_temp <- cbind(sig_results1 = unlist(flatten(sig_results1)), sig_results2 = unlist(flatten(sig_results2)), sig_results3 = unlist(flatten(sig_results3)),sig_results4 = unlist(flatten(sig_results4))) %>% 
+#   data.frame()
+# 
+# All <- All_temp %>% 
+#   mutate("95%" = ifelse(rowSums(All_temp <= 0.05) > 0, TRUE, FALSE),
+#          "90%" = ifelse(rowSums(All_temp <= 0.1) > 0, TRUE, FALSE)) %>% 
+#   tibble::rownames_to_column("dataset.id") %>% 
+#   mutate(dataset.id = as.integer(dataset.id)) %>% 
+#   left_join(., fos_meta, by = "dataset.id")
+# 
+# write.csv(All, "All_sig_tests.csv", row.names = FALSE)
 
 
 rlghr <- randomTF(spp = spp*100, env = data.frame(tjul = env),
@@ -659,8 +731,8 @@ fossil_input <- foss_pct_p[, keep_cols]
 july_prop <- 
       rioja::MAT(
         y = pollen_input,
-        x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
-        k = 10,
+        x = env,
+        k = 20,
         dist.method = "sq.chord",
         lean = FALSE
       )
@@ -697,7 +769,7 @@ july_prop <-
       rioja::MAT(
         y = pollen_input,
         x = dplyr::bind_rows(MPCT_final$climate)[[paste0("tavg_", 7)]],
-        k = 10,
+        k = 20,
         dist.method = "sq.chord",
         lean = FALSE
       )
@@ -706,7 +778,7 @@ new_output_recont_fos2_95 <-
   predict(
     object = july_prop,
     newdata = fossil_input,
-    k = 4,
+    k = 5,
     sse = TRUE
   )
 
@@ -1207,9 +1279,9 @@ tavg_new_90 <- fos_90 %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
   dplyr::filter(age < 5500) %>%
   dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
-  #summarise(observ = n())
+  summarise(observ = n()) %>% 
   mutate(mid_period = get_midpoints(period)) %>% 
-  dplyr::mutate(anom = values - warmest.month)
+  dplyr::mutate(anom = value - warmest.month)
 
 # tavg_new_90 %>% 
 #   filter(date >= -1000) %>% 
@@ -1249,7 +1321,7 @@ tavg_new_90 <- fos_90 %>%
 
 # 
 tavg_predicted_west_new_90 <- tavg_new_90 %>%
-  # group_by(site.name) %>% 
+  # group_by(site.name, site.id) %>%
   # summarise(observ = n())
   # filter(!sample.id %in% sample_filter) %>% 
   # filter(site.id != 9830) %>% 
@@ -1321,6 +1393,13 @@ site.preds.unlisted <-
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
   dplyr::mutate(anom = value - modern)
+
+# ok <- site.preds.unlisted.anom %>% 
+# sf::st_as_sf(coords = c("long", "lat"),
+#                   crs = 4326) 
+
+# ok <- site.preds.unlisted.anom %>%   group_by(site.name, site.id) %>%
+#     summarise(observ = n(), minDate = min(date), maxDate = max(date))
 
 write.csv(site.preds.unlisted.anom, "./vignettes/data/output/site.preds.unlisted.anom_90.csv", row.names = FALSE)
 

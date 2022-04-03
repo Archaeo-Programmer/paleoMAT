@@ -383,8 +383,10 @@ samples <- tavg_new %>%
 
   
 site.preds.unlisted.anom %>% 
+  #filter(site.id == 246) %>% 
   #filter(site.id != 1710) %>% 
   group_by(date) %>% 
+  #mutate(anom = anom - mean(site.preds.unlisted.anom$anom)) %>% 
   #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>% 
   dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>% 
   #mutate(anom = temp - warmest.month) %>% 
@@ -393,6 +395,7 @@ site.preds.unlisted.anom %>%
   #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") +
   geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") +
   geom_line(colour = "red", size = 1.0) +
+  #geom_line(aes(y=rollmean(temp, 3, na.pad=TRUE))) +
   #geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95) +
   #geom_point() +
   xlab("Year BC/AD") +
@@ -411,7 +414,7 @@ site.preds.unlisted.anom %>%
                      expand = c(0.01,0)) +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
   geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
-  geom_vline(xintercept = c(570, 1280)) +
+  #geom_vline(xintercept = c(570, 1280)) +
   geom_hline(yintercept = 0, colour = "grey40", linetype = "dashed", size=1.5) +
   geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
   #geom_rug(data = samples, aes(x = x, y = y)) +
