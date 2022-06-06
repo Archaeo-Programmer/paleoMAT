@@ -20,7 +20,7 @@ map_predictions <-
     # Get the modern data (from PRISM) at each of the fossil pollen sites.
     modern.data <-
       as.data.frame(raster::extract(x = raster.data,
-                                    y = site.preds %>%
+                                    y = site.preds[[1]] %>%
                                       dplyr::select(long, lat))) %>%
       dplyr::rename(modern = 1)
 
@@ -62,16 +62,16 @@ map_predictions <-
       list(x = raster.data.list$x, y = raster.data.list$y)
 
     # Next, get the number of sites, which is used to define the degrees of freedom (df).
-    no.sites <- nrow(site.preds)
+    no.sites <- nrow(site.preds[[1]])
 
-    site.preds <- cbind(site.preds, modern.data)
+    site.preds <- cbind(site.preds[[1]], modern.data)
 
     if (is.null(nfraction.df) == TRUE) {
       stop(
         "Value for nfraction.df cannot be NULL. This function could not be completed. nfraction.df must be an integer
        between 0 and 1, or NA (the default). This is used to calculate the percentage of n that will be used to define df."
       )
-    } else if (is.na(nfraction.df) == TRUE) {
+    } else if (is.na(nfraction.df)) {
       # Fit the model as the first step in the process.
       # Thin Plate Spline Regression
       fit_TPS <- fields::Tps(
@@ -80,7 +80,7 @@ map_predictions <-
         # The dependent variable.
         Y = site.preds$value,
         # Modern temperature as an independent covariate.
-        Z = site.preds$modern,
+        #Z = site.preds$modern,
         miles = TRUE
       )
     } else if (nfraction.df < 0 | nfraction.df > 1) {
@@ -106,7 +106,10 @@ map_predictions <-
     if (rast.extrap == TRUE) {
       # Do prediction on raster surface and output a raster that extrapolates to the edge of the bounding box.
       fit.full <-
-        fields::predictSurface(fit_TPS, grid.list, ZGrid = raster.data.list, extrap = TRUE)
+        fields::predictSurface(fit_TPS,
+                               grid.list,
+                               #ZGrid = raster.data.list,
+                               extrap = TRUE)
       fit.full <- raster(fit.full)
       crs(fit.full) <- CRS('+init=EPSG:4326')
 
@@ -114,7 +117,7 @@ map_predictions <-
         fields::predictSurfaceSE(
           fit_TPS,
           grid.list,
-          ZGrid = raster.data.list,
+          #ZGrid = raster.data.list,
           drop.Z = TRUE,
           extrap = TRUE
         )
@@ -127,7 +130,10 @@ map_predictions <-
     } else {
       # Do prediction on raster surface and output a raster that is a convex hull (i.e., no extrapolation beyond site.locs extent).
       fit.full <-
-        fields::predictSurface(fit_TPS, grid.list, ZGrid = raster.data.list, extrap = FALSE)
+        fields::predictSurface(fit_TPS,
+                               grid.list,
+                               #ZGrid = raster.data.list,
+                               extrap = FALSE)
       fit.full <- raster(fit.full)
       crs(fit.full) <- CRS('+init=EPSG:4326')
 
@@ -135,7 +141,7 @@ map_predictions <-
         fields::predictSurfaceSE(
           fit_TPS,
           grid.list,
-          ZGrid = raster.data.list,
+          #ZGrid = raster.data.list,
           drop.Z = TRUE,
           extrap = FALSE
         )

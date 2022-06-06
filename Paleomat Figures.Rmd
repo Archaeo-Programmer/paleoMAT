@@ -25,8 +25,9 @@ data(us.cities)
 
 # Get locations of the fossil pollen sites.
 fossil.locs <-
-  readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>%
+  readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata.rds")) %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
+  select(-geometry) %>% 
   dplyr::group_by(site.name) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
@@ -98,7 +99,13 @@ fossil.sites <- fossil.locs %>%
 crs(temp.raster) <-
   "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs"
 temperature <- as.data.frame(temp.raster, xy = TRUE)
-temperature_transformed <- usmap::usmap_transform(temperature)
+names(temperature) <- c("long", "lat", "tavg")
+temperature_transformed <-
+  usmap::usmap_transform(
+    temperature,
+    input_names = c("long", "lat"),
+    output_names = c("x", "y")
+  )
 
 # Create a bounding box for limits of this study
 bb2 <-
@@ -115,16 +122,16 @@ bb2 <-
 
 
 ggplot() +
-  # geom_raster(
-  #   data = temperature_transformed,
-  #   aes(x = x, y = y, fill = PRISM_tavg_monthly_normals.7),
-  #   alpha = 0.8,
-  #   na.rm = TRUE
-  # ) +
-  # scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-  #                      #limits = c(-8, 8),
-  #                      na.value = "transparent",
-  #                      name = "Temperature °C") +
+  geom_raster(
+    data = temperature_transformed,
+    aes(x = long, y = lat, fill = tavg),
+    alpha = 0.8,
+    na.rm = TRUE
+  ) +
+  scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
+                       #limits = c(-8, 8),
+                       na.value = "transparent",
+                       name = "Temperature °C") +
   coord_equal() +
   theme_classic() +
   scale_x_continuous(breaks = seq(-115,-103, 2.0),
@@ -137,45 +144,46 @@ ggplot() +
     fill = "transparent",
     size = 0.5
   ) +
-  # geom_sf(
-  #   data = fossil.sites,
-  #   shape = 20,
-  #   fill = "blue",
-  #   size = 3
-  # ) +
-  # geom_sf(
-  #   data = cities,
-  #   shape = 23,
-  #   fill = "blue",
-  #   size = 3
-  # ) +
-  # geom_sf(
-  #   data = bb,
-  #   size = 1,
-  #   fill = NA,
-  #   aes(colour = "darkgrey"),
-  #   alpha = 0.3,
-  #   show.legend = "line"
-  # ) +
+  geom_sf(
+    data = fossil.sites,
+    shape = 20,
+    fill = "blue",
+    size = 3
+  ) +
+  geom_sf(
+    data = cities,
+    shape = 23,
+    fill = "blue",
+    size = 3
+  ) +
+  geom_sf(
+    data = bb,
+    size = 1,
+    fill = NA,
+    aes(colour = "darkgrey"),
+    alpha = 0.3,
+    show.legend = "line",
+    inherit.aes = FALSE
+  ) +
   geom_sf(
     data = bb2,
     size = 1,
     fill = NA,
-    colour = "black",
-    #aes(colour = "red2"),
+    aes(colour = "red2"),
     alpha = 0.3,
-    show.legend = "line"
+    show.legend = "line",
+    inherit.aes = FALSE
   ) +
-    # scale_color_manual(values = c("red2" = "red2", "darkgrey" = "darkgrey"), 
-    #                    labels = c("This Study", "Bocinsky and Kohler 2014"),
-    #                    name = "Data Extent") +
-  # shadowtext::geom_shadowtext(
-  #   data = cities3,
-  #   aes(x = long, y = lat, label = name),
-  #   nudge_y = 0.265,
-  #   color = "white",
-  #   size = 2.5
-  # ) +
+  scale_color_manual(values = c("darkgrey" = "darkgrey", "red2" = "red2"),
+                     labels = c("Bocinsky and Kohler 2014", "This Study"),
+                     name = "Data Extent") +
+  shadowtext::geom_shadowtext(
+    data = cities3,
+    aes(x = long, y = lat, label = name),
+    nudge_y = 0.265,
+    color = "white",
+    size = 2.5
+  ) +
   xlab("Longitude") +
   ylab("Latitude") +
   labs(colour = "") +
@@ -375,7 +383,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
 temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
 
 #samples <- data.frame(x = c(0, 100, 500, 1000), y = c(-3.5, -3.5, -3.5, -3.5))
-samples <- tavg_new %>%
+samples <- tavg_new_90 %>%
   ungroup %>%
   dplyr::select(date) %>%
   mutate(y = -3.0) %>%
@@ -387,6 +395,7 @@ site.preds.unlisted.anom %>%
   #filter(site.id != 1710) %>% 
   group_by(date) %>% 
   #mutate(anom = anom - mean(site.preds.unlisted.anom$anom)) %>% 
+  #mutate(anom = anom/10)
   #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>% 
   dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>% 
   #mutate(anom = temp - warmest.month) %>% 
@@ -409,15 +418,15 @@ site.preds.unlisted.anom %>%
                      #minor_breaks = seq(-3100, 1900, 200),
                      minor_breaks = NULL,
                      limits = c(-3000, 2000)) +
-  scale_y_continuous(breaks = seq(-4.0, 2.0, 1.0),
-                     limits = c(-4.0, 2.0),
+  scale_y_continuous(breaks = seq(-3.0, 2.0, 1.0),
+                     limits = c(-3.0, 2.0),
                      expand = c(0.01,0)) +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
-  geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
+  #geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
   #geom_vline(xintercept = c(570, 1280)) +
   geom_hline(yintercept = 0, colour = "grey40", linetype = "dashed", size=1.5) +
-  geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
-  #geom_rug(data = samples, aes(x = x, y = y)) +
+  #geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
+  geom_rug(data = samples, aes(x = x, y = NULL), sides="b") +
   # annotate(
   #   "rect",
   #   xmin = 800,
@@ -448,7 +457,7 @@ site.preds.unlisted.anom %>%
   #   label = "Little \n Ice \n Age",
   #   size = 5.25
   # ) +
-ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Technique") +
+#ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Technique") +
   theme(
     panel.border = element_blank(),
     #panel.grid.major = element_blank(),
@@ -481,10 +490,10 @@ ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Tech
     ),
     #panel.grid.minor = element_line(colour = "light grey"),
     axis.line = element_line(colour = "black"),
-    plot.title = element_text(size = 24, face = "bold", family = "Helvetica")
+    plot.title = element_text(size = 21, face = "bold", family = "Helvetica")
   )
 
-ggsave("new_anom_SAA_lines.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 
 
 ```
@@ -492,10 +501,12 @@ ggsave("new_anom_SAA_lines.png", width = 14.3, height = 7.5, units = "in", dpi =
 
 ```{r fig5, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-temp_anom_standard <- anom_new %>%
-  dplyr::mutate(update = (anom - mean(anom_new$anom)) / sd(anom_new$anom)) %>% 
+temp_anom_standard <- site.preds.unlisted.anom %>% 
+  group_by(date) %>% 
+  dplyr::summarise(temp = mean(anom)) %>% 
+  dplyr::mutate(update = (temp - mean(temp)) / sd(temp)) %>% 
   dplyr::mutate(Series = "This study") %>% 
-  dplyr::select(year, update, Series)
+  dplyr::select(year = date, update, Series)
 
 Moberg_standard <- Moberg %>% 
   dplyr::mutate(update = (LF - mean(Moberg$LF)) / sd(Moberg$LF)) %>% 
@@ -510,20 +521,21 @@ Moberg_paleomat %>%
   dplyr::filter(year >= 133 & year <= 1800) %>% 
   ggplot(aes(x = year, y = update, colour = Series)) +
   geom_line(size = 1.0) +
-  xlab("Year BC/AD") +
+  xlab("Year AD") +
   ylab("Standardized July Temperature Anomaly") +
   theme_bw() +
-  scale_x_continuous(breaks = seq(100, 1800, 100)) +
+  scale_x_continuous(breaks = seq(100, 1900, 200)) +
+  scale_y_continuous(breaks = seq(-2, 2, 0.5)) +
   theme(
     panel.border = element_blank(),
-    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
     axis.text = element_text(
-      size = 12,
+      size = 16,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 14,
+      size = 18,
       family = "Helvetica",
       margin = margin(
         t = 10,
@@ -533,7 +545,7 @@ Moberg_paleomat %>%
       )
     ),
     axis.title.x = element_text(
-      size = 14,
+      size = 18,
       family = "Helvetica",
       margin = margin(
         t = 6,
@@ -542,8 +554,10 @@ Moberg_paleomat %>%
         l = 10
       )
     ),
-    panel.grid.minor = element_line(colour = "light grey"),
-    axis.line = element_line(colour = "black")
+    panel.grid.major = element_line(colour = "light grey"),
+    axis.line = element_line(colour = "black"),
+    legend.title=element_text(size=18),
+    legend.text=element_text(size=14)
   )
 
 ```
