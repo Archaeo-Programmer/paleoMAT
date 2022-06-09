@@ -382,7 +382,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 #   pull(tavg)
 
 
-fossil_final$pollen <- map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
+fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
 
 
 fossil_pollen <- fossil_final %>% 
@@ -402,13 +402,13 @@ fossil_pollen2 <- fossil_pollen %>%
 # COMBO #2 - RUN ALL 3 STEPS (i.e., RLen removal, RandomTF removal, and no analgoue removal)
 
 # Step 1 RLen removal.
-rlen_removal <- map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
+rlen_removal <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
                     names(which(rlen$passive > quantile(rlen$train, probs = 0.90)))}) %>% 
   flatten_chr() %>% 
   as.numeric()
 
 
-rlen_results <- map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
+rlen_results <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
 stack(rlen$passive)}) %>% 
   bind_rows() %>% 
   rename("Squared_res_lengths" = 1, "sample.id" = 2)
@@ -425,7 +425,7 @@ stack(rlen$passive)}) %>%
 # abline(h=quantile(rlen$train, probs = c(0.9,0.95)), col=c("orange", "red"))
 
 fos <- fossil_pollen
-fos$pollen <- map(fos$pollen, ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id"))
+fos$pollen <- purrr::map(fos$pollen, ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id"))
 
 fos2 <- fos %>% 
   dplyr::select(-n_samples) %>% 
@@ -1831,10 +1831,10 @@ names(tavg_idw_brick) <- date_name_list
 #   overwrite = TRUE
 # )
 
-# plot(tavg_idw_stack[[1:16]], col = colors, zlim=c(-4.0, 3.0))
-# plot(tavg_idw_stack[[17:32]], col = colors, zlim=c(-4.0, 3.0))
-# plot(tavg_idw_stack[[33:48]], col = colors, zlim=c(-4.0, 3.0))
-# plot(tavg_idw_stack[[49:55]], col = colors, zlim=c(-4.0, 3.0))
+plot(tavg_idw_stack[[1:16]], col = colors, zlim=c(-4.0, 3.0))
+plot(tavg_idw_stack[[17:32]], col = colors, zlim=c(-4.0, 3.0))
+plot(tavg_idw_stack[[33:48]], col = colors, zlim=c(-4.0, 3.0))
+plot(tavg_idw_stack[[49:55]], col = colors, zlim=c(-4.0, 3.0))
 
 
 # Calculate the anomaly across time for entire area (to produce line graph).
@@ -1842,8 +1842,8 @@ anom_new <- purrr::map(tavg_idw, cellStats, mean) %>%
   as.data.frame() %>%
   t() %>% 
   data.frame(row.names = NULL) %>%
-  dplyr::mutate(date = site.preds.unlisted.anom.nested$date) #%>%
-  # dplyr::rename(year = name, anom = value)
+  dplyr::mutate(date = site.preds.unlisted.anom.nested$date) %>%
+  dplyr::rename(anom = 1, year = 2)
 
 # Write results to a csv.
 write.csv(anom_new,
@@ -1852,6 +1852,10 @@ write.csv(anom_new,
 
 
 # For figures for journal article, please see "Paleomat Figures.Rmd".
+
+
+
+# plot list of tavg_preds_temp3 and raster stack tavg_idw_stack
 
 ```
 

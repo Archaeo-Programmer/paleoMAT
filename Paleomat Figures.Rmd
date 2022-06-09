@@ -404,6 +404,7 @@ site.preds.unlisted.anom %>%
   #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") +
   geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") +
   geom_line(colour = "red", size = 1.0) +
+  #theme_bw()
   #geom_line(aes(y=rollmean(temp, 3, na.pad=TRUE))) +
   #geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95) +
   #geom_point() +
@@ -419,8 +420,8 @@ site.preds.unlisted.anom %>%
                      minor_breaks = NULL,
                      limits = c(-3000, 2000)) +
   scale_y_continuous(breaks = seq(-3.0, 2.0, 1.0),
-                     limits = c(-3.0, 2.0),
-                     expand = c(0.01,0)) +
+                     limits = c(-3.0, 2.5),
+                     expand = c(0.01, 0)) +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
   #geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
   #geom_vline(xintercept = c(570, 1280)) +
@@ -593,7 +594,7 @@ tavg_rasters <- stack("./output/paleomat-rasters.tif")
 # colnames(hill_spdf) <- c("value", "x", "y")
 
 
-rasterVis::gplot(tavg_rasters) +
+rasterVis::gplot(tavg_idw_stack, layout=c(5, 3)) +
   # geom_tile(data = hill_spdf, aes(x = x, y = y, fill = value)) +
   geom_tile(aes(fill = value)) +
   facet_wrap(~ variable) +
@@ -604,6 +605,12 @@ rasterVis::gplot(tavg_rasters) +
   ylab("Latitude") +
   labs(fill='Anomaly')
 
+trellis.device(pdf, file='mp.pdf', height=11.7, width=8.3)
+rasterVis::levelplot(tavg_idw_stack,
+          layout=c(4, 7), # create a 5x3 layout for the data
+          col.regions=colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255))
+
+dev.off()
 
 # names(tavg_idw) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
 #
@@ -647,131 +654,139 @@ rasterVis::gplot(tavg_rasters) +
 
 
 
-```{r fig7, fig.cap="July temperature anomaly for two Village Ecodynamics Project (VEP) areas, VEPIIS and VEPIIN (Schwindt et al. 2016).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+<!-- ```{r fig7, fig.cap="July temperature anomaly for two Village Ecodynamics Project (VEP) areas, VEPIIS and VEPIIN (Schwindt et al. 2016).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'} -->
 
-vepii_cmv_boundary <- st_transform(vepii_cmv_boundary, crs = st_crs(4326)) %>% 
-  sf::st_as_sf(crs = 4326) %>%
-  sf::st_transform(crs = 4326)
+<!-- vepii_cmv_boundary <- st_transform(vepii_cmv_boundary, crs = st_crs(4326)) %>%  -->
+<!--   sf::st_as_sf(crs = 4326) %>% -->
+<!--   sf::st_transform(crs = 4326) -->
 
-tavg_cmv <- brick("./output/paleomat-rasters.tif") %>%
-  unstack() %>% 
-  purrr::map(., raster::crop, vepii_cmv_boundary)
+<!-- tavg_cmv <- brick("./output/paleomat-rasters.tif") %>% -->
+<!--   unstack() %>%  -->
+<!--   purrr::map(., raster::crop, vepii_cmv_boundary) -->
 
-vepii_nrg_boundary <- st_transform(vepii_nrg_boundary, crs = st_crs(4326)) %>% 
-  sf::st_as_sf(crs = 4326) %>%
-  sf::st_transform(crs = 4326)
+<!-- vepii_nrg_boundary <- st_transform(vepii_nrg_boundary, crs = st_crs(4326)) %>%  -->
+<!--   sf::st_as_sf(crs = 4326) %>% -->
+<!--   sf::st_transform(crs = 4326) -->
 
-tavg_nrg <- brick("./output/paleomat-rasters.tif") %>%
-  unstack() %>% 
-  purrr::map(., raster::crop, vepii_nrg_boundary)
+<!-- tavg_nrg <- brick("./output/paleomat-rasters.tif") %>% -->
+<!--   unstack() %>%  -->
+<!--   purrr::map(., raster::crop, vepii_nrg_boundary) -->
 
-# Calculate the anomaly across time for CMV (or VEPIIN) (to produce line graph).
-anom_cmv <- purrr::map(tavg_cmv, cellStats, mean) %>% 
-  as.data.frame() %>% 
-  tidyr::pivot_longer(cols = 1:28) %>% 
-  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
-  dplyr::rename(year = name, anom = value) %>% 
-  dplyr::mutate(Series = "VEPIIN")
-  
-# anom_cmv <- anom_cmv %>%
-#   dplyr::mutate(updated = (anom - mean(anom_cmv$anom)) / sd(anom_cmv$anom)) %>% 
-#   dplyr::mutate(series = "CMV")
+<!-- # Calculate the anomaly across time for CMV (or VEPIIN) (to produce line graph). -->
+<!-- anom_cmv <- purrr::map(tavg_cmv, cellStats, mean) %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   tidyr::pivot_longer(cols = 1:28) %>%  -->
+<!--   dplyr::mutate(name = seq(-950, 1750, 100)) %>%  -->
+<!--   dplyr::rename(year = name, anom = value) %>%  -->
+<!--   dplyr::mutate(Series = "VEPIIN") -->
 
-# Calculate the anomaly across time for NRP (or VEPIIS) (to produce line graph).
-anom_nrg <- purrr::map(tavg_nrg, cellStats, mean) %>% 
-  as.data.frame() %>% 
-  tidyr::pivot_longer(cols = 1:28) %>% 
-  dplyr::mutate(name = seq(-950, 1750, 100)) %>% 
-  dplyr::rename(year = name, anom = value) %>% 
-  dplyr::mutate(Series = "VEPIIS")
-  
-# anom_nrg <- anom_nrg %>%
-#   dplyr::mutate(updated = (anom - mean(anom_nrg$anom)) / sd(anom_nrg$anom)) %>% 
-#   dplyr::mutate(series = "NRG")
+<!-- # anom_cmv <- anom_cmv %>% -->
+<!-- #   dplyr::mutate(updated = (anom - mean(anom_cmv$anom)) / sd(anom_cmv$anom)) %>%  -->
+<!-- #   dplyr::mutate(series = "CMV") -->
 
-VEPII <- rbind(anom_cmv, anom_nrg)
+<!-- # Calculate the anomaly across time for NRP (or VEPIIS) (to produce line graph). -->
+<!-- anom_nrg <- purrr::map(tavg_nrg, cellStats, mean) %>%  -->
+<!--   as.data.frame() %>%  -->
+<!--   tidyr::pivot_longer(cols = 1:28) %>%  -->
+<!--   dplyr::mutate(name = seq(-950, 1750, 100)) %>%  -->
+<!--   dplyr::rename(year = name, anom = value) %>%  -->
+<!--   dplyr::mutate(Series = "VEPIIS") -->
 
+<!-- # anom_nrg <- anom_nrg %>% -->
+<!-- #   dplyr::mutate(updated = (anom - mean(anom_nrg$anom)) / sd(anom_nrg$anom)) %>%  -->
+<!-- #   dplyr::mutate(series = "NRG") -->
 
-# Plot both together
-VEPII %>%
-  #dplyr::filter(year > 0) %>% 
-  ggplot(aes(x = year, y = anom, colour=Series)) +
-  geom_line(size = 1.0) +
-  xlab("Year BC/AD") +
-  ylab("July Temperature Anomaly (°C)") +
-  scale_x_continuous(breaks = seq(-1000, 1800, 200),
-                     minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
-  scale_y_continuous(breaks = seq(-2.5, 1.0, 0.5),
-                     limits = c(-2.5, 1.0)) +
-  theme_bw() +
-  # annotate(
-  #   "rect",
-  #   xmin = 800,
-  #   xmax = 1200,
-  #   ymin = -2.5,
-  #   ymax = 0.0,
-  #   alpha = .2
-  # ) +
-  # annotate(
-  #   "text",
-  #   x = 1000,
-  #   y = -0.25,
-  #   label = "Medieval Warm \n Period",
-  #   size = 4.5
-  # ) +
-  #   annotate(
-  #   "rect",
-  #   xmin = 1400,
-  #   xmax = 1800,
-  #   ymin = -2.5,
-  #   ymax = 0.0,
-  #   alpha = .2
-  # ) +
-  # annotate(
-  #   "text",
-  #   x = 1600,
-  #   y = -0.25,
-  #   label = "Little Ice \n Age",
-  #   size = 4.5
-  # ) +
-  theme(
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 12,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 14,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 6,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 14,
-      family = "Helvetica",
-      margin = margin(
-        t = 6,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_line(colour = "light grey"),
-    axis.line = element_line(colour = "black")
-  )
+<!-- VEPII <- rbind(anom_cmv, anom_nrg) -->
 
 
-```
+<!-- # Plot both together -->
+<!-- VEPII %>% -->
+<!--   #dplyr::filter(year > 0) %>%  -->
+<!--   ggplot(aes(x = year, y = anom, colour=Series)) + -->
+<!--   geom_line(size = 1.0) + -->
+<!--   xlab("Year BC/AD") + -->
+<!--   ylab("July Temperature Anomaly (°C)") + -->
+<!--   scale_x_continuous(breaks = seq(-1000, 1800, 200), -->
+<!--                      minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) + -->
+<!--   scale_y_continuous(breaks = seq(-2.5, 1.0, 0.5), -->
+<!--                      limits = c(-2.5, 1.0)) + -->
+<!--   theme_bw() + -->
+<!--   # annotate( -->
+<!--   #   "rect", -->
+<!--   #   xmin = 800, -->
+<!--   #   xmax = 1200, -->
+<!--   #   ymin = -2.5, -->
+<!--   #   ymax = 0.0, -->
+<!--   #   alpha = .2 -->
+<!--   # ) + -->
+<!--   # annotate( -->
+<!--   #   "text", -->
+<!--   #   x = 1000, -->
+<!--   #   y = -0.25, -->
+<!--   #   label = "Medieval Warm \n Period", -->
+<!--   #   size = 4.5 -->
+<!--   # ) + -->
+<!--   #   annotate( -->
+<!--   #   "rect", -->
+<!--   #   xmin = 1400, -->
+<!--   #   xmax = 1800, -->
+<!--   #   ymin = -2.5, -->
+<!--   #   ymax = 0.0, -->
+<!--   #   alpha = .2 -->
+<!--   # ) + -->
+<!--   # annotate( -->
+<!--   #   "text", -->
+<!--   #   x = 1600, -->
+<!--   #   y = -0.25, -->
+<!--   #   label = "Little Ice \n Age", -->
+<!--   #   size = 4.5 -->
+<!--   # ) + -->
+<!--   theme( -->
+<!--     panel.border = element_blank(), -->
+<!--     panel.grid.major = element_blank(), -->
+<!--     axis.text = element_text( -->
+<!--       size = 12, -->
+<!--       colour = "black", -->
+<!--       family = "Helvetica" -->
+<!--     ), -->
+<!--     axis.title.y = element_text( -->
+<!--       size = 14, -->
+<!--       family = "Helvetica", -->
+<!--       margin = margin( -->
+<!--         t = 10, -->
+<!--         r = 6, -->
+<!--         b = 10, -->
+<!--         l = 10 -->
+<!--       ) -->
+<!--     ), -->
+<!--     axis.title.x = element_text( -->
+<!--       size = 14, -->
+<!--       family = "Helvetica", -->
+<!--       margin = margin( -->
+<!--         t = 6, -->
+<!--         r = 10, -->
+<!--         b = 10, -->
+<!--         l = 10 -->
+<!--       ) -->
+<!--     ), -->
+<!--     panel.grid.minor = element_line(colour = "light grey"), -->
+<!--     axis.line = element_line(colour = "black") -->
+<!--   ) -->
+
+
+<!-- ``` -->
 
 ```{r fig8, fig.cap="Comparison of low-frequency reconstruction from this study, crop productivity, and niche.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 years <- 1:1300
+
+paleomat <- site.preds.unlisted.anom %>% 
+  dplyr::filter(date >= 1 & date <= 1250) %>% 
+  group_by(date) %>% 
+  dplyr::summarise(temp = mean(anom)) %>% 
+  dplyr::mutate(updated = (temp - mean(temp)) / sd(temp)) %>% 
+  select(-temp)
+  #dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
 
 paleomat <-
   read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>%
@@ -842,7 +857,7 @@ ggplot(all_reconstructions, aes(x = Year)) +
   facet_wrap("Measure_f",
              ncol = 1,
              scales = "free_y") +
-  guides(fill = FALSE, color = FALSE) +
+  guides(fill = "none", color = "none") +
   theme(text = element_text(size = 15),
         plot.margin = margin(10, 15, 10, 10))
 
