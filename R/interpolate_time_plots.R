@@ -26,28 +26,28 @@ interpolate_time_plots <-
         xlab("Year BC/AD") +
         ylab("Temperature °C") +
         scale_x_continuous(
-          breaks = seq(agemin_rounded, agemax_rounded, 200),
-          minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
-                                                        100), 200)
+          breaks = seq(agemin_rounded, agemax_rounded, 500),
+          minor_breaks = seq((agemin_rounded + 250), (agemax_rounded -
+                                                        250), 500)
         ) +
         scale_y_continuous(breaks = seq((
           DescTools::RoundTo(
             min(fit$value - 1.96 * fit$se.fit),
-            multiple = 0.5,
+            multiple = 1.0,
             FUN = floor
           )
         ), (
           DescTools::RoundTo(
             max(fit$value + 1.96 * fit$se.fit),
-            multiple = 0.5,
+            multiple = 1.0,
             FUN = ceiling
           )
-        ), 1.0)) +
+        ), 3.0)) +
         theme_bw() +
         theme(
           panel.border = element_blank(),
-          panel.grid.major = element_blank(),
-          plot.margin = margin(5.0, 5.0, 5.0, 5.0),
+          panel.grid.minor = element_blank(),
+          plot.margin = margin(10.0, 10.0, 10.0, 10.0),
           axis.text = element_text(
             size = 10,
             colour = "black",
@@ -67,13 +67,13 @@ interpolate_time_plots <-
             size = 12,
             family = "Helvetica",
             margin = margin(
-              t = 20,
+              t = 10,
               r = 10,
               b = 10,
               l = 10
             )
           ),
-          panel.grid.minor = element_line(colour = "light grey"),
+          panel.grid.major = element_line(colour = "light grey"),
           axis.line = element_line(colour = "black"),
           legend.text = element_text(size = 10, family = "Helvetica"),
           legend.title = element_text(size = 11, family = "Helvetica")
@@ -90,20 +90,20 @@ interpolate_time_plots <-
         xlab("Year BC/AD") +
         ylab("Temperature °C") +
         scale_x_continuous(
-          breaks = seq(agemin_rounded, agemax_rounded, 200),
-          minor_breaks = seq((agemin_rounded + 100), (agemax_rounded -
-                                                        100), 200)
+          breaks = seq(agemin_rounded, agemax_rounded, 500),
+          minor_breaks = seq((agemin_rounded + 250), (agemax_rounded -
+                                                        250), 500)
         ) +
         scale_y_continuous(breaks = seq((
-          DescTools::RoundTo(min(fit$value), multiple = 0.5, FUN = floor)
+          DescTools::RoundTo(min(fit$value), multiple = 1.0, FUN = floor)
         ), (
-          DescTools::RoundTo(max(fit$value), multiple = 0.5, FUN = ceiling)
-        ), 0.5)) +
+          DescTools::RoundTo(max(fit$value), multiple = 1.0, FUN = ceiling)
+        ), 3.0)) +
         theme_bw() +
         theme(
           panel.border = element_blank(),
-          panel.grid.major = element_blank(),
-          plot.margin = margin(5.0, 5.0, 5.0, 5.0),
+          panel.grid.minor = element_blank(),
+          plot.margin = margin(10.0, 10.0, 10.0, 10.0),
           axis.text = element_text(
             size = 10,
             colour = "black",
@@ -123,13 +123,13 @@ interpolate_time_plots <-
             size = 12,
             family = "Helvetica",
             margin = margin(
-              t = 20,
+              t = 10,
               r = 10,
               b = 10,
               l = 10
             )
           ),
-          panel.grid.minor = element_line(colour = "light grey"),
+          panel.grid.major = element_line(colour = "light grey"),
           axis.line = element_line(colour = "black"),
           legend.text = element_text(size = 10, family = "Helvetica"),
           legend.title = element_text(size = 11, family = "Helvetica")

@@ -561,6 +561,8 @@ Moberg_paleomat %>%
     legend.text=element_text(size=14)
   )
 
+ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+
 ```
 
 
@@ -605,7 +607,7 @@ rasterVis::gplot(tavg_idw_stack, layout=c(5, 3)) +
   ylab("Latitude") +
   labs(fill='Anomaly')
 
-trellis.device(pdf, file='mp.pdf', height=11.7, width=8.3)
+trellis.device(pdf, file='idw_interpolation.pdf', height=11.7, width=8.3)
 rasterVis::levelplot(tavg_idw_stack,
           layout=c(4, 7), # create a 5x3 layout for the data
           col.regions=colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255))
@@ -788,12 +790,12 @@ paleomat <- site.preds.unlisted.anom %>%
   select(-temp)
   #dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
 
-paleomat <-
-  read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>%
-  dplyr::filter(year >= 1 & year <= 1250)
-
-paleomat <- paleomat %>% 
-  dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
+# paleomat <-
+#   read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>%
+#   dplyr::filter(year >= 1 & year <= 1250)
+# 
+# paleomat <- paleomat %>% 
+#   dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
 
 # Estimated potential average maize yield (kg) in the CMV region
 years_vep <- data.frame(Year = seq(1, 599, 1))
@@ -861,7 +863,7 @@ ggplot(all_reconstructions, aes(x = Year)) +
   theme(text = element_text(size = 15),
         plot.margin = margin(10, 15, 10, 10))
 
-
+ggsave("Paleomat_Productivity_Niche.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 
 
 
@@ -947,12 +949,19 @@ knitr::kable(fossil.locs2,
 temporal_interpolations <- readRDS("./output/temporal_interpolations.rds")
 
 # Plot results in one PDF.
-plot_objects <- temporal_interpolations$plot_fit
-names(plot_objects) <- c(temporal_interpolations$site.name)
+# plot_objects <- temporal_interpolations$plot_fit
+# names(plot_objects) <- c(temporal_interpolations$site.name)
+
+# Plot the temporal interpolation results in one PDF.
+plot_objects <- tavg_predicted_west_new_90$plot_fit
+names(plot_objects) <- c(tavg_predicted_west_new_90$site.name)
 
 ok <- ggpubr::ggarrange(plotlist= plot_objects,
                     labels = c(names(plot_objects)),
-                    ncol = 4, nrow = 9, vjust = -0.5)
+                    ncol = 3, nrow = 5, vjust = -0.5) +
+  theme(plot.margin = margin(1.0,0.1,2,0.1, "cm")) 
+
+ggsave("site_temporal_interpolation.png", ok, width = 16.0, height = 16.0, units = "in")
 
 annotate_figure(ok, top = text_grob("", 
                color = "red", face = "bold", size = 14))
@@ -1038,6 +1047,22 @@ annotate_figure(ok2, top = text_grob("",
 
 
 ```{r supp_fig2, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+ggplot(data = usa) +
+  geom_sf(fill = NA) +
+  geom_sf(data = MPCT_final,
+          inherit.aes = FALSE,
+          aes(geometry = geometry)) +
+  coord_sf(xlim = c(-125,-95), ylim = c(25, 50)) +
+  theme_classic() +
+  theme(axis.text = element_text(
+      size = 16,
+      colour = "black",
+      family = "Helvetica"
+    ))
+
+
+
 
 library(tidyverse)
 library(rnaturalearth)
@@ -1170,3 +1195,10 @@ roughsf::save_roughsf(pst, "13_naturalearth.png")
 
 ```
 
+
+```
+
+ggplot(data = world) +
+    geom_sf() + geom_sf(data = MPCT_final, inherit.aes = FALSE, aes(geometry = geometry)) + coord_sf(xlim = c(-125, -95), ylim = c(25, 50))
+
+```
