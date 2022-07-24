@@ -573,10 +573,14 @@ fossil_input <- fossil_input[, keep_cols]
 swap.mat2 <- mat(pollen_input, climate_input, method = "SQchord")
 # getK(swap.mat2)
 
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
+rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
 
 
 mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
+  tibble::rownames_to_column("sample.id") %>%
+  rename(value = 2)
+
+mat_prediction_1_analogue <- as.data.frame(rlgh.mat2_best_analogue$predictions$model$predicted[1,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(value = 2)
 
@@ -632,6 +636,9 @@ fos_90 <- mat_prediction_cleaned %>%
   # filter(site.id == 246) %>% 
   sf::st_as_sf()
 
+write.csv(fos_90, "Tim_All_sig_tests_1best_analog.csv", row.names = FALSE)
+
+# Testing for using just 1 analogue on each site.
 
 
 
@@ -688,6 +695,8 @@ fos_90 <- mat_prediction_cleaned %>%
   dplyr::mutate(age = round(age)) %>% 
   # filter(site.id == 246) %>% 
   sf::st_as_sf()
+
+write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 
 full_fos <- randomTF(
       spp = pollen_input,
