@@ -287,7 +287,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 #load(file = "data/prism_1.rda")
 
 # Extract Prism climate data for modern pollen sites.
-MPCT_climate <-
+MPCT_climate2 <- MPCT_climate2
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
   extract_prism_normals() %>%
@@ -403,7 +403,7 @@ fossil_pollen2 <- fossil_pollen %>%
 
 # Step 1 RLen removal.
 rlen_removal <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
-                    names(which(rlen$passive > quantile(rlen$train, probs = 0.90)))}) %>% 
+                    names(which(rlen$passive > quantile(rlen$train, probs = 0.95)))}) %>% 
   flatten_chr() %>% 
   as.numeric()
 
@@ -463,7 +463,7 @@ sig_results2 <-
       spp = spp,
       env = data.frame(tjul = env),
       fos = x,
-      n = 10000,
+      n = 100,
       fun = MAT,
       col = 1
     )
@@ -490,7 +490,7 @@ sig_results2b <-
 sum(as.numeric(flatten(sig_results2))<=0.05)
 # 0.05
 # 11
-sum(as.numeric(flatten(sig_results2))<=0.1)
+sum(as.numeric(flatten(sig_results2))<=0.2)
 # 0.1
 # 19
 
@@ -534,7 +534,7 @@ fos2_95 <- fos %>%
 
 only_90 <- stack(unlist(sig_results2)) %>%
   #mutate(values = round(values, digits = 1)) %>% 
-  mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
+  mutate(sig_results2 = case_when(values <= 0.2 ~ TRUE,
                                                        TRUE ~ FALSE)) %>% 
   filter(sig_results2 == TRUE) %>% 
   pull(ind) %>% 
@@ -559,8 +559,11 @@ full_fos <- randomTF(
 pollen_input <- spp %>% 
   dplyr::select(which(colSums(.) > 0))
 
+#sfossil_samples <- unlist(map(fos3_90$pollen, function(x) row.names(x)))
+
 # Run for 90%
-fossil_input <- dplyr::bind_rows(fos3_90$pollen) %>% 
+fossil_input <- do.call(rbind, unname(fos3_90$pollen)) %>% 
+  #dplyr::bind_rows(fos3_90$pollen) %>% 
   dplyr::select(which(colSums(.) > 0))
 
 keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
@@ -570,19 +573,31 @@ pollen_input <- pollen_input[, keep_cols]
 fossil_input <- fossil_input[, keep_cols]
 
 
-swap.mat2 <- mat(pollen_input, climate_input, method = "SQchord")
+swap.mat2 <- mat(pollen_input, env, method = "SQchord")
 # getK(swap.mat2)
+rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
 
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
+rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
 
+rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
 
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
+mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[2,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(value = 2)
 
-mat_prediction_1_analogue <- as.data.frame(rlgh.mat2_best_analogue$predictions$model$predicted[1,]) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(value = 2)
+mat_prediction_4 <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
+  mutate(sample.id = fossil_samples) %>% 
+  rename(value = 1) %>% 
+  mutate(bootstrap = rlgh.mat2[["predictions"]][["bootstrap"]][["predicted"]][,4],
+         error = rlgh.mat2[["predictions"]][["sample.errors"]][["rmsep"]][,4])
+
+
+
+mat_prediction_1_analogue <- as.data.frame(rlgh.mat2b$predictions$model$predicted[1,]) %>%
+  mutate(sample.id = fossil_samples) %>% 
+  rename(value = 1) %>% 
+  mutate(bootstrap = rlgh.mat2b[["predictions"]][["bootstrap"]][["predicted"]][,1],
+         error = rlgh.mat2b[["predictions"]][["sample.errors"]][["rmsep"]][,1])
 
 # rlgh.mat2_copy <- rlgh.mat2
 # replace_names <- data.frame(sample.id = colnames(rlgh.mat2$predictions$model$predicted)) %>% 
@@ -636,9 +651,9 @@ fos_90 <- mat_prediction_cleaned %>%
   # filter(site.id == 246) %>% 
   sf::st_as_sf()
 
-write.csv(fos_90, "Tim_All_sig_tests_1best_analog.csv", row.names = FALSE)
+write.csv(fos_90, "Tim_All_sig_tests_1best_analog_boostrap.csv", row.names = FALSE)
 
-# Testing for using just 1 analogue on each site.
+
 
 
 
@@ -665,11 +680,11 @@ pollen_input <- pollen_input[, keep_cols]
 fossil_input <- fossil_input[, keep_cols]
 
 
-swap.mat2 <- mat(pollen_input, climate_input, method = "SQchord")
+swap.mat2 <- mat(pollen_input, env, method = "SQchord")
 
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 5)
+rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
 
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[5,]) %>%
+mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(value = 2)
 
@@ -783,8 +798,15 @@ fos_90 <- mat_prediction_cleaned %>%
 
 
 
+```
 
 
+
+
+
+
+# Testing OLD
+```{r testing_OLD, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 # sig_results3 <- map2(fos$pollen, fos$dataset.id, function(x,y) {output <- randomTF(spp = spp*100, env = data.frame(tjul = env),
 #    fos = x*100, n = 10000, fun = MAT, col = 2); sig_out <- output$sig; names(sig_out) <- y; return(sig_out)})
 # 
@@ -1090,13 +1112,13 @@ fossil_input <- fossil_p_prop[, keep_cols]
 month_name <- data.frame(month = c(1:12), labels = c("tjan", "tfeb", "tmar", "tapr", "tmay", "tjun", "tjul", "taug", "tsep", "toct", "tnov", "tdec"))
 
 climate_input <- bind_rows(MPCT_climate_final$climate) %>% 
-  select(month, tavg) %>% 
+  dplyr::select(month, tavg) %>% 
   left_join(., month_name, by = "month") %>% 
-  select(month = labels, tavg) %>% 
+  dplyr::select(month = labels, tavg) %>% 
   group_by(grp = as.integer(gl(n(), 12, n()))) %>% 
   pivot_wider(names_from = "month", values_from = "tavg") %>% 
   ungroup %>% 
-  select(-grp)
+  dplyr::select(-grp)
 climate_input <- filter(climate_input, month == 7)
 climate_input <- select(climate_input, tavg)
 climate_input <- pull(climate_input, tavg)
@@ -1158,10 +1180,6 @@ new_output_recont_fos2_95
 
 
 ```
-
-
-
-
 
 
 # Reconstruction
@@ -1648,9 +1666,9 @@ tavg_new_90 <- fos_90 %>%
   mutate(mid_period = get_midpoints(period)) %>% 
   dplyr::mutate(anom = value - warmest.month)
 
-# tavg_new_90 %>% 
-#   filter(date >= -1000) %>% 
-# ggplot(., aes(x=date, y=values, group=site.name)) + 
+# tavg_new_90 %>%
+#   filter(date >= -1000) %>%
+# ggplot(., aes(x=date, y=value, group=site.name)) +
 #   geom_line(aes(color=site.name)) +
 #   #geom_smooth(method="auto", se=TRUE, fullrange=TRUE, level=0.95) +
 #   facet_wrap(~ site.name, ncol=4)
@@ -1690,7 +1708,7 @@ tavg_predicted_west_new_90 <- tavg_new_90 %>%
   # summarise(observ = n())
   # filter(!sample.id %in% sample_filter) %>% 
   # filter(site.id != 1661) %>% 
-  filter(!site.id %in% c(2260, 1661)) %>% 
+  filter(!site.id %in% c(1661, 2260, 2241)) %>% 
   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
   tidyr::nest() %>%
   dplyr::rename(site.data = data) %>%
@@ -1733,7 +1751,7 @@ tavg_predicted_west_new_90 <- tavg_new_90 %>%
 tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
   dplyr::select(-model_fit,-plot_fit) %>%
   tidyr::unnest(mean_100yrs) %>%
-  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(2260, 1661)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
+  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
   # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
   #dplyr::filter(date >= -3550 & date <= 1800) %>%
   arrange(date) %>% 
@@ -1760,6 +1778,20 @@ site.preds.unlisted <-
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
   dplyr::mutate(anom = value - modern)
+
+# #Modern Weighted Mean
+# site.preds.unlisted %>% 
+#   ungroup %>% 
+#   dplyr::select(site.id, modern) %>% 
+#   distinct() %>% 
+#   left_join(tavg_new_90, ., by = "site.id") %>% 
+#   group_by(site.id) %>% 
+#   mutate(n = n()) %>% 
+#   slice(1) %>% 
+#   filter(!site.id %in% c(1661, 1609)) %>% 
+#   ungroup %>% 
+#   summarise(modern = (n * modern)) %>% 
+#   summarise(sum(modern)/818)
 
 # ok <- site.preds.unlisted.anom %>% 
 # sf::st_as_sf(coords = c("long", "lat"),

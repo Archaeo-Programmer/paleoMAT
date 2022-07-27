@@ -14,18 +14,18 @@ extract_prism_normals <-
       dplyr::group_by(month) %>%
       dplyr::summarise(`days` = mean(n))
 
-    prism_extraction <- list(prism_1,
-         prism_2,
-         prism_3,
-         prism_4,
-         prism_5,
-         prism_6,
-         prism_7,
-         prism_8,
-         prism_9,
-         prism_10,
-         prism_11,
-         prism_12) %>%
+    # prism_extraction <- list(prism_1,
+    #      prism_2,
+    #      prism_3,
+    #      prism_4,
+    #      prism_5,
+    #      prism_6,
+    #      prism_7,
+    #      prism_8,
+    #      prism_9,
+    #      prism_10,
+    #      prism_11,
+    #      prism_12) %>%
 
       prism_extraction <- list(prism_7) %>%
       dplyr::bind_rows() %>%
@@ -63,8 +63,9 @@ extract_prism_normals <-
     NA_index <- which(is.na(prism_extraction$ppt))
     NA_index <- unique(prism_extraction$sample.id[NA_index])
 
-    if(NA_index != length(0)){
-      sites <- subset(sites, sample.id != NA_index)
+    if(length(NA_index) != 0){
+      sites <- sites %>%
+        dplyr::filter(!sample.id %in% NA_index)
     }
 
     prism_extraction %>%
