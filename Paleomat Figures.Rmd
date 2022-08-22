@@ -245,11 +245,11 @@ alley2000 <-
 
 alley2000 %>%
   ggplot(aes(x = Age, y = Temperature)) +
-  geom_line() +
+  geom_line(size = 2) +
   scale_x_continuous(breaks = seq(-18000, 2000, 2000),
                    limits = c(-18000, 2000)) +
   theme_classic() +
-  xlab("Year BC/AD") +
+  xlab("Years BC/AD") +
   ylab("Temperature °C") +
   annotate(
     "rect",
@@ -264,7 +264,7 @@ alley2000 %>%
     x = -10201,
     y = -27.25,
     label = "Younger \n Dryas",
-    size = 5
+    size = 8
   ) +
   geom_segment(aes(
     x = -6251,
@@ -278,7 +278,7 @@ alley2000 %>%
     x = -6251,
     y = -38,
     label = "6250 BC \n Cold Event",
-    size = 5
+    size = 8
   ) +
   annotate(
     "rect",
@@ -293,18 +293,18 @@ alley2000 %>%
     x = -3051,
     y = -27.25,
     label = "Northward Expansion \n of Agriculture",
-    size = 5
+    size = 8
   ) +
     theme(
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 16,
+      size = 26,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 10,
@@ -314,7 +314,7 @@ alley2000 %>%
       )
     ),
     axis.title.x = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 5,
@@ -327,77 +327,11 @@ alley2000 %>%
 
 ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
 
-
-# If using BP
-# alley2000 %>%
-#   ggplot(aes(x = Age, y = Temperature)) +
-#   geom_line() +
-#   scale_x_reverse(breaks = seq(0, 20000, 2500)) +
-#   theme_classic() +
-#   xlab("calibrated years BP") +
-#   ylab("Temperature °C") +
-#   annotate(
-#     "rect",
-#     xmin = 11500,
-#     xmax = 12800,
-#     ymin = min(alley2000$Temperature) - 0.5,
-#     ymax = max(alley2000$Temperature),
-#     alpha = .2
-#   ) +
-#   annotate(
-#     "text",
-#     x = 12150,
-#     y = -27.25,
-#     label = "Younger \n Dryas",
-#     size = 3.5
-#   ) +
-#   geom_segment(aes(
-#     x = 8200,
-#     y = -36.5,
-#     xend = 8200,
-#     yend = -33
-#   ),
-#   arrow = arrow(length = unit(0.3, "cm"))) +
-#   annotate(
-#     "text",
-#     x = 8200,
-#     y = -38,
-#     label = "8200 cal yr BP \n cold event",
-#     size = 3
-#   ) +
-#   annotate(
-#     "rect",
-#     xmin = 4000,
-#     xmax = 6000,
-#     ymin = min(alley2000$Temperature) - 0.5,
-#     ymax = max(alley2000$Temperature),
-#     alpha = .2
-#   ) +
-#   annotate(
-#     "text",
-#     x = 5000,
-#     y = -27.25,
-#     label = "northward expansion \n of agriculture",
-#     size = 3
-#   ) 
-
 # Warmest periods following 5000 BP.
 # 3297.07     -28.748
 # 2068.24    -29.5708
 # 1514.860    -30.4060
 # 964.939    -30.4628
-
-
-# To visualize in BC/AD.
-# alley2000 %>%
-#   dplyr::filter(Age <= 3000) %>% 
-#   dplyr::mutate(date = BPtoBCAD(Age)) %>% 
-#   ggplot(aes(x = date, y = Temperature)) +
-#   geom_line() +
-#   scale_x_continuous(breaks = seq(-1200, 2000, 200)) +
-#   theme_classic() +
-#   xlab("calibrated years BP") +
-#   ylab("Temperature °C") 
 
 
 ```
@@ -427,12 +361,12 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 16,
+      size = 26,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 10,
@@ -442,7 +376,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
       )
     ),
     axis.title.x = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 5,
@@ -455,62 +389,13 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
     axis.line = element_line(colour = "black"),
     plot.margin = margin(
       t = 5,
-      r = 10,
+      r = 25,
       b = 5,
       l = 5
     )
   )
 
 ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure3.png", dpi = 600)
-
-# For BP
-# ggplot(data = Moberg, aes(x = date, y = LF)) +
-#   geom_line(size = 1.5, color = "darkblue") +
-#   xlab("Years AD") +
-#   ylab("Temperature Anomaly (°C)") +
-#   #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
-#   scale_x_reverse(breaks = seq(0, 2000, 200),
-#                   minor_breaks = seq(100, 1900, 200)) +
-#   scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
-#   theme_bw() +
-#   geom_vline(xintercept = c(1067, 800, 660, 360)) +
-#   theme(
-#     panel.border = element_blank(),
-#     panel.grid.major = element_blank(),
-#     axis.text = element_text(
-#       size = 12,
-#       colour = "black",
-#       family = "Helvetica"
-#     ),
-#     axis.title.y = element_text(
-#       size = 14,
-#       family = "Helvetica",
-#       margin = margin(
-#         t = 10,
-#         r = 4,
-#         b = 10,
-#         l = 10
-#       )
-#     ),
-#     axis.title.x = element_text(
-#       size = 14,
-#       family = "Helvetica",
-#       margin = margin(
-#         t = 4,
-#         r = 10,
-#         b = 10,
-#         l = 10
-#       )
-#     ),
-#     panel.grid.minor = element_line(colour = "grey 70"),
-#     axis.line = element_line(colour = "black"),
-#     plot.margin = margin(
-#       t = 5,
-#       r = 10,
-#       b = 5,
-#       l = 5
-#     )
-#   )
 
 ```
 
