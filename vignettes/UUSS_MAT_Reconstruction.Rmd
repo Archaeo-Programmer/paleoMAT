@@ -382,7 +382,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 #   pull(tavg)
 
 
-fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
+#fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
 
 
 fossil_pollen <- fossil_final %>% 
@@ -490,7 +490,7 @@ sig_results2b <-
 sum(as.numeric(flatten(sig_results2))<=0.05)
 # 0.05
 # 11
-sum(as.numeric(flatten(sig_results2))<=0.2)
+sum(as.numeric(flatten(sig_results2))<=0.1)
 # 0.1
 # 19
 
@@ -534,7 +534,7 @@ fos2_95 <- fos %>%
 
 only_90 <- stack(unlist(sig_results2)) %>%
   #mutate(values = round(values, digits = 1)) %>% 
-  mutate(sig_results2 = case_when(values <= 0.2 ~ TRUE,
+  mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
                                                        TRUE ~ FALSE)) %>% 
   filter(sig_results2 == TRUE) %>% 
   pull(ind) %>% 
@@ -575,21 +575,25 @@ fossil_input <- fossil_input[, keep_cols]
 
 swap.mat2 <- mat(pollen_input, env, method = "SQchord")
 # getK(swap.mat2)
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
+rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
 
 rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
 
 rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
 
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[2,]) %>%
+mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(value = 2)
 
-mat_prediction_4 <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
-  mutate(sample.id = fossil_samples) %>% 
-  rename(value = 1) %>% 
-  mutate(bootstrap = rlgh.mat2[["predictions"]][["bootstrap"]][["predicted"]][,4],
-         error = rlgh.mat2[["predictions"]][["sample.errors"]][["rmsep"]][,4])
+mat_prediction_4 <- as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %>%
+  tibble::rownames_to_column("sample.id") %>%
+  rename(value = 2) %>% 
+  left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
+  rename(bootstrap = 2), by = "sample.id") %>% 
+  left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
+  rename(rmsep = 2), by = "sample.id") %>% 
+    left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
+  rename(s1 = 2), by = "sample.id")
 
 
 
@@ -1751,7 +1755,7 @@ tavg_predicted_west_new_90 <- tavg_new_90 %>%
 tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
   dplyr::select(-model_fit,-plot_fit) %>%
   tidyr::unnest(mean_100yrs) %>%
-  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
+  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661, 2260, 2241)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
   # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
   #dplyr::filter(date >= -3550 & date <= 1800) %>%
   arrange(date) %>% 
@@ -1777,7 +1781,8 @@ site.preds.unlisted <-
 
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
-  dplyr::mutate(anom = value - modern)
+  dplyr::mutate(anom = value - modern) %>% 
+ # dplyr::mutate(anom_bootstrap = bootstrap - modern)
 
 # #Modern Weighted Mean
 # site.preds.unlisted %>% 
@@ -1800,7 +1805,7 @@ site.preds.unlisted.anom <- site.preds.unlisted %>%
 # ok <- site.preds.unlisted.anom %>%   group_by(site.name, site.id) %>%
 #     summarise(observ = n(), minDate = min(date), maxDate = max(date))
 
-write.csv(site.preds.unlisted.anom, "./vignettes/data/output/Anom_All3Steps.csv", row.names = FALSE)
+write.csv(site.preds.unlisted.anom, "./vignettes/data/output/Anom_All3Steps_withBootstrapErrors.csv", row.names = FALSE)
 
 # Look at the distribution:
 # ggplot(site.preds.unlisted.anom, aes(x = anom)) + geom_density(aes(y = ..count..), fill = "lightgray") +

@@ -27,7 +27,7 @@ data(us.cities)
 fossil.locs <-
   readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata.rds")) %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
-  select(-geometry) %>% 
+  dplyr::select(-geometry) %>% 
   dplyr::group_by(site.name) %>%
   dplyr::slice(1) %>%
   dplyr::ungroup() %>%
@@ -142,90 +142,93 @@ ggplot() +
     data = usa,
     color = "#2b2b2b",
     fill = "transparent",
-    size = 0.5
+    size = 1.0
   ) +
   geom_sf(
     data = fossil.sites,
     shape = 20,
     fill = "blue",
-    size = 3
+    size = 3.5
   ) +
   geom_sf(
     data = cities,
     shape = 23,
     fill = "blue",
-    size = 3
+    size = 3.5
   ) +
   geom_sf(
     data = bb,
-    size = 1,
+    size = 1.5,
     fill = NA,
-    aes(colour = "darkgrey"),
+    aes(colour = "darkgrey",
+        linetype = "darkgrey"),
     alpha = 0.3,
     show.legend = "line",
     inherit.aes = FALSE
   ) +
   geom_sf(
     data = bb2,
-    size = 1,
+    size = 1.5,
     fill = NA,
-    aes(colour = "red2"),
+    aes(colour = "darkolivegreen4",
+        linetype = "darkolivegreen4"),
     alpha = 0.3,
     show.legend = "line",
     inherit.aes = FALSE
   ) +
-  scale_color_manual(values = c("darkgrey" = "darkgrey", "red2" = "red2"),
-                     labels = c("Bocinsky and Kohler 2014", "This Study"),
-                     name = "Data Extent") +
+  # scale_color_manual(values = c("darkgrey" = "darkgrey", "darkolivegreen4" = "darkolivegreen4"),
+  #                    labels = c("Bocinsky and Kohler 2014", "This Study"),
+  #                    name = "Data Extent") +
+  scale_color_manual(values = c("darkgrey" = "darkgrey", "darkolivegreen4" = "darkolivegreen4"), labels = c("Bocinsky and Kohler 2014", "This Study"), name = "Data Extent") +
+  scale_linetype_manual(values = c("darkgrey" = "solid","darkolivegreen4" = "dashed"), labels = c("Bocinsky and Kohler 2014", "This Study"), name = "Data Extent") + 
   shadowtext::geom_shadowtext(
     data = cities3,
     aes(x = long, y = lat, label = name),
     nudge_y = 0.265,
     color = "white",
-    size = 2.5
+    size = 4
   ) +
   xlab("Longitude") +
   ylab("Latitude") +
   labs(colour = "") +
-  annotate("text", x=-109.75, y=37.25, label= "UTAH", size = 5, fontface = 2, hjust = 1) +
-  annotate("text", x=-108.25, y=37.25, label= "COLORADO", size = 5, fontface = 2, hjust = 0) +
-  annotate("text", x=-109.75, y=36.5, label= "ARIZONA", size = 5, fontface = 2, hjust = 1) +
-  annotate("text", x=-108.25, y=36.5, label= "NEW MEXICO", size = 5, fontface = 2, hjust = 0) +
+  annotate("text", x=-109.75, y=38.5, label= "UTAH", size = 6, fontface = 2, hjust = 1.0) +
+  annotate("text", x=-108.25, y=38.5, label= "COLORADO", size = 6, fontface = 2, hjust = 0) +
+  annotate("text", x=-109.75, y=32.3, label= "ARIZONA", size = 6, fontface = 2, hjust = 1) +
+  annotate("text", x=-108.25, y=32.3, label= "NEW MEXICO", size = 6, fontface = 2, hjust = 0) +
   theme(
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 10,
+      size = 26,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 12,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 10,
-        r = 4,
+        r = 5,
         b = 10,
         l = 10
       )
     ),
     axis.title.x = element_text(
-      size = 12,
+      size = 28,
       family = "Helvetica",
       margin = margin(
-        t = 4,
+        t = 5,
         r = 10,
         b = 10,
         l = 10
       )
     ),
-    panel.grid.minor = element_line(colour = "light grey"),
     axis.line = element_line(colour = "black"),
-    legend.text = element_text(size = 10, family = "Helvetica"),
-    legend.title = element_text(size = 11, family = "Helvetica")
+    legend.text = element_text(size = 19, family = "Helvetica"),
+    legend.title = element_text(size = 20, family = "Helvetica")
   )
 
-ggsave("LF_reconstruction_extent.png", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure1.png", dpi = 600)
 
 
 ```
@@ -237,59 +240,146 @@ ggsave("LF_reconstruction_extent.png", dpi = 600)
 alley2000 <-
   read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
   dplyr::mutate(Age = Age * 1000)  %>%
-  dplyr::filter(Age <= 20000)
+  dplyr::filter(Age <= 20000) %>% 
+  dplyr::mutate(Age = BPtoBCAD(Age))
 
 alley2000 %>%
   ggplot(aes(x = Age, y = Temperature)) +
   geom_line() +
-  scale_x_reverse(breaks = seq(0, 20000, 2500)) +
+  scale_x_continuous(breaks = seq(-18000, 2000, 2000),
+                   limits = c(-18000, 2000)) +
   theme_classic() +
-  xlab("calibrated years BP") +
+  xlab("Year BC/AD") +
   ylab("Temperature °C") +
   annotate(
     "rect",
-    xmin = 11500,
-    xmax = 12800,
+    xmin = -10851 ,
+    xmax = -9551,
     ymin = min(alley2000$Temperature) - 0.5,
     ymax = max(alley2000$Temperature),
     alpha = .2
   ) +
   annotate(
     "text",
-    x = 12150,
+    x = -10201,
     y = -27.25,
     label = "Younger \n Dryas",
-    size = 3.5
+    size = 5
   ) +
   geom_segment(aes(
-    x = 8200,
+    x = -6251,
     y = -36.5,
-    xend = 8200,
+    xend = -6251,
     yend = -33
   ),
   arrow = arrow(length = unit(0.3, "cm"))) +
   annotate(
     "text",
-    x = 8200,
+    x = -6251,
     y = -38,
-    label = "8200 cal yr BP \n cold event",
-    size = 3
+    label = "6250 BC \n Cold Event",
+    size = 5
   ) +
   annotate(
     "rect",
-    xmin = 4000,
-    xmax = 6000,
+    xmin = -2051,
+    xmax = -4051,
     ymin = min(alley2000$Temperature) - 0.5,
     ymax = max(alley2000$Temperature),
     alpha = .2
   ) +
   annotate(
     "text",
-    x = 5000,
+    x = -3051,
     y = -27.25,
-    label = "northward expansion \n of agriculture",
-    size = 3
-  ) 
+    label = "Northward Expansion \n of Agriculture",
+    size = 5
+  ) +
+    theme(
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 16,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 18,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 18,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
+
+
+# If using BP
+# alley2000 %>%
+#   ggplot(aes(x = Age, y = Temperature)) +
+#   geom_line() +
+#   scale_x_reverse(breaks = seq(0, 20000, 2500)) +
+#   theme_classic() +
+#   xlab("calibrated years BP") +
+#   ylab("Temperature °C") +
+#   annotate(
+#     "rect",
+#     xmin = 11500,
+#     xmax = 12800,
+#     ymin = min(alley2000$Temperature) - 0.5,
+#     ymax = max(alley2000$Temperature),
+#     alpha = .2
+#   ) +
+#   annotate(
+#     "text",
+#     x = 12150,
+#     y = -27.25,
+#     label = "Younger \n Dryas",
+#     size = 3.5
+#   ) +
+#   geom_segment(aes(
+#     x = 8200,
+#     y = -36.5,
+#     xend = 8200,
+#     yend = -33
+#   ),
+#   arrow = arrow(length = unit(0.3, "cm"))) +
+#   annotate(
+#     "text",
+#     x = 8200,
+#     y = -38,
+#     label = "8200 cal yr BP \n cold event",
+#     size = 3
+#   ) +
+#   annotate(
+#     "rect",
+#     xmin = 4000,
+#     xmax = 6000,
+#     ymin = min(alley2000$Temperature) - 0.5,
+#     ymax = max(alley2000$Temperature),
+#     alpha = .2
+#   ) +
+#   annotate(
+#     "text",
+#     x = 5000,
+#     y = -27.25,
+#     label = "northward expansion \n of agriculture",
+#     size = 3
+#   ) 
 
 # Warmest periods following 5000 BP.
 # 3297.07     -28.748
@@ -323,48 +413,45 @@ Moberg <-
     sep = "\t",
     dec = "."
   ) [, 1:3] %>%
-  dplyr::filter(LF != -9.9999 & date <= 2000) %>%
-  dplyr::mutate(date = 1950 - date)
+  dplyr::filter(LF != -9.9999 & date <= 2000)
 
 ggplot(data = Moberg, aes(x = date, y = LF)) +
-  geom_line(size = 1.5) +
-  xlab("calibrated years BP") +
+  geom_line(size = 2, color = "darkblue") +
+  xlab("Years AD") +
   ylab("Temperature Anomaly (°C)") +
-  #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
-  scale_x_reverse(breaks = seq(0, 2000, 200),
-                  minor_breaks = seq(100, 1900, 200)) +
-  scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
+  scale_x_continuous(breaks=seq(0,2000,200)) +
+  scale_y_continuous(breaks = seq(-0.7, 0, 0.1), limits = c(-0.7, 0)) +
   theme_bw() +
-  geom_vline(xintercept = c(1067, 800, 660, 360)) +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
   theme(
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 12,
+      size = 16,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 14,
+      size = 18,
       family = "Helvetica",
       margin = margin(
         t = 10,
-        r = 4,
+        r = 5,
         b = 10,
         l = 10
       )
     ),
     axis.title.x = element_text(
-      size = 14,
+      size = 18,
       family = "Helvetica",
       margin = margin(
-        t = 4,
+        t = 5,
         r = 10,
         b = 10,
         l = 10
       )
     ),
-    panel.grid.minor = element_line(colour = "grey 70"),
+    panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black"),
     plot.margin = margin(
       t = 5,
@@ -373,6 +460,57 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
       l = 5
     )
   )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure3.png", dpi = 600)
+
+# For BP
+# ggplot(data = Moberg, aes(x = date, y = LF)) +
+#   geom_line(size = 1.5, color = "darkblue") +
+#   xlab("Years AD") +
+#   ylab("Temperature Anomaly (°C)") +
+#   #scale_x_continuous(breaks=seq(0,2000,200), minor_breaks = seq(100, 1900, 200)) +
+#   scale_x_reverse(breaks = seq(0, 2000, 200),
+#                   minor_breaks = seq(100, 1900, 200)) +
+#   scale_y_continuous(breaks = seq(-0.8, 0, 0.1), limits = c(-0.8, 0)) +
+#   theme_bw() +
+#   geom_vline(xintercept = c(1067, 800, 660, 360)) +
+#   theme(
+#     panel.border = element_blank(),
+#     panel.grid.major = element_blank(),
+#     axis.text = element_text(
+#       size = 12,
+#       colour = "black",
+#       family = "Helvetica"
+#     ),
+#     axis.title.y = element_text(
+#       size = 14,
+#       family = "Helvetica",
+#       margin = margin(
+#         t = 10,
+#         r = 4,
+#         b = 10,
+#         l = 10
+#       )
+#     ),
+#     axis.title.x = element_text(
+#       size = 14,
+#       family = "Helvetica",
+#       margin = margin(
+#         t = 4,
+#         r = 10,
+#         b = 10,
+#         l = 10
+#       )
+#     ),
+#     panel.grid.minor = element_line(colour = "grey 70"),
+#     axis.line = element_line(colour = "black"),
+#     plot.margin = margin(
+#       t = 5,
+#       r = 10,
+#       b = 5,
+#       l = 5
+#     )
+#   )
 
 ```
 
@@ -419,8 +557,8 @@ site.preds.unlisted.anom %>%
                      #minor_breaks = seq(-3100, 1900, 200),
                      minor_breaks = NULL,
                      limits = c(-3000, 2000)) +
-  scale_y_continuous(breaks = seq(-3.0, 2.0, 1.0),
-                     limits = c(-3.0, 2.5),
+  scale_y_continuous(breaks = seq(-2.0, 2.0, 1.0),
+                     limits = c(-2.0, 2.5),
                      expand = c(0.01, 0)) +
   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
   #geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
@@ -502,25 +640,33 @@ ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi 
 
 ```{r fig5, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-temp_anom_standard <- site.preds.unlisted.anom %>% 
-  group_by(date) %>% 
-  dplyr::summarise(temp = mean(anom)) %>% 
-  dplyr::mutate(update = (temp - mean(temp)) / sd(temp)) %>% 
-  dplyr::mutate(Series = "This study") %>% 
-  dplyr::select(year = date, update, Series)
+anom_loess_2 <- anom_loess %>% 
+  mutate(x = as.integer(x)) %>% 
+  filter(x >= 133 & x <= 1800)
+
+temp_anom_standard <- anom_loess_2 %>% 
+  ## site.preds.unlisted.anom %>% 
+  ## group_by(date) %>% 
+  ## dplyr::summarise(temp = mean(anom)) %>% 
+  #dplyr::mutate(update = (y - mean(anom_loess_2$y)) / sd(anom_loess_2$y)) %>% 
+  dplyr::mutate(series = "This study") %>% 
+  #dplyr::select(year = x, update, series)
+  dplyr::select(year = x, anom = y, series)
 
 Moberg_standard <- Moberg %>% 
-  dplyr::mutate(update = (LF - mean(Moberg$LF)) / sd(Moberg$LF)) %>% 
+  #dplyr::mutate(update = (LF - mean(Moberg$LF)) / sd(Moberg$LF)) %>% 
   dplyr::mutate(year = BPtoBCAD(date)) %>% 
-  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
-  dplyr::select(year, update, Series)
+  dplyr::mutate(series = "Moberg et al. 2005") %>% 
+  dplyr::select(year, anom = LF, series) %>% 
+  filter(year <= 1800)
 
 Moberg_paleomat <- rbind(temp_anom_standard, Moberg_standard)
 
 # Moberg LF and paleomat
 Moberg_paleomat %>% 
   dplyr::filter(year >= 133 & year <= 1800) %>% 
-  ggplot(aes(x = year, y = update, colour = Series)) +
+  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
+  ggplot(aes(x = year, y = update, colour = series)) +
   geom_line(size = 1.0) +
   xlab("Year AD") +
   ylab("Standardized July Temperature Anomaly") +
@@ -1046,7 +1192,7 @@ annotate_figure(ok2, top = text_grob("",
 ```
 
 
-```{r supp_fig2, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig9, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 ggplot(data = usa) +
   geom_sf(fill = NA) +
