@@ -14,12 +14,51 @@ knitr::opts_chunk$set(echo = TRUE)
 library(paleomat)
 library(maps)
 data(us.cities)
+library(ggh4x)
 
 ```
 
 # Figures
 
-```{r fig1, fig.cap="Locations of fossil pollen samples used in this study over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution. The grey box indicates the extent of the Upper United States Southwest (Bocinsky and Kohler 2014), and the red box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig1, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+ggplot(data = usa) +
+  geom_sf(fill = NA) +
+  geom_sf(data = MPCT_final,
+          inherit.aes = FALSE,
+          aes(geometry = geometry)) +
+  coord_sf(xlim = c(-125,-95), ylim = c(25, 50)) +
+  theme_classic() +
+  scale_x_continuous(breaks = seq(-125,-95, 5.0)) +
+  scale_y_continuous(breaks = seq(25, 50, 5)) +
+  labs(colour = "") +
+  theme(
+    axis.ticks=element_blank(),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.text.x = element_text(angle = 90,
+                               margin = margin(
+        t = -25,
+        r = 10,
+        b = 10,
+        l = 10
+      )),
+    axis.line = element_blank()
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure1.png", dpi = 600)
+
+
+```
+
+
+
+```{r fig2, fig.cap="Locations of fossil pollen samples used in this study over the mean July temperature for 1961 to 1990 from PRISM at 800-m resolution. The grey box indicates the extent of the Upper United States Southwest (Bocinsky and Kohler 2014), and the red box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Showing extent of UUSS and the fossil pollen sites.
 
@@ -162,7 +201,6 @@ ggplot() +
     fill = NA,
     aes(colour = "darkgrey",
         linetype = "darkgrey"),
-    alpha = 0.3,
     show.legend = "line",
     inherit.aes = FALSE
   ) +
@@ -172,13 +210,9 @@ ggplot() +
     fill = NA,
     aes(colour = "darkolivegreen4",
         linetype = "darkolivegreen4"),
-    alpha = 0.3,
     show.legend = "line",
     inherit.aes = FALSE
   ) +
-  # scale_color_manual(values = c("darkgrey" = "darkgrey", "darkolivegreen4" = "darkolivegreen4"),
-  #                    labels = c("Bocinsky and Kohler 2014", "This Study"),
-  #                    name = "Data Extent") +
   scale_color_manual(values = c("darkgrey" = "darkgrey", "darkolivegreen4" = "darkolivegreen4"), labels = c("Bocinsky and Kohler 2014", "This Study"), name = "Data Extent") +
   scale_linetype_manual(values = c("darkgrey" = "solid","darkolivegreen4" = "dashed"), labels = c("Bocinsky and Kohler 2014", "This Study"), name = "Data Extent") + 
   shadowtext::geom_shadowtext(
@@ -188,14 +222,13 @@ ggplot() +
     color = "white",
     size = 4
   ) +
-  xlab("Longitude") +
-  ylab("Latitude") +
   labs(colour = "") +
   annotate("text", x=-109.75, y=38.5, label= "UTAH", size = 6, fontface = 2, hjust = 1.0) +
   annotate("text", x=-108.25, y=38.5, label= "COLORADO", size = 6, fontface = 2, hjust = 0) +
   annotate("text", x=-109.75, y=32.3, label= "ARIZONA", size = 6, fontface = 2, hjust = 1) +
   annotate("text", x=-108.25, y=32.3, label= "NEW MEXICO", size = 6, fontface = 2, hjust = 0) +
   theme(
+    legend.key.width = unit(1.25, 'cm'),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -203,38 +236,21 @@ ggplot() +
       colour = "black",
       family = "Helvetica"
     ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.line = element_line(colour = "black"),
-    legend.text = element_text(size = 19, family = "Helvetica"),
-    legend.title = element_text(size = 20, family = "Helvetica")
+    axis.text.x = element_text(angle = 90),
+    axis.title = element_blank(),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    legend.text = element_text(size = 18, family = "Helvetica"),
+    legend.title = element_text(size = 19, family = "Helvetica")
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure1.png", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2b.png", dpi = 600)
 
 
 ```
 
 
-```{r fig2, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig3, fig.cap= "Temperature for the North Atlantic using Greenland ice core data (Alley 2000) for 20,000 BP to present.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
 alley2000 <-
@@ -247,7 +263,12 @@ alley2000 %>%
   ggplot(aes(x = Age, y = Temperature)) +
   geom_line(size = 2) +
   scale_x_continuous(breaks = seq(-18000, 2000, 2000),
-                   limits = c(-18000, 2000)) +
+                     limits = c(-18000, 2000),
+                     minor_breaks=seq(-17000, 2000,by=1000),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(-50, -28, 2),
+                     minor_breaks=seq(-49, -29,by=1),
+                     guide = "axis_minor") +
   theme_classic() +
   xlab("Years BC/AD") +
   ylab("Temperature °C") +
@@ -296,6 +317,8 @@ alley2000 %>%
     size = 8
   ) +
     theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -325,7 +348,7 @@ alley2000 %>%
     )
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure3.png", dpi = 600)
 
 # Warmest periods following 5000 BP.
 # 3297.07     -28.748
@@ -337,7 +360,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
 ```
 
 
-```{r fig3, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig4, fig.cap="Low-frequency component of Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for 1817-25 BP.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Moberg et al. 2005 low-frequency reconstruction (only).
 Moberg <-
@@ -353,82 +376,18 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
   geom_line(size = 2, color = "#A60F2D") +
   xlab("Years AD") +
   ylab("Temperature Anomaly (°C)") +
-  scale_x_continuous(breaks=seq(0,2000,200)) +
-  scale_y_continuous(breaks = seq(-0.7, 0, 0.1), limits = c(-0.7, 0)) +
+  scale_x_continuous(breaks=seq(0,2000,200),
+                     minor_breaks=seq(100, 1900,by=200),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(-0.7, 0, 0.1), 
+                     limits = c(-0.7, 0),
+                     minor_breaks=seq(-0.65, -0.05,by=0.05),
+                     guide = "axis_minor") +
   theme_bw() +
   geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
   theme(
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 26,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure3.png", dpi = 600)
-
-```
-
-
-```{r fig4, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-Threebest <- read_csv("~/Dropbox/WSU/SKOPEII/model/Anom_All3Steps_90sign_withBootstrapErrors_4analogs.csv")
-
-Threebest$century <- round(as.numeric(Threebest$date),-2)
-
-Threebest %>%
-  filter(date >= -3000) %>%
-  ggplot(aes(y = anom_bootstrap)) +
-  geom_boxplot(
-    aes(x = century, group = century),
-    lwd = .25,
-    outlier.alpha = 0.5,
-    outlier.shape = 1,
-    position = position_dodge2(preserve = "total")
-  ) +
-  geom_hline(yintercept = 0,
-             linetype = 'dashed',
-             color = c('blue')) +
-  geom_smooth(method = "loess", span = 0.15, aes(x = date), size = 2) +
-  scale_x_continuous(limits = c(-3000, 2100),
-                     breaks = seq(-3000, 2000, 100),
-                     labels = head(as.vector(rbind(seq(-3000, 2100, 500), "", "", "", "")), -4)) +
-  scale_y_continuous(limits = c(-8, 8),
-                     breaks = seq(-8, 8, 1),
-                     labels = head(as.vector(rbind(seq(-8, 8, 2), "")), - 1)) +
-  xlab("Years BC/AD") +
-  ylab("Temperature Anomaly (°C)") +
-  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
     axis.text = element_text(
@@ -467,6 +426,82 @@ Threebest %>%
   )
 
 ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure4.png", dpi = 600)
+
+```
+
+
+```{r fig5, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+Threebest <- read_csv("~/Dropbox/WSU/SKOPEII/model/Anom_All3Steps_90sign_withBootstrapErrors_4analogs.csv")
+
+Threebest$century <- round(as.numeric(Threebest$date),-2)
+
+Threebest %>%
+  filter(date >= -3000) %>%
+  ggplot(aes(y = anom_bootstrap)) +
+  geom_boxplot(
+    aes(x = century, group = century),
+    lwd = .25,
+    outlier.alpha = 0.5,
+    outlier.shape = 1,
+    position = position_dodge2(preserve = "total")
+  ) +
+  geom_hline(yintercept = 0,
+             linetype = 'dashed',
+             color = c('darkslategray')) +
+  geom_smooth(method = "loess", span = 0.15, aes(x = date), size = 2, colour = "cornflowerblue") +
+  scale_x_continuous(limits = c(-3000, 2100),
+                     breaks = seq(-3000, 2000, 500),
+                     minor_breaks=seq(-2900, 2000,by=100),
+                     guide = "axis_minor") +
+  scale_y_continuous(limits = c(-8, 8),
+                     breaks = seq(-8, 8, 2),
+                     minor_breaks=seq(-7, 7,by=1),
+                     guide = "axis_minor") +
+  theme_bw() +
+  xlab("Years BC/AD") +
+  ylab("Temperature Anomaly (°C)") +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5.png", dpi = 600)
 
 
 # Extracting the fit values
@@ -600,173 +635,205 @@ site.preds.unlisted.anom %>%
     plot.title = element_text(size = 21, face = "bold", family = "Helvetica")
   )
 
-ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+#ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 
 
 ```
 
 
-```{r fig5, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig6, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-anom_loess_2 <- anom_loess %>% 
+temp_anom_standard <- anom_loess %>% 
   dplyr::mutate(x = as.integer(x)) %>% 
-  dplyr::filter(x >= 133 & x <= 1800)
-
-temp_anom_standard <- anom_loess_2 %>% 
-  ## site.preds.unlisted.anom %>% 
-  ## group_by(date) %>% 
-  ## dplyr::summarise(temp = mean(anom)) %>% 
-  #dplyr::mutate(update = (y - mean(anom_loess_2$y)) / sd(anom_loess_2$y)) %>% 
-  dplyr::mutate(series = "This study") %>% 
-  #dplyr::select(year = x, update, series)
-  dplyr::select(year = x, anom = y, series)
+  dplyr::filter(x >= 133 & x <= 1900) %>% 
+  dplyr::mutate(Series = "This study") %>% 
+  dplyr::select(year = x, anom = y, Series)
 
 Moberg_standard <- Moberg %>% 
-  #dplyr::mutate(update = (LF - mean(Moberg$LF)) / sd(Moberg$LF)) %>% 
-  dplyr::mutate(year = BPtoBCAD(date)) %>% 
-  dplyr::mutate(series = "Moberg et al. 2005") %>% 
-  dplyr::select(year, anom = LF, series) %>% 
-  filter(year <= 1800)
+  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
+  dplyr::select(year = date, anom = LF, Series) %>% 
+  filter(year >= 133 & year <= 1900)
 
-Moberg_paleomat <- rbind(temp_anom_standard, Moberg_standard)
+Moberg_paleomat <- bind_rows(temp_anom_standard, Moberg_standard)
 
 # Moberg LF and paleomat
 Moberg_paleomat %>% 
-  dplyr::filter(year >= 133 & year <= 1800) %>% 
+  group_by(Series) %>% 
   dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
-  ggplot(aes(x = year, y = update, colour = series)) +
-  geom_line(size = 1.0) +
-  xlab("Year AD") +
-  ylab("Standardized July Temperature Anomaly") +
+  ggplot(aes(x = year, y = update, colour = Series)) +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
+  # geom_vline(aes(xintercept = 872, color = "mean"), linetype="twodash", lwd = 0.5) +
+  # geom_vline(xintercept = c(1002, 1144, 1225, 1286, 1447, 1582), color = "red", linetype="twodash", lwd = 0.5) +
+  geom_line(size = 2.0) +
+  scale_color_manual(values=c("#A60F2D", "cornflowerblue")) +
+  xlab("Years AD") +
+  ylab("Standardized Temperature Values (Z-Scores)") +
+  scale_x_continuous(limits = c(100, 1900),
+                     breaks = seq(100, 1900, 200), 
+                     minor_breaks=seq(200,1800,by=200),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(-2, 3, 0.5)) +
   theme_bw() +
-  scale_x_continuous(breaks = seq(100, 1900, 200)) +
-  scale_y_continuous(breaks = seq(-2, 2, 0.5)) +
   theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
-    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
     axis.text = element_text(
-      size = 16,
+      size = 26,
       colour = "black",
       family = "Helvetica"
     ),
     axis.title.y = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
         t = 10,
-        r = 6,
+        r = 5,
         b = 10,
         l = 10
       )
     ),
     axis.title.x = element_text(
-      size = 18,
+      size = 28,
       family = "Helvetica",
       margin = margin(
-        t = 6,
+        t = 5,
         r = 10,
         b = 10,
         l = 10
       )
     ),
-    panel.grid.major = element_line(colour = "light grey"),
+    panel.grid.minor = element_blank(),
     axis.line = element_line(colour = "black"),
-    legend.title=element_text(size=18),
-    legend.text=element_text(size=14)
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    ),
+    legend.text = element_text(size = 19, family = "Helvetica"),
+    legend.title = element_blank()
   )
 
-ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+#ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
 
 ```
 
 
-```{r fig6, fig.cap="The spatial interpolation of the low-frequency temperature reconstruction for this study. The extent can be seen by the red box in Figure 3.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-tavg_rasters <- stack("./output/paleomat-rasters.tif")
+# Tables
 
-# library(ggnewscale)
-# 
-# # setting up bounding box
-# locations <- data.frame(x = c(-112.81446, -105.52416),
-#                         y = c(32.65757, 38.089))
+```{r table1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
-# -112.81446,
-#     "xmax" = -105.52416,
-#     "ymin" = 32.65757,
-#     "ymax" = 38.089
+fossil.locs2 <-
+    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
+  dplyr::select(-c(month, type, pub_year, value, error, sample.id)) %>% 
+  dplyr::ungroup() %>% 
+  tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
+  dplyr::group_by(dataset.id, site.id, site.name) %>% 
+  summarise(minAge = min(age), maxAge = max(age), minDepth = min(depth), maxDepth = max(depth), across(c(long, lat, elev), unique)) %>% 
+  dplyr::select(site.name, site.id, dataset.id, minAge, maxAge, minDepth, maxDepth, long, lat, elev) %>% 
+  dplyr::arrange(site.name) %>% 
+  dplyr::rename("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "Earliest date of core (BP)" = minAge, "Latest date of core (BP)" = maxAge, "Minimum Depth" = minDepth, "Maximum Depth" = maxDepth, "Longitude" = long, "Latitude" = lat, "Elevation (m)" = elev )
 
-# # get gem
-# dem <- get_elev_raster(locations = bb2, prj = sf::st_crs(4326), z = 7, clip = "bbox")
-# temp.raster <- raster::crop(temp.raster, bb2)
-# temp.raster <-
-#   raster::projectRaster(temp.raster, crs = CRS("+init=epsg:4326"))
-# 
-# # create slope and hillshade
-# slope = terrain(dem, opt='slope')
-# aspect = terrain(dem, opt='aspect')
-# hill = hillShade(slope, aspect, 40, 270)
-# hill_spdf <- as(hill, "SpatialPixelsDataFrame")
-# hill_spdf <- as.data.frame(hill_spdf)
-# colnames(hill_spdf) <- c("value", "x", "y")
+#write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
 
-
-rasterVis::gplot(tavg_idw_stack, layout=c(5, 3)) +
-  # geom_tile(data = hill_spdf, aes(x = x, y = y, fill = value)) +
-  geom_tile(aes(fill = value)) +
-  facet_wrap(~ variable) +
-  scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255)) +
-  coord_equal() +
-  theme_bw() +
-  xlab("Longitude") +
-  ylab("Latitude") +
-  labs(fill='Anomaly')
-
-trellis.device(pdf, file='idw_interpolation.pdf', height=11.7, width=8.3)
-rasterVis::levelplot(tavg_idw_stack,
-          layout=c(4, 7), # create a 5x3 layout for the data
-          col.regions=colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255))
-
-dev.off()
-
-# names(tavg_idw) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-#
-# anomaly_plots <-
-#   purrr::map2(
-#     .x = tavg_idw, .y = names(tavg_idw),
-#     .f =
-#       ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, cities = FALSE, animation = FALSE)
-#   )
-
-
-# temp.raster <-
-#   raster::projectRaster(tavg_nrg[[23]], crs = CRS("+init=epsg:4326"))
-# 
-# 
-# usa <- sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE))
-# usa <- sf::st_transform(usa, crs = 4326)
-# 
-# crs(temp.raster) <-
-#   "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs"
-# temperature <- as.data.frame(temp.raster, xy = TRUE)
-# temperature_transformed <- usmap::usmap_transform(temperature)
-# 
-# 
-# ggplot() +
-#   geom_raster(
-#     data = temperature_transformed,
-#     aes(x = x, y = y, fill = paleomat.rasters.23),
-#     alpha = 0.8,
-#     na.rm = TRUE
-#   ) +
-#   scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255),
-#                        #limits = c(-8, 8),
-#                        na.value = "transparent",
-#                        name = "Temperature °C") +
-#   coord_equal() +
-#   theme_classic()
-
+knitr::kable(fossil.locs2,
+             caption = "Metadata for the fossil pollen records used in this study.")
 
 ```
+
+
+
+<!-- ```{r old_fig6, fig.cap="The spatial interpolation of the low-frequency temperature reconstruction for this study. The extent can be seen by the red box in Figure 3.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'} -->
+
+<!-- tavg_rasters <- stack("./output/paleomat-rasters.tif") -->
+
+<!-- # library(ggnewscale) -->
+<!-- #  -->
+<!-- # # setting up bounding box -->
+<!-- # locations <- data.frame(x = c(-112.81446, -105.52416), -->
+<!-- #                         y = c(32.65757, 38.089)) -->
+
+<!-- # -112.81446, -->
+<!-- #     "xmax" = -105.52416, -->
+<!-- #     "ymin" = 32.65757, -->
+<!-- #     "ymax" = 38.089 -->
+
+<!-- # # get gem -->
+<!-- # dem <- get_elev_raster(locations = bb2, prj = sf::st_crs(4326), z = 7, clip = "bbox") -->
+<!-- # temp.raster <- raster::crop(temp.raster, bb2) -->
+<!-- # temp.raster <- -->
+<!-- #   raster::projectRaster(temp.raster, crs = CRS("+init=epsg:4326")) -->
+<!-- #  -->
+<!-- # # create slope and hillshade -->
+<!-- # slope = terrain(dem, opt='slope') -->
+<!-- # aspect = terrain(dem, opt='aspect') -->
+<!-- # hill = hillShade(slope, aspect, 40, 270) -->
+<!-- # hill_spdf <- as(hill, "SpatialPixelsDataFrame") -->
+<!-- # hill_spdf <- as.data.frame(hill_spdf) -->
+<!-- # colnames(hill_spdf) <- c("value", "x", "y") -->
+
+
+<!-- rasterVis::gplot(tavg_idw_stack, layout=c(5, 3)) + -->
+<!--   # geom_tile(data = hill_spdf, aes(x = x, y = y, fill = value)) + -->
+<!--   geom_tile(aes(fill = value)) + -->
+<!--   facet_wrap(~ variable) + -->
+<!--   scale_fill_gradientn(colours = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255)) + -->
+<!--   coord_equal() + -->
+<!--   theme_bw() + -->
+<!--   xlab("Longitude") + -->
+<!--   ylab("Latitude") + -->
+<!--   labs(fill='Anomaly') -->
+
+<!-- trellis.device(pdf, file='idw_interpolation.pdf', height=11.7, width=8.3) -->
+<!-- rasterVis::levelplot(tavg_idw_stack, -->
+<!--           layout=c(4, 7), # create a 5x3 layout for the data -->
+<!--           col.regions=colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255)) -->
+
+<!-- dev.off() -->
+
+<!-- # names(tavg_idw) <- c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750") -->
+<!-- # -->
+<!-- # anomaly_plots <- -->
+<!-- #   purrr::map2( -->
+<!-- #     .x = tavg_idw, .y = names(tavg_idw), -->
+<!-- #     .f = -->
+<!-- #       ~plot_map_anomaly(x = .x, x.name = .y, us.cities = us.cities, cities = FALSE, animation = FALSE) -->
+<!-- #   ) -->
+
+
+<!-- # temp.raster <- -->
+<!-- #   raster::projectRaster(tavg_nrg[[23]], crs = CRS("+init=epsg:4326")) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # usa <- sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE)) -->
+<!-- # usa <- sf::st_transform(usa, crs = 4326) -->
+<!-- #  -->
+<!-- # crs(temp.raster) <- -->
+<!-- #   "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs" -->
+<!-- # temperature <- as.data.frame(temp.raster, xy = TRUE) -->
+<!-- # temperature_transformed <- usmap::usmap_transform(temperature) -->
+<!-- #  -->
+<!-- #  -->
+<!-- # ggplot() + -->
+<!-- #   geom_raster( -->
+<!-- #     data = temperature_transformed, -->
+<!-- #     aes(x = x, y = y, fill = paleomat.rasters.23), -->
+<!-- #     alpha = 0.8, -->
+<!-- #     na.rm = TRUE -->
+<!-- #   ) + -->
+<!-- #   scale_fill_gradientn(colors = colorRampPalette(rev(RColorBrewer::brewer.pal(11, "RdBu")))(255), -->
+<!-- #                        #limits = c(-8, 8), -->
+<!-- #                        na.value = "transparent", -->
+<!-- #                        name = "Temperature °C") + -->
+<!-- #   coord_equal() + -->
+<!-- #   theme_classic() -->
+
+
+<!-- ``` -->
 
 
 
@@ -892,427 +959,401 @@ dev.off()
 
 <!-- ``` -->
 
-```{r fig8, fig.cap="Comparison of low-frequency reconstruction from this study, crop productivity, and niche.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-years <- 1:1300
-
-paleomat <- site.preds.unlisted.anom %>% 
-  dplyr::filter(date >= 1 & date <= 1250) %>% 
-  group_by(date) %>% 
-  dplyr::summarise(temp = mean(anom)) %>% 
-  dplyr::mutate(updated = (temp - mean(temp)) / sd(temp)) %>% 
-  select(-temp)
-  #dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
-
-# paleomat <-
-#   read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>%
-#   dplyr::filter(year >= 1 & year <= 1250)
-# 
-# paleomat <- paleomat %>% 
-#   dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom))
-
-# Estimated potential average maize yield (kg) in the CMV region
-years_vep <- data.frame(Year = seq(1, 599, 1))
-vep_paleoprod_mean <-
-  read.csv("./data-raw/vepiin_paleoprod_stats.csv")
-vep_paleoprod_mean <-
-  dplyr::bind_rows(years_vep, vep_paleoprod_mean)
-
-vep_paleoprod_mean <- vep_paleoprod_mean %>% 
-  dplyr::mutate(updated = (`Average.prod..linear.lagged.` - mean(vep_paleoprod_mean$`Average.prod..linear.lagged.`, na.rm = TRUE)) / sd(vep_paleoprod_mean$`Average.prod..linear.lagged.`, na.rm = TRUE))
-
-
-# Proportion of the CMV region in the maize dry-farming niche
-vep_niche_percent <- read.csv("./data-raw/vepiin_niche_stats.csv")
-
-vep_niche_percent <- vep_niche_percent %>% 
-  dplyr::mutate(updated = (`Prop.in.niche..linear.lagged.` - mean(vep_niche_percent$`Prop.in.niche..linear.lagged.`, na.rm = TRUE)) / sd(vep_niche_percent$`Prop.in.niche..linear.lagged.`, na.rm = TRUE))
-
-
-all_reconstructions <- vep_paleoprod_mean %>%
-  dplyr::select(Year, `Average.prod..linear.lagged.`) %>%
-  dplyr::rename(
-    "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-  ) %>%
-  dplyr::left_join(
-    vep_niche_percent %>% dplyr::select(Year, `Prop.in.niche..linear.lagged.`) %>% dplyr::rename(
-      "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-    ),
-    by = "Year"
-  ) %>%
-  dplyr::left_join(
-    paleomat %>% dplyr::rename(
-      "Year" = 1,
-      "MAT - Temperature Anomaly °C (100-year Intervals)" = 2
-    ) ,
-    by = "Year"
-  ) %>%
-  tidyr::pivot_longer(!Year, "Measure", "value") %>%
-  dplyr::filter(!is.na(value))
-
-all_reconstructions$Measure_f = factor(
-  all_reconstructions$Measure ,
-  levels = c(
-    'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-    'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-    'MAT - Temperature Anomaly °C (100-year Intervals)'
-  )
-)
-
-
-ggplot(all_reconstructions, aes(x = Year)) +
-  geom_line(aes(y = value)) +
-  scale_x_continuous(
-    breaks = c(1, seq(100, 1300, 100)),
-    limits = c(1, 1300),
-    expand = c(0, 0)
-  ) +
-  ggplot2::xlab("Year AD") +
-  ggplot2::ylab("") +
-  ggplot2::theme_linedraw() +
-  facet_wrap("Measure_f",
-             ncol = 1,
-             scales = "free_y") +
-  guides(fill = "none", color = "none") +
-  theme(text = element_text(size = 15),
-        plot.margin = margin(10, 15, 10, 10))
-
-ggsave("Paleomat_Productivity_Niche.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
-
-
-
-
-# plot together using the standardized values.
-# all_reconstructions <- vep_paleoprod_mean %>%
-#   dplyr::select(Year, updated) %>%
-#   dplyr::rename(
-#     "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-#   ) %>%
-#   dplyr::left_join(
-#     vep_niche_percent %>% dplyr::select(Year, updated) %>% dplyr::rename(
-#       "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2
-#     ),
-#     by = "Year"
-#   ) %>%
-#   dplyr::left_join(
-#     paleomat %>% dplyr::select(year, updated) %>% 
-#       dplyr::rename(
-#       "Year" = 1,
-#       "MAT - Temperature Anomaly °C (100-year Intervals)" = 2
-#     ) ,
-#     by = "Year"
-#   ) %>%
-#   tidyr::pivot_longer(!Year, "Measure", "value") %>%
-#   dplyr::filter(!is.na(value))
-# 
-# all_reconstructions$Measure_f = factor(
-#   all_reconstructions$Measure ,
-#   levels = c(
-#     'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-#     'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])',
-#     'MAT - Temperature Anomaly °C (100-year Intervals)'
-#   )
-# )
-# 
-# ggplot(all_reconstructions, aes(x = Year, y = value, colour = Measure)) +
-#   geom_line() +
-#   scale_x_continuous(
-#     breaks = c(1, seq(100, 1300, 100)),
-#     limits = c(1, 1300),
-#     expand = c(0, 0)
-#   ) +
-#   ggplot2::xlab("Year AD") +
-#   ggplot2::ylab("") +
-#   theme(legend.position = "none") +
-#   theme(text = element_text(size = 15),
-#         plot.margin = margin(10, 15, 10, 10))
-
-
-```
-
-
-
-# Tables
-
-```{r table1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
-
-fossil.locs2 <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
-  dplyr::select(-c(month, type, pub_year, value, error, sample.id)) %>% 
-  dplyr::ungroup() %>% 
-  tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
-  dplyr::group_by(dataset.id, site.id, site.name) %>% 
-  summarise(minAge = min(age), maxAge = max(age), minDepth = min(depth), maxDepth = max(depth), across(c(long, lat, elev), unique)) %>% 
-  dplyr::select(site.name, site.id, dataset.id, minAge, maxAge, minDepth, maxDepth, long, lat, elev) %>% 
-  dplyr::arrange(site.name) %>% 
-  dplyr::rename("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "Earliest date of core (BP)" = minAge, "Latest date of core (BP)" = maxAge, "Minimum Depth" = minDepth, "Maximum Depth" = maxDepth, "Longitude" = long, "Latitude" = lat, "Elevation (m)" = elev )
-
-#write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
-
-knitr::kable(fossil.locs2,
-             caption = "Metadata for the fossil pollen records used in this study.")
-
-```
-
-
-
-# Supplementary Figures
-
-```{r supp_fig1, fig.cap="Temporal interpolation of temperature reconstruction for each fossil pollen site.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-temporal_interpolations <- readRDS("./output/temporal_interpolations.rds")
-
-# Plot results in one PDF.
-# plot_objects <- temporal_interpolations$plot_fit
-# names(plot_objects) <- c(temporal_interpolations$site.name)
-
-# Plot the temporal interpolation results in one PDF.
-plot_objects <- tavg_predicted_west_new_90$plot_fit
-names(plot_objects) <- c(tavg_predicted_west_new_90$site.name)
-
-ok <- ggpubr::ggarrange(plotlist= plot_objects,
-                    labels = c(names(plot_objects)),
-                    ncol = 3, nrow = 5, vjust = -0.5) +
-  theme(plot.margin = margin(1.0,0.1,2,0.1, "cm")) 
-
-ggsave("site_temporal_interpolation.png", ok, width = 16.0, height = 16.0, units = "in")
-
-annotate_figure(ok, top = text_grob("", 
-               color = "red", face = "bold", size = 14))
-
-# plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=7, ncol=5, top=quote(names(plot_objects)[g]))
-# ggsave("./output/temporal_interpolations_plots.pdf", plot_objects_arranged, scale = 1.5)
-
-
-# Plot anomaly through time for each site.
-site_anomaly <- site.preds.unlisted.anom %>% 
-  dplyr::group_by(site.id) %>%
-  tidyr::nest()
-
-
-int_anom_plot <- function(x) {
-  ggplot(data = x,
-         aes(x = date,
-             y = anom)) +
-    geom_line(colour = "red", size = 1.0) +
-    xlab("Year BC/AD") +
-    ylab("Temperature Anomaly (°C)") +
-    scale_x_continuous(breaks = seq(-1000, 1800, 200),
-                       minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
-    # scale_y_continuous(breaks = seq((
-    #   DescTools::RoundTo(min(fit$value), multiple = 0.5, FUN = floor)
-    # ), (
-    #   DescTools::RoundTo(max(fit$value), multiple = 0.5, FUN = ceiling)
-    # ), 0.5)) +
-    theme_bw() +
-    theme(
-      panel.border = element_blank(),
-      panel.grid.major = element_blank(),
-      axis.text = element_text(
-        size = 10,
-        colour = "black",
-        family = "Helvetica"
-      ),
-      axis.title.y = element_text(
-        size = 12,
-        family = "Helvetica",
-        margin = margin(
-          t = 10,
-          r = 20,
-          b = 10,
-          l = 10
-        )
-      ),
-      axis.title.x = element_text(
-        size = 12,
-        family = "Helvetica",
-        margin = margin(
-          t = 20,
-          r = 10,
-          b = 10,
-          l = 10
-        )
-      ),
-      panel.grid.minor = element_line(colour = "light grey"),
-      axis.line = element_line(colour = "black"),
-      legend.text = element_text(size = 10, family = "Helvetica"),
-      legend.title = element_text(size = 11, family = "Helvetica")
-    )
-}
-
-
-plot_objects2 <- purrr::map(site_anomaly$data, int_anom_plot)
-
-ok3 <- purrr::map(plot_objects2, 1) 
-ok3 <- lapply(ok3, `[[`, 2)
-ok3 <- lapply(ok3, `[`, 1) %>% unlist()
-
-names(plot_objects2) <- c(ok3)
-
-
-ok2 <- ggpubr::ggarrange(plotlist= plot_objects2,
-                    labels = c(names(plot_objects2)),
-                    ncol = 4, nrow = 9, vjust = -0.5)
-
-annotate_figure(ok2, top = text_grob("", 
-               color = "red", face = "bold", size = 14))
-
-```
-
-
-```{r fig9, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-ggplot(data = usa) +
-  geom_sf(fill = NA) +
-  geom_sf(data = MPCT_final,
-          inherit.aes = FALSE,
-          aes(geometry = geometry)) +
-  coord_sf(xlim = c(-125,-95), ylim = c(25, 50)) +
-  theme_classic() +
-  theme(axis.text = element_text(
-      size = 16,
-      colour = "black",
-      family = "Helvetica"
-    ))
-
-
-
-
-library(tidyverse)
-library(rnaturalearth)
-library(sf)
-library(ggtext)
-
-dat <- MPCT_metadata_counts_final %>% 
-  dplyr::select(c(dataset.id, geometry, PINUSX)) %>% 
-  filter(!is.na(PINUSX))
-
-usa2 <- st_cast(usa, "POLYGON") %>%
-  mutate(mapcolor7 = sample(1:7, n(), replace = TRUE))
-
-
-usa2$fill <- as.factor(usa2$ID)
-usa2$fill <- c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")[usa2$mapcolor7]
-usa2$stroke <- 2
-usa2$fillweight <- 4.0
-
-# MULTIPOLYGON (and also MULTILINESTRING) are not supported
-usa2 <- st_cast(usa2, "POLYGON")
-
-
-dat <- st_sf(dat)
-st_crs(dat) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-dat$size <- 8
-dat$color <- "#000000"
-# dat$label <- cities$name
-# dat$label_pos <- "e"
-
-
-dat1 <- dat
-dat1$size <- ambient::normalise((dat1$PINUSX))
-dat1$radius <- dat1$size / 10
-st_crs(dat1) <- st_crs(usa)
-dat1$size <- ambient::normalise(dat1$size, to = c(10, 30))
-st_crs(dat1) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-dat1$color <- "red"
-
-
-roughsf_map <- roughsf::roughsf(list(usa2, dat1),
-                 title = "Modern Pine Pollen Samples across the United States", caption = "*Points are scaled based on the count of pine pollen grains at each site. Data are from the Neotoma Paleoecology Database.",
-                 title_font = "48px Pristina", font = "30px Pristina", caption_font = "18px Pristina",
-                 roughness = 1, bowing = 1, simplification = 1,
-                 width = 1600, height = 1000, 
-)
-
-roughsf::save_roughsf(roughsf_map, "roughsf_map.png")
-
-
-europe <- ne_countries(scale = 50, continent = "North America", returnclass = "sf")
-
-europe$fill <- as.factor(europe$mapcolor7)
-dat$size <- ambient::normalise(log(dat$PINUSX))
-dat$radius <- dat$size / 10
-
-newloc <- packcircles::circleRepelLayout(select(dat, long, lat, radius))
-dat1 <- bind_cols(dat, newloc$layout[, -3])
-
-
-map_title <- "<span style='font-size:32pt;'>Figurative Map of the Cargo Tonnage of the Major Ports of Europe</span>"
-p <- ggplot() +
-  geom_sf(data = europe, aes(fill = fill), show.legend = FALSE, size = 0.1) +
-  # geom_sf_text(
-  #   data = europe[europe$pop_est > 8e6 & !europe$name_long %in% c("Netherlands", "Belgium", "Portugal"), ],
-  #   aes(label = name_long), size = 10, family = "EB Garamond 08"
-  # ) +
-  geom_point(data = dat1, aes(x, y, size = I(size)), show.legend = FALSE, shape = 21, fill = "darkgreen") +
-  geom_text(data = dat1, aes(x, y, size = I(size / 3), label = PINUSX), family = "EB Garamond 08") +
-  #geom_text(data = dat1, aes(x, y, label = city), size = 2, vjust = -dat$size / 3, family = "EB Garamond 08") +
-  scale_fill_manual(values = c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")) +
-  coord_sf(expand = FALSE, xlim = c(-10, 50), ylim = c(35, 75)) +
-  # title
-  annotate("richtext",
-    x = -Inf, y = Inf, hjust = 0, vjust = 1, label = map_title,
-    size = 8, fill = "#e8e4c9", family = "EB Garamond 08",
-    label.padding = unit(c(3.25, 1.0, 3.0, 1.0), "lines")
-  ) +
-  # caption
-  annotate("richtext",
-    x = Inf, y = -Inf, hjust = 1, vjust = 0, label = "<span style='font-size:22pt'>@schochastics</span>",
-    size = 12, fill = NA, family = "EB Garamond 08", label.color = NA,
-    label.padding = unit(c(0.2, 0.2, 0.2, 0.2), "lines")
-  ) +
-  theme_void() +
-  theme(
-    plot.title = element_text(family = "EB Garamond 08", size = 46, hjust = 0, margin = margin(0, 0, 0, 0)),
-    plot.background = element_rect(fill = "#e8e4c9", colour = "black", size = 0.5),
-    panel.background = element_rect(fill = "#e8e4c9", colour = "black", size = 0.1)
-  )
-
-ragg::agg_png("13_naturalearth.png", width = 1500, height = 1500)
-p
-dev.off()
-
-europe <- ne_countries(scale = 110, continent = "North America", returnclass = "sf")
-europe$fill <- c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")[europe$mapcolor7]
-europe$fillweight <- 2
-europe$label <- ""
-keep <- c("Spain", "Germany", "Poland", "Austria", "Hungary", "Romania")
-europe <- st_cast(europe, "POLYGON")
-europe_crop <- st_crop(europe, st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 70, -10, 70, -10, 32), ncol = 2, byrow = TRUE))))
-
-dat1 <- dat1 %>% st_as_sf(coords = c("long", "lat"))
-st_crs(dat1) <- st_crs(europe)
-dat1$size <- ambient::normalise(dat1$size, to = c(10, 30))
-dat1_crop <- st_crop(dat1, st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 75, -10, 75, -10, 32), ncol = 2, byrow = TRUE)))) %>%
-  dplyr::filter(y >= 35)
-dat1_crop$color <- "red"
-
-water <- data.frame(name = "water")
-water$geometry <- st_sfc(st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 73, -10, 73, -10, 32), ncol = 2, byrow = TRUE))))
-water <- st_sf(water)
-st_crs(water) <- st_crs(europe)
-water$fill <- "#006994"
-water$fillstyle <- "cross-hatch"
-water$fillweight <- 0.1
-water$stroke <- 5
-
-europe_bg <- europe_crop
-europe_bg$fill <- "#ffffff"
-europe_bg$fillstyle <- "solid"
-pst <- roughsf::roughsf(list(water, dat1_crop),
-  title = "Ports of Europe", title_font = "94px Pristina",
-  caption = "(data from naturalearth) drawn by @schochastics", caption_font = "40px Pristina",
-  width = 2500, height = 2500
-)
-pst
-roughsf::save_roughsf(pst, "13_naturalearth.png")
-
-```
-
-
-```
-
-ggplot(data = world) +
-    geom_sf() + geom_sf(data = MPCT_final, inherit.aes = FALSE, aes(geometry = geometry)) + coord_sf(xlim = c(-125, -95), ylim = c(25, 50))
-
-```
+<!-- ```{r fig8, fig.cap="Comparison of low-frequency reconstruction from this study, crop productivity, and niche.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'} -->
+
+<!-- years <- 1:1300 -->
+
+<!-- paleomat <- site.preds.unlisted.anom %>%  -->
+<!--   dplyr::filter(date >= 1 & date <= 1250) %>%  -->
+<!--   group_by(date) %>%  -->
+<!--   dplyr::summarise(temp = mean(anom)) %>%  -->
+<!--   dplyr::mutate(updated = (temp - mean(temp)) / sd(temp)) %>%  -->
+<!--   select(-temp) -->
+<!--   #dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom)) -->
+
+<!-- # paleomat <- -->
+<!-- #   read.csv(file = "./output/paleomat-temp-anomaly-final.csv", header = TRUE) %>% -->
+<!-- #   dplyr::filter(year >= 1 & year <= 1250) -->
+<!-- #  -->
+<!-- # paleomat <- paleomat %>%  -->
+<!-- #   dplyr::mutate(updated = (anom - mean(paleomat$anom)) / sd(paleomat$anom)) -->
+
+<!-- # Estimated potential average maize yield (kg) in the CMV region -->
+<!-- years_vep <- data.frame(Year = seq(1, 599, 1)) -->
+<!-- vep_paleoprod_mean <- -->
+<!--   read.csv("./data-raw/vepiin_paleoprod_stats.csv") -->
+<!-- vep_paleoprod_mean <- -->
+<!--   dplyr::bind_rows(years_vep, vep_paleoprod_mean) -->
+
+<!-- vep_paleoprod_mean <- vep_paleoprod_mean %>%  -->
+<!--   dplyr::mutate(updated = (`Average.prod..linear.lagged.` - mean(vep_paleoprod_mean$`Average.prod..linear.lagged.`, na.rm = TRUE)) / sd(vep_paleoprod_mean$`Average.prod..linear.lagged.`, na.rm = TRUE)) -->
+
+
+<!-- # Proportion of the CMV region in the maize dry-farming niche -->
+<!-- vep_niche_percent <- read.csv("./data-raw/vepiin_niche_stats.csv") -->
+
+<!-- vep_niche_percent <- vep_niche_percent %>%  -->
+<!--   dplyr::mutate(updated = (`Prop.in.niche..linear.lagged.` - mean(vep_niche_percent$`Prop.in.niche..linear.lagged.`, na.rm = TRUE)) / sd(vep_niche_percent$`Prop.in.niche..linear.lagged.`, na.rm = TRUE)) -->
+
+
+<!-- all_reconstructions <- vep_paleoprod_mean %>% -->
+<!--   dplyr::select(Year, `Average.prod..linear.lagged.`) %>% -->
+<!--   dplyr::rename( -->
+<!--     "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2 -->
+<!--   ) %>% -->
+<!--   dplyr::left_join( -->
+<!--     vep_niche_percent %>% dplyr::select(Year, `Prop.in.niche..linear.lagged.`) %>% dplyr::rename( -->
+<!--       "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2 -->
+<!--     ), -->
+<!--     by = "Year" -->
+<!--   ) %>% -->
+<!--   dplyr::left_join( -->
+<!--     paleomat %>% dplyr::rename( -->
+<!--       "Year" = 1, -->
+<!--       "MAT - Temperature Anomaly °C (100-year Intervals)" = 2 -->
+<!--     ) , -->
+<!--     by = "Year" -->
+<!--   ) %>% -->
+<!--   tidyr::pivot_longer(!Year, "Measure", "value") %>% -->
+<!--   dplyr::filter(!is.na(value)) -->
+
+<!-- all_reconstructions$Measure_f = factor( -->
+<!--   all_reconstructions$Measure , -->
+<!--   levels = c( -->
+<!--     'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])', -->
+<!--     'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])', -->
+<!--     'MAT - Temperature Anomaly °C (100-year Intervals)' -->
+<!--   ) -->
+<!-- ) -->
+
+
+<!-- ggplot(all_reconstructions, aes(x = Year)) + -->
+<!--   geom_line(aes(y = value)) + -->
+<!--   scale_x_continuous( -->
+<!--     breaks = c(1, seq(100, 1300, 100)), -->
+<!--     limits = c(1, 1300), -->
+<!--     expand = c(0, 0) -->
+<!--   ) + -->
+<!--   ggplot2::xlab("Year AD") + -->
+<!--   ggplot2::ylab("") + -->
+<!--   ggplot2::theme_linedraw() + -->
+<!--   facet_wrap("Measure_f", -->
+<!--              ncol = 1, -->
+<!--              scales = "free_y") + -->
+<!--   guides(fill = "none", color = "none") + -->
+<!--   theme(text = element_text(size = 15), -->
+<!--         plot.margin = margin(10, 15, 10, 10)) -->
+
+<!-- ggsave("Paleomat_Productivity_Niche.png", width = 14.3, height = 7.5, units = "in", dpi = 600) -->
+
+
+
+
+<!-- # plot together using the standardized values. -->
+<!-- # all_reconstructions <- vep_paleoprod_mean %>% -->
+<!-- #   dplyr::select(Year, updated) %>% -->
+<!-- #   dplyr::rename( -->
+<!-- #     "Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2 -->
+<!-- #   ) %>% -->
+<!-- #   dplyr::left_join( -->
+<!-- #     vep_niche_percent %>% dplyr::select(Year, updated) %>% dplyr::rename( -->
+<!-- #       "Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])" = 2 -->
+<!-- #     ), -->
+<!-- #     by = "Year" -->
+<!-- #   ) %>% -->
+<!-- #   dplyr::left_join( -->
+<!-- #     paleomat %>% dplyr::select(year, updated) %>%  -->
+<!-- #       dplyr::rename( -->
+<!-- #       "Year" = 1, -->
+<!-- #       "MAT - Temperature Anomaly °C (100-year Intervals)" = 2 -->
+<!-- #     ) , -->
+<!-- #     by = "Year" -->
+<!-- #   ) %>% -->
+<!-- #   tidyr::pivot_longer(!Year, "Measure", "value") %>% -->
+<!-- #   dplyr::filter(!is.na(value)) -->
+<!-- #  -->
+<!-- # all_reconstructions$Measure_f = factor( -->
+<!-- #   all_reconstructions$Measure , -->
+<!-- #   levels = c( -->
+<!-- #     'Average Crop Productivity (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])', -->
+<!-- #     'Proportion in Maize Niche (Unweighted Average of the Current Year and the Previous 20 [i.e., linear lagged])', -->
+<!-- #     'MAT - Temperature Anomaly °C (100-year Intervals)' -->
+<!-- #   ) -->
+<!-- # ) -->
+<!-- #  -->
+<!-- # ggplot(all_reconstructions, aes(x = Year, y = value, colour = Measure)) + -->
+<!-- #   geom_line() + -->
+<!-- #   scale_x_continuous( -->
+<!-- #     breaks = c(1, seq(100, 1300, 100)), -->
+<!-- #     limits = c(1, 1300), -->
+<!-- #     expand = c(0, 0) -->
+<!-- #   ) + -->
+<!-- #   ggplot2::xlab("Year AD") + -->
+<!-- #   ggplot2::ylab("") + -->
+<!-- #   theme(legend.position = "none") + -->
+<!-- #   theme(text = element_text(size = 15), -->
+<!-- #         plot.margin = margin(10, 15, 10, 10)) -->
+
+
+<!-- ``` -->
+
+
+
+<!-- # Supplementary Figures -->
+
+<!-- ```{r supp_fig1, fig.cap="Temporal interpolation of temperature reconstruction for each fossil pollen site.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'} -->
+
+<!-- temporal_interpolations <- readRDS("./output/temporal_interpolations.rds") -->
+
+<!-- # Plot results in one PDF. -->
+<!-- # plot_objects <- temporal_interpolations$plot_fit -->
+<!-- # names(plot_objects) <- c(temporal_interpolations$site.name) -->
+
+<!-- # Plot the temporal interpolation results in one PDF. -->
+<!-- plot_objects <- tavg_predicted_west_new_90$plot_fit -->
+<!-- names(plot_objects) <- c(tavg_predicted_west_new_90$site.name) -->
+
+<!-- ok <- ggpubr::ggarrange(plotlist= plot_objects, -->
+<!--                     labels = c(names(plot_objects)), -->
+<!--                     ncol = 3, nrow = 5, vjust = -0.5) + -->
+<!--   theme(plot.margin = margin(1.0,0.1,2,0.1, "cm"))  -->
+
+<!-- ggsave("site_temporal_interpolation.png", ok, width = 16.0, height = 16.0, units = "in") -->
+
+<!-- annotate_figure(ok, top = text_grob("",  -->
+<!--                color = "red", face = "bold", size = 14)) -->
+
+<!-- # plot_objects_arranged <- gridExtra::marrangeGrob(plot_objects, nrow=7, ncol=5, top=quote(names(plot_objects)[g])) -->
+<!-- # ggsave("./output/temporal_interpolations_plots.pdf", plot_objects_arranged, scale = 1.5) -->
+
+
+<!-- # Plot anomaly through time for each site. -->
+<!-- site_anomaly <- site.preds.unlisted.anom %>%  -->
+<!--   dplyr::group_by(site.id) %>% -->
+<!--   tidyr::nest() -->
+
+
+<!-- int_anom_plot <- function(x) { -->
+<!--   ggplot(data = x, -->
+<!--          aes(x = date, -->
+<!--              y = anom)) + -->
+<!--     geom_line(colour = "red", size = 1.0) + -->
+<!--     xlab("Year BC/AD") + -->
+<!--     ylab("Temperature Anomaly (°C)") + -->
+<!--     scale_x_continuous(breaks = seq(-1000, 1800, 200), -->
+<!--                        minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) + -->
+<!--     # scale_y_continuous(breaks = seq(( -->
+<!--     #   DescTools::RoundTo(min(fit$value), multiple = 0.5, FUN = floor) -->
+<!--     # ), ( -->
+<!--     #   DescTools::RoundTo(max(fit$value), multiple = 0.5, FUN = ceiling) -->
+<!--     # ), 0.5)) + -->
+<!--     theme_bw() + -->
+<!--     theme( -->
+<!--       panel.border = element_blank(), -->
+<!--       panel.grid.major = element_blank(), -->
+<!--       axis.text = element_text( -->
+<!--         size = 10, -->
+<!--         colour = "black", -->
+<!--         family = "Helvetica" -->
+<!--       ), -->
+<!--       axis.title.y = element_text( -->
+<!--         size = 12, -->
+<!--         family = "Helvetica", -->
+<!--         margin = margin( -->
+<!--           t = 10, -->
+<!--           r = 20, -->
+<!--           b = 10, -->
+<!--           l = 10 -->
+<!--         ) -->
+<!--       ), -->
+<!--       axis.title.x = element_text( -->
+<!--         size = 12, -->
+<!--         family = "Helvetica", -->
+<!--         margin = margin( -->
+<!--           t = 20, -->
+<!--           r = 10, -->
+<!--           b = 10, -->
+<!--           l = 10 -->
+<!--         ) -->
+<!--       ), -->
+<!--       panel.grid.minor = element_line(colour = "light grey"), -->
+<!--       axis.line = element_line(colour = "black"), -->
+<!--       legend.text = element_text(size = 10, family = "Helvetica"), -->
+<!--       legend.title = element_text(size = 11, family = "Helvetica") -->
+<!--     ) -->
+<!-- } -->
+
+
+<!-- plot_objects2 <- purrr::map(site_anomaly$data, int_anom_plot) -->
+
+<!-- ok3 <- purrr::map(plot_objects2, 1)  -->
+<!-- ok3 <- lapply(ok3, `[[`, 2) -->
+<!-- ok3 <- lapply(ok3, `[`, 1) %>% unlist() -->
+
+<!-- names(plot_objects2) <- c(ok3) -->
+
+
+<!-- ok2 <- ggpubr::ggarrange(plotlist= plot_objects2, -->
+<!--                     labels = c(names(plot_objects2)), -->
+<!--                     ncol = 4, nrow = 9, vjust = -0.5) -->
+
+<!-- annotate_figure(ok2, top = text_grob("",  -->
+<!--                color = "red", face = "bold", size = 14)) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r fig1_alt, fig.cap="Modern samples in North America.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'} -->
+
+<!-- # ggplot(data = usa) + -->
+<!-- #   geom_sf(fill = NA) + -->
+<!-- #   geom_sf(data = MPCT_final, -->
+<!-- #           inherit.aes = FALSE, -->
+<!-- #           aes(geometry = geometry)) + -->
+<!-- #   coord_sf(xlim = c(-125,-95), ylim = c(25, 50)) + -->
+<!-- #   theme_classic() + -->
+<!-- #   theme(axis.text = element_text( -->
+<!-- #       size = 16, -->
+<!-- #       colour = "black", -->
+<!-- #       family = "Helvetica" -->
+<!-- #     )) -->
+
+
+<!-- library(tidyverse) -->
+<!-- library(rnaturalearth) -->
+<!-- library(sf) -->
+<!-- library(ggtext) -->
+
+<!-- dat <- MPCT_metadata_counts_final %>%  -->
+<!--   dplyr::select(c(dataset.id, geometry, PINUSX)) %>%  -->
+<!--   filter(!is.na(PINUSX)) -->
+
+<!-- usa2 <- st_cast(usa, "POLYGON") %>% -->
+<!--   mutate(mapcolor7 = sample(1:7, n(), replace = TRUE)) -->
+
+
+<!-- usa2$fill <- as.factor(usa2$ID) -->
+<!-- usa2$fill <- c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")[usa2$mapcolor7] -->
+<!-- usa2$stroke <- 2 -->
+<!-- usa2$fillweight <- 4.0 -->
+
+<!-- # MULTIPOLYGON (and also MULTILINESTRING) are not supported -->
+<!-- usa2 <- st_cast(usa2, "POLYGON") -->
+
+
+<!-- dat <- st_sf(dat) -->
+<!-- st_crs(dat) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" -->
+<!-- dat$size <- 8 -->
+<!-- dat$color <- "#000000" -->
+<!-- # dat$label <- cities$name -->
+<!-- # dat$label_pos <- "e" -->
+
+
+<!-- dat1 <- dat -->
+<!-- dat1$size <- ambient::normalise((dat1$PINUSX)) -->
+<!-- dat1$radius <- dat1$size / 10 -->
+<!-- st_crs(dat1) <- st_crs(usa) -->
+<!-- dat1$size <- ambient::normalise(dat1$size, to = c(10, 30)) -->
+<!-- st_crs(dat1) <- "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0" -->
+<!-- dat1$color <- "red" -->
+
+
+<!-- roughsf_map <- roughsf::roughsf(list(usa2, dat1), -->
+<!--                  title = "Modern Pine Pollen Samples across the United States", caption = "*Points are scaled based on the count of pine pollen grains at each site. Data are from the Neotoma Paleoecology Database.", -->
+<!--                  title_font = "48px Pristina", font = "30px Pristina", caption_font = "18px Pristina", -->
+<!--                  roughness = 1, bowing = 1, simplification = 1, -->
+<!--                  width = 1600, height = 1000,  -->
+<!-- ) -->
+
+<!-- roughsf::save_roughsf(roughsf_map, "roughsf_map.png") -->
+
+
+<!-- europe <- ne_countries(scale = 50, continent = "North America", returnclass = "sf") -->
+
+<!-- europe$fill <- as.factor(europe$mapcolor7) -->
+<!-- dat$size <- ambient::normalise(log(dat$PINUSX)) -->
+<!-- dat$radius <- dat$size / 10 -->
+
+<!-- newloc <- packcircles::circleRepelLayout(select(dat, long, lat, radius)) -->
+<!-- dat1 <- bind_cols(dat, newloc$layout[, -3]) -->
+
+
+<!-- map_title <- "<span style='font-size:32pt;'>Figurative Map of the Cargo Tonnage of the Major Ports of Europe</span>" -->
+<!-- p <- ggplot() + -->
+<!--   geom_sf(data = europe, aes(fill = fill), show.legend = FALSE, size = 0.1) + -->
+<!--   # geom_sf_text( -->
+<!--   #   data = europe[europe$pop_est > 8e6 & !europe$name_long %in% c("Netherlands", "Belgium", "Portugal"), ], -->
+<!--   #   aes(label = name_long), size = 10, family = "EB Garamond 08" -->
+<!--   # ) + -->
+<!--   geom_point(data = dat1, aes(x, y, size = I(size)), show.legend = FALSE, shape = 21, fill = "darkgreen") + -->
+<!--   geom_text(data = dat1, aes(x, y, size = I(size / 3), label = PINUSX), family = "EB Garamond 08") + -->
+<!--   #geom_text(data = dat1, aes(x, y, label = city), size = 2, vjust = -dat$size / 3, family = "EB Garamond 08") + -->
+<!--   scale_fill_manual(values = c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")) + -->
+<!--   coord_sf(expand = FALSE, xlim = c(-10, 50), ylim = c(35, 75)) + -->
+<!--   # title -->
+<!--   annotate("richtext", -->
+<!--     x = -Inf, y = Inf, hjust = 0, vjust = 1, label = map_title, -->
+<!--     size = 8, fill = "#e8e4c9", family = "EB Garamond 08", -->
+<!--     label.padding = unit(c(3.25, 1.0, 3.0, 1.0), "lines") -->
+<!--   ) + -->
+<!--   # caption -->
+<!--   annotate("richtext", -->
+<!--     x = Inf, y = -Inf, hjust = 1, vjust = 0, label = "<span style='font-size:22pt'>@schochastics</span>", -->
+<!--     size = 12, fill = NA, family = "EB Garamond 08", label.color = NA, -->
+<!--     label.padding = unit(c(0.2, 0.2, 0.2, 0.2), "lines") -->
+<!--   ) + -->
+<!--   theme_void() + -->
+<!--   theme( -->
+<!--     plot.title = element_text(family = "EB Garamond 08", size = 46, hjust = 0, margin = margin(0, 0, 0, 0)), -->
+<!--     plot.background = element_rect(fill = "#e8e4c9", colour = "black", size = 0.5), -->
+<!--     panel.background = element_rect(fill = "#e8e4c9", colour = "black", size = 0.1) -->
+<!--   ) -->
+
+<!-- ragg::agg_png("13_naturalearth.png", width = 1500, height = 1500) -->
+<!-- p -->
+<!-- dev.off() -->
+
+<!-- europe <- ne_countries(scale = 110, continent = "North America", returnclass = "sf") -->
+<!-- europe$fill <- c("#F9D8D6", "#CDF5F6", "#F9EBDF", "#EFD2AC", "#f9d6f7", "#d6f9d8", "#f7f9d6")[europe$mapcolor7] -->
+<!-- europe$fillweight <- 2 -->
+<!-- europe$label <- "" -->
+<!-- keep <- c("Spain", "Germany", "Poland", "Austria", "Hungary", "Romania") -->
+<!-- europe <- st_cast(europe, "POLYGON") -->
+<!-- europe_crop <- st_crop(europe, st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 70, -10, 70, -10, 32), ncol = 2, byrow = TRUE)))) -->
+
+<!-- dat1 <- dat1 %>% st_as_sf(coords = c("long", "lat")) -->
+<!-- st_crs(dat1) <- st_crs(europe) -->
+<!-- dat1$size <- ambient::normalise(dat1$size, to = c(10, 30)) -->
+<!-- dat1_crop <- st_crop(dat1, st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 75, -10, 75, -10, 32), ncol = 2, byrow = TRUE)))) %>% -->
+<!--   dplyr::filter(y >= 35) -->
+<!-- dat1_crop$color <- "red" -->
+
+<!-- water <- data.frame(name = "water") -->
+<!-- water$geometry <- st_sfc(st_polygon(list(matrix(c(-10, 32, 50, 32, 50, 73, -10, 73, -10, 32), ncol = 2, byrow = TRUE)))) -->
+<!-- water <- st_sf(water) -->
+<!-- st_crs(water) <- st_crs(europe) -->
+<!-- water$fill <- "#006994" -->
+<!-- water$fillstyle <- "cross-hatch" -->
+<!-- water$fillweight <- 0.1 -->
+<!-- water$stroke <- 5 -->
+
+<!-- europe_bg <- europe_crop -->
+<!-- europe_bg$fill <- "#ffffff" -->
+<!-- europe_bg$fillstyle <- "solid" -->
+<!-- pst <- roughsf::roughsf(list(water, dat1_crop), -->
+<!--   title = "Ports of Europe", title_font = "94px Pristina", -->
+<!--   caption = "(data from naturalearth) drawn by @schochastics", caption_font = "40px Pristina", -->
+<!--   width = 2500, height = 2500 -->
+<!-- ) -->
+<!-- pst -->
+<!-- roughsf::save_roughsf(pst, "13_naturalearth.png") -->
+
+<!-- ``` -->
+
+
+<!-- ``` -->
+
+<!-- ggplot(data = world) + -->
+<!--     geom_sf() + geom_sf(data = MPCT_final, inherit.aes = FALSE, aes(geometry = geometry)) + coord_sf(xlim = c(-125, -95), ylim = c(25, 50)) -->
+
+<!-- ``` -->
