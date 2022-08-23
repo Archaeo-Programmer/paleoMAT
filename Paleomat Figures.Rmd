@@ -509,133 +509,12 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5.png", dpi = 600)
 # p <- Threebest %>%
 #   filter(date >= -3000) %>%
 #   qplot(date,anom_bootstrap,data=.) +
-#   stat_smooth(aes(outfit=fit<<-..y..), span = 0.15, n = 5000)
+#   stat_smooth(aes(outfit=fit<<-..y..), span = 0.05, n = 5000)
 # 
-# anom_loess <- ggplot_build(p)$data[[2]]
+# anom_loess3 <- ggplot_build(p)$data[[2]]
 # 
 # ggplot(anom_loess) +
 #   geom_line(aes(x, outfit))
-
-
-
-
-
-# Temperature anomaly across time for the spatial extent in each 100 year interval.
-temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv")
-
-#samples <- data.frame(x = c(0, 100, 500, 1000), y = c(-3.5, -3.5, -3.5, -3.5))
-samples <- tavg_new_90 %>%
-  ungroup %>%
-  dplyr::select(date) %>%
-  mutate(y = -3.0) %>%
-  rename(x = date)
-
-  
-site.preds.unlisted.anom %>% 
-  #filter(site.id == 246) %>% 
-  #filter(site.id != 1710) %>% 
-  group_by(date) %>% 
-  #mutate(anom = anom - mean(site.preds.unlisted.anom$anom)) %>% 
-  #mutate(anom = anom/10)
-  #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>% 
-  dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>% 
-  #mutate(anom = temp - warmest.month) %>% 
-  #bp_95 %>% 
-  ggplot(aes(x = date, y = temp)) +
-  #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") +
-  geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") +
-  geom_line(colour = "red", size = 1.0) +
-  #theme_bw()
-  #geom_line(aes(y=rollmean(temp, 3, na.pad=TRUE))) +
-  #geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95) +
-  #geom_point() +
-  xlab("Year BC/AD") +
-  ylab("July Temperature Anomaly (°C)") +
-  # scale_x_continuous(breaks = seq(-1000, 1800, 200),
-  #                    minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) +
-  # scale_y_continuous(breaks = seq(10, 18, 1),
-  #                   limits = c(10, 18)) +
-  theme_bw() +
-  scale_x_continuous(breaks = seq(-3000, 2000, 500),
-                     #minor_breaks = seq(-3100, 1900, 200),
-                     minor_breaks = NULL,
-                     limits = c(-3000, 2000)) +
-  scale_y_continuous(breaks = seq(-2.0, 2.0, 1.0),
-                     limits = c(-2.0, 2.5),
-                     expand = c(0.01, 0)) +
-  #geom_vline(xintercept = c(883, 1150, 1290, 1590)) +
-  #geom_vline(xintercept = c(800, 1200, 1400, 1800)) +
-  #geom_vline(xintercept = c(570, 1280)) +
-  geom_hline(yintercept = 0, colour = "grey40", linetype = "dashed", size=1.5) +
-  #geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) +
-  geom_rug(data = samples, aes(x = x, y = NULL), sides="b") +
-  # annotate(
-  #   "rect",
-  #   xmin = 800,
-  #   xmax = 1200,
-  #   ymin = -2.0,
-  #   ymax = 0.0,
-  #   alpha = .2
-  # ) +
-  # annotate(
-  #   "text",
-  #   x = 1000,
-  #   y = 0.5,
-  #   label = "Medieval \n Warm \n Period",
-  #   size = 5.25
-  # ) +
-  #   annotate(
-  #   "rect",
-  #   xmin = 1400,
-  #   xmax = 1800,
-  #   ymin = -2.0,
-  #   ymax = 0.0,
-  #   alpha = .2
-  # ) +
-  # annotate(
-  #   "text",
-  #   x = 1600,
-  #   y = 0.5,
-  #   label = "Little \n Ice \n Age",
-  #   size = 5.25
-  # ) +
-#ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Technique") +
-  theme(
-    panel.border = element_blank(),
-    #panel.grid.major = element_blank(),
-    panel.grid.minor.y = element_blank(),
-    #panel.grid.major.y = element_blank(),
-    axis.text = element_text(
-      size = 22,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 23,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 6,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 23,
-      family = "Helvetica",
-      margin = margin(
-        t = 6,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    #panel.grid.minor = element_line(colour = "light grey"),
-    axis.line = element_line(colour = "black"),
-    plot.title = element_text(size = 21, face = "bold", family = "Helvetica")
-  )
-
-#ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 
 
 ```
@@ -655,6 +534,10 @@ Moberg_standard <- Moberg %>%
   filter(year >= 133 & year <= 1900)
 
 Moberg_paleomat <- bind_rows(temp_anom_standard, Moberg_standard)
+
+# Moberg_paleomat_dff <- left_join(temp_anom_standard %>% dplyr::select(-Series), Moberg_standard %>% dplyr::select(-Series), by = "year") %>% 
+#   mutate(diff = anom.x - anom.y) %>% 
+#   dplyr::select(-c(anom.x, anom.y))
 
 # Moberg LF and paleomat
 Moberg_paleomat %>% 
@@ -719,9 +602,213 @@ Moberg_paleomat %>%
 #ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
 ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
 
+
+
+#Moberg paleomat diff
+ggplot(data = Moberg_paleomat_dff, aes(x = year, y = diff)) +
+  geom_line(size = 2, color = "#A60F2D") +
+  xlab("Years AD") +
+  ylab("Temperature Anomaly (°C)") +
+  # scale_x_continuous(breaks=seq(0,2000,200),
+  #                    minor_breaks=seq(100, 1900,by=200),
+  #                    guide = "axis_minor") +
+  # scale_y_continuous(breaks = seq(-0.7, 0, 0.1), 
+  #                    limits = c(-0.7, 0),
+  #                    minor_breaks=seq(-0.65, -0.05,by=0.05),
+  #                    guide = "axis_minor") +
+  theme_bw() +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6_diff.png", dpi = 600)
+
 ```
 
 
+
+```{r viau}
+
+viau <- read.csv("~/Dropbox/WSU/SKOPEII/model/viau.csv") %>% 
+  dplyr::mutate(time = BPtoBCAD(time))
+
+viau %>%
+  filter(time >= -3000) %>%
+  ggplot(aes(x = time, y = temp)) +
+  geom_line() +
+  scale_x_continuous(limits = c(-3000, 2100),
+                     breaks = seq(-3000, 2000, 500),
+                     minor_breaks=seq(-2900, 2000,by=100),
+                     guide = "axis_minor") +
+  scale_y_continuous(
+                     breaks = seq(-0.30, 0.15, 0.05),
+                     labels=scaleFUN) +
+  theme_bw() +
+  xlab("Years BC/AD") +
+  ylab("Temperature Anomaly (°C)") +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+
+Moberg_standard <- Moberg %>% 
+  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
+  dplyr::select(year = date, anom = LF, Series) %>% 
+  filter(year >= 133 & year <= 1951)
+
+temp_anom_standard <- anom_loess %>% 
+  dplyr::mutate(x = as.integer(x)) %>% 
+  dplyr::filter(x >= -3000 & x <= 1951) %>% 
+  dplyr::mutate(Series = "This study") %>% 
+  dplyr::select(year = x, anom = y, Series)
+
+viau_standard <- viau %>% 
+  dplyr::mutate(Series = "Viau et al. 2006") %>% 
+  dplyr::select(year = time, anom = temp, Series) %>% 
+  filter(year >= -3000 & year <= 1951)
+
+viau_paleomat <- bind_rows(temp_anom_standard, viau_standard, Moberg_standard)
+viau_paleomat <- bind_rows(temp_anom_standard, viau_standard)
+
+# Viau and paleomat
+viau_paleomat %>% 
+  group_by(Series) %>% 
+  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
+  ggplot(aes(x = year, y = update, colour = Series)) +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
+  # geom_vline(aes(xintercept = 872, color = "mean"), linetype="twodash", lwd = 0.5) +
+  # geom_vline(xintercept = c(1002, 1144, 1225, 1286, 1447, 1582), color = "red", linetype="twodash", lwd = 0.5) +
+  geom_line(size = 2.0) +
+  scale_color_manual(values=c("cornflowerblue", "darkolivegreen")) +
+  #scale_color_manual(values=c("#A60F2D", "cornflowerblue", "darkolivegreen")) +
+  xlab("Years AD") +
+  ylab("Standardized Temperature Values (Z-Scores)") +
+  scale_x_continuous(
+                     breaks = seq(-3000, 2000, 500), 
+                     minor_breaks=seq(-2900,1900,by=100),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(-2, 3.5, 0.5)) +
+  theme_bw() +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    ),
+    legend.text = element_text(size = 19, family = "Helvetica"),
+    legend.title = element_blank()
+  )
+
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/viau_mat_15span.png", dpi = 600)
+
+
+```
 
 # Tables
 
@@ -744,6 +831,130 @@ knitr::kable(fossil.locs2,
              caption = "Metadata for the fossil pollen records used in this study.")
 
 ```
+
+
+
+
+<!-- ```{r old_matanom} -->
+<!-- # Temperature anomaly across time for the spatial extent in each 100 year interval. -->
+<!-- temp_anom <- read.csv("./output/paleomat-temp-anomaly-final.csv") -->
+
+<!-- #samples <- data.frame(x = c(0, 100, 500, 1000), y = c(-3.5, -3.5, -3.5, -3.5)) -->
+<!-- samples <- tavg_new_90 %>% -->
+<!--   ungroup %>% -->
+<!--   dplyr::select(date) %>% -->
+<!--   mutate(y = -3.0) %>% -->
+<!--   rename(x = date) -->
+
+
+<!-- site.preds.unlisted.anom %>%  -->
+<!--   #filter(site.id == 246) %>%  -->
+<!--   #filter(site.id != 1710) %>%  -->
+<!--   group_by(date) %>%  -->
+<!--   #mutate(anom = anom - mean(site.preds.unlisted.anom$anom)) %>%  -->
+<!--   #mutate(anom = anom/10) -->
+<!--   #dplyr::summarise(temp = mean(anom), twenty_five = quantile(anom, 0.25), seventy_five = quantile(anom, 0.75), IQR = IQR(anom)) %>%  -->
+<!--   dplyr::summarise(temp = mean(anom), se = sd(anom)/sqrt(n())) %>%  -->
+<!--   #mutate(anom = temp - warmest.month) %>%  -->
+<!--   #bp_95 %>%  -->
+<!--   ggplot(aes(x = date, y = temp)) + -->
+<!--   #geom_ribbon(aes(ymin = twenty_five, ymax = seventy_five), fill = "grey90") + -->
+<!--   geom_ribbon(aes(ymin = temp-se, ymax = temp+se), fill = "grey90") + -->
+<!--   geom_line(colour = "red", size = 1.0) + -->
+<!--   #theme_bw() -->
+<!--   #geom_line(aes(y=rollmean(temp, 3, na.pad=TRUE))) + -->
+<!--   #geom_smooth(method="auto", se=TRUE, fullrange=FALSE, level=0.95) + -->
+<!--   #geom_point() + -->
+<!--   xlab("Year BC/AD") + -->
+<!--   ylab("July Temperature Anomaly (°C)") + -->
+<!--   # scale_x_continuous(breaks = seq(-1000, 1800, 200), -->
+<!--   #                    minor_breaks = seq((-1000 + 100), (1800 - 100), 200)) + -->
+<!--   # scale_y_continuous(breaks = seq(10, 18, 1), -->
+<!--   #                   limits = c(10, 18)) + -->
+<!--   theme_bw() + -->
+<!--   scale_x_continuous(breaks = seq(-3000, 2000, 500), -->
+<!--                      #minor_breaks = seq(-3100, 1900, 200), -->
+<!--                      minor_breaks = NULL, -->
+<!--                      limits = c(-3000, 2000)) + -->
+<!--   scale_y_continuous(breaks = seq(-2.0, 2.0, 1.0), -->
+<!--                      limits = c(-2.0, 2.5), -->
+<!--                      expand = c(0.01, 0)) + -->
+<!--   #geom_vline(xintercept = c(883, 1150, 1290, 1590)) + -->
+<!--   #geom_vline(xintercept = c(800, 1200, 1400, 1800)) + -->
+<!--   #geom_vline(xintercept = c(570, 1280)) + -->
+<!--   geom_hline(yintercept = 0, colour = "grey40", linetype = "dashed", size=1.5) + -->
+<!--   #geom_point(data = samples, shape = "|", size = 3,  aes(x = x, y = y)) + -->
+<!--   geom_rug(data = samples, aes(x = x, y = NULL), sides="b") + -->
+<!--   # annotate( -->
+<!--   #   "rect", -->
+<!--   #   xmin = 800, -->
+<!--   #   xmax = 1200, -->
+<!--   #   ymin = -2.0, -->
+<!--   #   ymax = 0.0, -->
+<!--   #   alpha = .2 -->
+<!--   # ) + -->
+<!--   # annotate( -->
+<!--   #   "text", -->
+<!--   #   x = 1000, -->
+<!--   #   y = 0.5, -->
+<!--   #   label = "Medieval \n Warm \n Period", -->
+<!--   #   size = 5.25 -->
+<!--   # ) + -->
+<!--   #   annotate( -->
+<!--   #   "rect", -->
+<!--   #   xmin = 1400, -->
+<!--   #   xmax = 1800, -->
+<!--   #   ymin = -2.0, -->
+<!--   #   ymax = 0.0, -->
+<!--   #   alpha = .2 -->
+<!--   # ) + -->
+<!--   # annotate( -->
+<!--   #   "text", -->
+<!--   #   x = 1600, -->
+<!--   #   y = 0.5, -->
+<!--   #   label = "Little \n Ice \n Age", -->
+<!--   #   size = 5.25 -->
+<!--   # ) + -->
+<!-- #ggtitle("Low-frequency Temperature Reconstruction using the Modern Analogue Technique") + -->
+<!--   theme( -->
+<!--     panel.border = element_blank(), -->
+<!--     #panel.grid.major = element_blank(), -->
+<!--     panel.grid.minor.y = element_blank(), -->
+<!--     #panel.grid.major.y = element_blank(), -->
+<!--     axis.text = element_text( -->
+<!--       size = 22, -->
+<!--       colour = "black", -->
+<!--       family = "Helvetica" -->
+<!--     ), -->
+<!--     axis.title.y = element_text( -->
+<!--       size = 23, -->
+<!--       family = "Helvetica", -->
+<!--       margin = margin( -->
+<!--         t = 10, -->
+<!--         r = 6, -->
+<!--         b = 10, -->
+<!--         l = 10 -->
+<!--       ) -->
+<!--     ), -->
+<!--     axis.title.x = element_text( -->
+<!--       size = 23, -->
+<!--       family = "Helvetica", -->
+<!--       margin = margin( -->
+<!--         t = 6, -->
+<!--         r = 10, -->
+<!--         b = 10, -->
+<!--         l = 10 -->
+<!--       ) -->
+<!--     ), -->
+<!--     #panel.grid.minor = element_line(colour = "light grey"), -->
+<!--     axis.line = element_line(colour = "black"), -->
+<!--     plot.title = element_text(size = 21, face = "bold", family = "Helvetica") -->
+<!--   ) -->
+
+<!-- #ggsave("Anom_JustNoAnalgoue.png", width = 14.3, height = 7.5, units = "in", dpi = 600) -->
+
+
+<!-- ``` -->
 
 
 
