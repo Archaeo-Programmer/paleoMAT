@@ -260,8 +260,9 @@ fossil_metadata_counts_final2 <-
 
 
 fossil_final <-
-  fossil_metadata_counts_final %>%
+  fossil_metadata_counts_final2 %>%
   filter(!is.na(age)) %>% 
+  #filter(age <= 5500) %>% 
   dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
   dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
@@ -513,16 +514,16 @@ sum(as.numeric(flatten(sig_results2))<=0.1)
 #   filter(sig_results2 == TRUE) %>% 
 #   pull(dataset.id)
 
-only_95 <- stack(unlist(sig_results2)) %>%
-  mutate(sig_results2 = case_when(values <= 0.051 ~ TRUE,
-                                                       values > 0.05 & values <= 0.1 ~ FALSE,
-                                                       TRUE ~ FALSE)) %>% 
-  filter(sig_results2 == TRUE) %>% 
-  pull(ind) %>% 
-  as.numeric(levels(.))[.]
-
-fos2_95 <- fos %>% 
-  filter(dataset.id %in% only_95)
+# only_95 <- stack(unlist(sig_results2)) %>%
+#   mutate(sig_results2 = case_when(values <= 0.051 ~ TRUE,
+#                                                        values > 0.05 & values <= 0.1 ~ FALSE,
+#                                                        TRUE ~ FALSE)) %>% 
+#   filter(sig_results2 == TRUE) %>% 
+#   pull(ind) %>% 
+#   as.numeric(levels(.))[.]
+# 
+# fos2_95 <- fos %>% 
+#   filter(dataset.id %in% only_95)
 
 
 # only_90 <- All_sig_tests %>%
