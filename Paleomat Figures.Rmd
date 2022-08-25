@@ -859,7 +859,11 @@ knitr::kable(fossil.locs2,
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
   filter(date >= -3000)
 
-summary_table <- 
+summary_table <- Threebest %>% 
+  group_by(dataset.id) %>% 
+  summarise(value_range = max(value) -  min(value), bootstrap_range = max(bootstrap) - min(bootstrap), anom_range = max(anom) - min(anom), anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap), rmsep_mean = mean(rmsep), s1_mean = mean(s1))
+
+
 
 knitr::kable(fossil.locs2,
              caption = "Metadata for the fossil pollen records used in this study.")
