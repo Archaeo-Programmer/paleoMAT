@@ -522,152 +522,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5b.png", dpi = 600)
 
 ```
 
-
-```{r fig6, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-
-temp_anom_standard <- anom_loess %>% 
-  dplyr::mutate(x = as.integer(x)) %>% 
-  dplyr::filter(x >= 133 & x <= 1900) %>% 
-  dplyr::mutate(Series = "This study") %>% 
-  dplyr::select(year = x, anom = y, Series)
-
-Moberg_standard <- Moberg %>% 
-  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
-  dplyr::select(year = date, anom = LF, Series) %>% 
-  filter(year >= 133 & year <= 1900)
-
-Moberg_paleomat <- bind_rows(temp_anom_standard, Moberg_standard)
-
-# Moberg_paleomat_dff <- left_join(temp_anom_standard %>% dplyr::select(-Series), Moberg_standard %>% dplyr::select(-Series), by = "year") %>% 
-#   mutate(diff = anom.x - anom.y) %>% 
-#   dplyr::select(-c(anom.x, anom.y))
-
-# Moberg LF and paleomat
-Moberg_paleomat %>% 
-  group_by(Series) %>% 
-  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
-  ggplot(aes(x = year, y = update, colour = Series)) +
-  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
-  # geom_vline(aes(xintercept = 872, color = "mean"), linetype="twodash", lwd = 0.5) +
-  # geom_vline(xintercept = c(1002, 1144, 1225, 1286, 1447, 1582), color = "red", linetype="twodash", lwd = 0.5) +
-  geom_line(size = 2.0) +
-  scale_color_manual(values=c("#A60F2D", "cornflowerblue")) +
-  xlab("Years AD") +
-  ylab("Standardized Temperature Values (Z-Scores)") +
-  scale_x_continuous(limits = c(100, 1900),
-                     breaks = seq(100, 1900, 200), 
-                     minor_breaks=seq(200,1800,by=200),
-                     guide = "axis_minor") +
-  scale_y_continuous(breaks = seq(-2, 3, 0.5)) +
-  theme_bw() +
-  theme(
-    axis.ticks.length=unit(0.125,"inch"),
-    ggh4x.axis.ticks.length.minor = rel(0.5),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 26,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    ),
-    legend.text = element_text(size = 19, family = "Helvetica"),
-    legend.title = element_blank()
-  )
-
-#ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
-
-
-
-#Moberg paleomat diff
-ggplot(data = Moberg_paleomat_dff, aes(x = year, y = diff)) +
-  geom_line(size = 2, color = "#A60F2D") +
-  xlab("Years AD") +
-  ylab("Temperature Anomaly (°C)") +
-  # scale_x_continuous(breaks=seq(0,2000,200),
-  #                    minor_breaks=seq(100, 1900,by=200),
-  #                    guide = "axis_minor") +
-  # scale_y_continuous(breaks = seq(-0.7, 0, 0.1), 
-  #                    limits = c(-0.7, 0),
-  #                    minor_breaks=seq(-0.65, -0.05,by=0.05),
-  #                    guide = "axis_minor") +
-  theme_bw() +
-  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
-  theme(
-    axis.ticks.length=unit(0.125,"inch"),
-    ggh4x.axis.ticks.length.minor = rel(0.5),
-    panel.border = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.text = element_text(
-      size = 26,
-      colour = "black",
-      family = "Helvetica"
-    ),
-    axis.title.y = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 10,
-        r = 5,
-        b = 10,
-        l = 10
-      )
-    ),
-    axis.title.x = element_text(
-      size = 28,
-      family = "Helvetica",
-      margin = margin(
-        t = 5,
-        r = 10,
-        b = 10,
-        l = 10
-      )
-    ),
-    panel.grid.minor = element_blank(),
-    axis.line = element_line(colour = "black"),
-    plot.margin = margin(
-      t = 5,
-      r = 25,
-      b = 5,
-      l = 5
-    )
-  )
-
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6_diff.png", dpi = 600)
-
-```
-
-
-
-```{r viau}
+```{r fig6}
 
 viau <- read.csv("./data-raw/viau.csv") %>% 
   dplyr::mutate(time = BPtoBCAD(time))
@@ -822,25 +677,173 @@ viau_paleomat_kaufman %>%
   )
 
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/viau_mat_kaufman.png", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
 
 
 ```
+
+
+```{r fig7, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+
+temp_anom_standard <- anom_loess %>% 
+  dplyr::mutate(x = as.integer(x)) %>% 
+  dplyr::filter(x >= 133 & x <= 1900) %>% 
+  dplyr::mutate(Series = "This study") %>% 
+  dplyr::select(year = x, anom = y, Series)
+
+Moberg_standard <- Moberg %>% 
+  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
+  dplyr::select(year = date, anom = LF, Series) %>% 
+  filter(year >= 133 & year <= 1900)
+
+Moberg_paleomat <- bind_rows(temp_anom_standard, Moberg_standard)
+
+# Moberg_paleomat_dff <- left_join(temp_anom_standard %>% dplyr::select(-Series), Moberg_standard %>% dplyr::select(-Series), by = "year") %>% 
+#   mutate(diff = anom.x - anom.y) %>% 
+#   dplyr::select(-c(anom.x, anom.y))
+
+# Moberg LF and paleomat
+Moberg_paleomat %>% 
+  group_by(Series) %>% 
+  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
+  ggplot(aes(x = year, y = update, colour = Series)) +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
+  # geom_vline(aes(xintercept = 872, color = "mean"), linetype="twodash", lwd = 0.5) +
+  # geom_vline(xintercept = c(1002, 1144, 1225, 1286, 1447, 1582), color = "red", linetype="twodash", lwd = 0.5) +
+  geom_line(size = 2.0) +
+  scale_color_manual(values=c("#A60F2D", "cornflowerblue")) +
+  xlab("Years AD") +
+  ylab("Standardized Temperature Values (Z-Scores)") +
+  scale_x_continuous(limits = c(100, 1900),
+                     breaks = seq(100, 1900, 200), 
+                     minor_breaks=seq(200,1800,by=200),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(-2, 3, 0.5)) +
+  theme_bw() +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    ),
+    legend.text = element_text(size = 19, family = "Helvetica"),
+    legend.title = element_blank()
+  )
+
+#ggsave("Paleomat_Moberg.png", width = 14.3, height = 7.5, units = "in", dpi = 600)
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure7.png", dpi = 600)
+
+
+
+#Moberg paleomat diff
+ggplot(data = Moberg_paleomat_dff, aes(x = year, y = diff)) +
+  geom_line(size = 2, color = "#A60F2D") +
+  xlab("Years AD") +
+  ylab("Temperature Anomaly (°C)") +
+  # scale_x_continuous(breaks=seq(0,2000,200),
+  #                    minor_breaks=seq(100, 1900,by=200),
+  #                    guide = "axis_minor") +
+  # scale_y_continuous(breaks = seq(-0.7, 0, 0.1), 
+  #                    limits = c(-0.7, 0),
+  #                    minor_breaks=seq(-0.65, -0.05,by=0.05),
+  #                    guide = "axis_minor") +
+  theme_bw() +
+  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure7_diff.png", dpi = 600)
+
+```
+
 
 # Tables
 
 ```{r table1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
 fossil.locs2 <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
-  dplyr::select(-c(month, type, pub_year, value, error, sample.id)) %>% 
-  dplyr::ungroup() %>% 
+    #readr::read_rds(here::here("./vignettes/data/reconst_tavg_final_west_3.rds")) %>% dplyr::filter(month == 7) %>% 
+  fossil_metadata_counts_final2 %>% 
+  filter(age <= 5500) %>% 
+  dplyr::select(site.name, site.id, dataset.id, elev) %>% 
+  group_by(site.name, site.id, dataset.id, elev) %>% 
+  count() %>% 
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>% 
-  dplyr::group_by(dataset.id, site.id, site.name) %>% 
-  summarise(minAge = min(age), maxAge = max(age), minDepth = min(depth), maxDepth = max(depth), across(c(long, lat, elev), unique)) %>% 
-  dplyr::select(site.name, site.id, dataset.id, minAge, maxAge, minDepth, maxDepth, long, lat, elev) %>% 
+  dplyr::select(-geometry) %>% 
+  #dplyr::group_by(dataset.id, site.id, site.name) %>% 
+  # summarise(minAge = min(age), maxAge = max(age), minDepth = min(depth), maxDepth = max(depth), across(c(long, lat, elev), unique)) %>% 
+  # dplyr::select(site.name, site.id, dataset.id, minAge, maxAge, minDepth, maxDepth, long, lat, elev) %>% 
   dplyr::arrange(site.name) %>% 
-  dplyr::rename("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "Earliest date of core (BP)" = minAge, "Latest date of core (BP)" = maxAge, "Minimum Depth" = minDepth, "Maximum Depth" = maxDepth, "Longitude" = long, "Latitude" = lat, "Elevation (m)" = elev )
+  dplyr::select("Site Name" = site.name, "Site ID" = site.id, "Dataset ID" = dataset.id, "No. of Samples" = n, "Elevation (m)" = elev, "Longitude" = long, "Latitude" = lat)
 
 #write.csv(fossil.locs2, "./vignettes/data/fossil.locations.csv", row.names = FALSE)
 
@@ -849,7 +852,307 @@ knitr::kable(fossil.locs2,
 
 ```
 
+# Supplemental Figures
 
+```{r suppfig1}
+
+
+ff <- fossil_metadata_counts_final2 %>% 
+  filter(!is.na(age) & age <= 5500) %>% 
+  dplyr::select(dataset.id:pub_year)
+
+rlen_results_filtered <- rlen_results %>% 
+  mutate(sample.id = as.integer(levels(sample.id))) %>% 
+  filter(sample.id %in% ff$sample.id) %>% 
+  left_join(., ff %>% 
+              dplyr::select(sample.id, age) %>% 
+              mutate(age = BPtoBCAD(age)),
+            by = "sample.id")
+
+ninety5quant <- quantile(rlen$train, probs = 0.95)
+
+ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
+  geom_point() +
+  xlab("Years BC/AD") +
+  ylab("Squared Residual Length") +
+  scale_x_continuous(limits = c(-3000, 2100),
+                     breaks = seq(-3000, 2000, 500),
+                     minor_breaks=seq(-2900, 2000,by = 100),
+                     guide = "axis_minor") +
+  scale_y_continuous(limits = c(0, 260),
+                     breaks = seq(0, 260, 20),
+                     minor_breaks=seq(10, 240, 10),
+                     guide = "axis_minor") +
+  theme_bw() +
+  geom_hline(yintercept = quantile(rlen$train, probs = 0.95), color = "red", lty = 1, lwd=0.5) +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure1.png", dpi = 600)
+
+
+```
+
+
+```{r suppfig2}
+
+tbl <- cbind(swap.mat2$standard$rmsep[1:20], swap.mat2$standard$r.squared[1:20],
+             swap.mat2$standard$avg.bias[1:20], swap.mat2$standard$max.bias[1:20])
+
+tbl <- as.matrix(format(tbl, digits = 3))
+
+tbl <- cbind(as.integer(1:20), tbl)
+
+rownames(tbl) <- rep("", nrow(tbl))
+colnames(tbl) <- c("k", "RMSEP","R2","Avg Bias","Max Bias")
+
+as.data.frame(tbl) %>% 
+  mutate(across(everything(), ~ as.numeric(.x))) %>% 
+  ggplot(aes(x = k, y = RMSEP)) +
+  geom_line(size = 1) +
+  geom_label(aes(label = k), fill = "white", label.size = NA, size = 5.5) +
+  xlab("Number of Analgoues (k)") +
+  ylab("RMSEP") +
+  scale_x_continuous(breaks=seq(0,20,2),
+                     minor_breaks=seq(1, 19,by=1),
+                     guide = "axis_minor") +
+  scale_y_continuous(breaks = seq(2.10, 2.45, 0.05), 
+                     limits = c(2.10, 2.45),
+                     minor_breaks=seq(2.11, 2.44,by=0.01),
+                     guide = "axis_minor") +
+  theme_bw() +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
+
+```
+
+```{r suppfig3}
+
+
+
+
+```
+
+
+```{r suppfig4}
+
+
+Threebest %>%
+  ggplot(aes(x = anom, y = anom_bootstrap)) +
+    geom_point() +
+  stat_smooth(method = "lm", col = "red") +
+  scale_x_continuous(limits = c(-9, 9),
+                     breaks = seq(-9, 9, 2),
+                     minor_breaks=seq(-8, 8,by=1),
+                     guide = "axis_minor") +
+  scale_y_continuous(limits = c(-9, 9),
+                     breaks = seq(-9, 9, 2),
+                     minor_breaks=seq(-8, 8,by=1),
+                     guide = "axis_minor") +  
+  theme_bw() +
+  xlab("Temperature Anomaly Predicted Values") +
+  ylab("Bootstrapped Temperature Predictions") +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
+
+
+```
+
+
+
+```{r suppfig5}
+
+Threebest <- read_csv("~/Dropbox/WSU/SKOPEII/model/Anom_All3Steps_90sign_withBootstrapErrors_4analogs.csv") %>%
+  filter(date >= -3000)
+
+Threebest$century <- round(as.numeric(Threebest$date),-2)
+
+weight <- (1 / Threebest$s1)
+
+Threebest %>%
+  ggplot(aes(y = anom_bootstrap)) +
+  geom_point(aes(x = date), size=weight, shape=1) +
+  geom_boxplot(
+    aes(x = century, group = century),
+    lwd = .25,
+    outlier.alpha = NA,
+    outlier.shape = NA,
+    position = position_dodge2(preserve = "total")
+  ) +
+  geom_hline(yintercept = 0,
+             linetype = 'dashed',
+             color = c('darkslategray')) +
+  geom_smooth(method = "loess", span = 0.15, aes(x = date, weight = weight), size = 2, colour = "cornflowerblue") +
+  scale_x_continuous(limits = c(-3000, 2100),
+                     breaks = seq(-3000, 2000, 500),
+                     minor_breaks=seq(-2900, 2000,by=100),
+                     guide = "axis_minor") +
+  scale_y_continuous(limits = c(-8, 8),
+                     breaks = seq(-8, 8, 2),
+                     minor_breaks=seq(-7, 7,by=1),
+                     guide = "axis_minor") +
+  theme_bw() +
+  xlab("Years BC/AD") +
+  ylab("Temperature Anomaly (°C)") +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 25,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure5.png", dpi = 600)
+
+
+```
 
 
 <!-- ```{r old_matanom} -->
