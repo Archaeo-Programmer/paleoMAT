@@ -432,7 +432,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure4.png", dpi = 600)
 
 ```{r fig5, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Threebest <- read_csv("~/Dropbox/WSU/SKOPEII/model/Anom_All3Steps_90sign_withBootstrapErrors_4analogs.csv") %>%
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
   filter(date >= -3000)
 
 Threebest$century <- round(as.numeric(Threebest$date),-2)
@@ -852,39 +852,51 @@ knitr::kable(fossil.locs2,
 
 ```
 
+
+```{r table2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
+
+
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+  filter(date >= -3000)
+
+summary_table <- 
+
+knitr::kable(fossil.locs2,
+             caption = "Metadata for the fossil pollen records used in this study.")
+
+```
+
+
 # Supplemental Figures
 
 ```{r suppfig1}
 
-
-ff <- fossil_metadata_counts_final2 %>% 
+ff <- readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata_post5500BP.rds")) %>% 
   filter(!is.na(age) & age <= 5500) %>% 
-  dplyr::select(dataset.id:pub_year)
+  dplyr::select(sample.id, age) %>% 
+  mutate(age = BPtoBCAD(age)) %>% 
+  sf::st_drop_geometry()
 
-rlen_results_filtered <- rlen_results %>% 
-  mutate(sample.id = as.integer(levels(sample.id))) %>% 
-  filter(sample.id %in% ff$sample.id) %>% 
-  left_join(., ff %>% 
-              dplyr::select(sample.id, age) %>% 
-              mutate(age = BPtoBCAD(age)),
-            by = "sample.id")
 
-ninety5quant <- quantile(rlen$train, probs = 0.95)
+rlen_results_filtered <- readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$res_lengths %>% 
+  left_join(., ff, by = "sample.id")
+
+ninety5quant <- readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$quantile_95
 
 ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
   geom_point() +
   xlab("Years BC/AD") +
   ylab("Squared Residual Length") +
-  scale_x_continuous(limits = c(-3000, 2100),
-                     breaks = seq(-3000, 2000, 500),
-                     minor_breaks=seq(-2900, 2000,by = 100),
+  scale_x_continuous(limits = c(-3500, 2100),
+                     breaks = seq(-3500, 2000, 500),
+                     minor_breaks=seq(-3400, 1900,by = 100),
                      guide = "axis_minor") +
   scale_y_continuous(limits = c(0, 260),
                      breaks = seq(0, 260, 20),
                      minor_breaks=seq(10, 240, 10),
                      guide = "axis_minor") +
   theme_bw() +
-  geom_hline(yintercept = quantile(rlen$train, probs = 0.95), color = "red", lty = 1, lwd=0.5) +
+  geom_hline(yintercept = ninety5quant, color = "red", lty = 1, lwd=0.5) +
   theme(
     axis.ticks.length=unit(0.125,"inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
@@ -933,8 +945,11 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure1.png", dpi = 600)
 
 ```{r suppfig2}
 
-tbl <- cbind(swap.mat2$standard$rmsep[1:20], swap.mat2$standard$r.squared[1:20],
-             swap.mat2$standard$avg.bias[1:20], swap.mat2$standard$max.bias[1:20])
+mat_calibration <- readr::read_rds(here::here("./vignettes/data/mat_calibration.rds"))
+
+
+tbl <- cbind(mat_calibration$standard$rmsep[1:20], mat_calibration$standard$r.squared[1:20],
+             mat_calibration$standard$avg.bias[1:20], mat_calibration$standard$max.bias[1:20])
 
 tbl <- as.matrix(format(tbl, digits = 3))
 
@@ -1004,7 +1019,67 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
 
 ```{r suppfig3}
 
+minDC_df <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$minDC %>% 
+  arrange(age)
 
+# Keeping only 1%, 2.5%, and 5%, as I don't want to plot 10%.
+minDC_quantiles <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$quantiles[1:3]
+
+ggplot(data = minDC_df, aes(x = age, y = values)) +
+  xlab("Years BC/AD") +
+  ylab("Dissimilarity") +
+  scale_x_continuous(limits = c(-3500, 2100),
+                     breaks = seq(-3500, 2000, 500),
+                     minor_breaks=seq(-3400, 1900,by = 100),
+                     guide = "axis_minor") +
+  scale_y_continuous(limits = c(0, 0.35),
+                     breaks = seq(0, 0.35, 0.05)) +
+  theme_bw() +
+  annotate("label", x = Inf, y = c(0.1139258, 0.1650981, 0.2171289), label = c("1%", "2.5%", "5%"), hjust = 0, size = 8, fill = "white", label.size = NA) +
+  coord_cartesian(xlim = c(-3500, 2000), clip = "off") +
+  geom_hline(yintercept = minDC_quantiles, color = "red", lty = "dashed", lwd=0.5) +
+  geom_point() +
+  theme(
+    axis.ticks.length=unit(0.125,"inch"),
+    ggh4x.axis.ticks.length.minor = rel(0.5),
+    panel.border = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.text = element_text(
+      size = 26,
+      colour = "black",
+      family = "Helvetica"
+    ),
+    axis.title.y = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 10,
+        r = 5,
+        b = 10,
+        l = 10
+      )
+    ),
+    axis.title.x = element_text(
+      size = 28,
+      family = "Helvetica",
+      margin = margin(
+        t = 5,
+        r = 10,
+        b = 10,
+        l = 10
+      )
+    ),
+    panel.grid.minor = element_blank(),
+    axis.line = element_line(colour = "black"),
+    plot.margin = margin(
+      t = 5,
+      r = 75,
+      b = 5,
+      l = 5
+    )
+  )
+
+ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure3.png", dpi = 600)
 
 
 ```
@@ -1012,6 +1087,8 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
 
 ```{r suppfig4}
 
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+  filter(date >= -3000)
 
 Threebest %>%
   ggplot(aes(x = anom, y = anom_bootstrap)) +
@@ -1077,7 +1154,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
 
 ```{r suppfig5}
 
-Threebest <- read_csv("~/Dropbox/WSU/SKOPEII/model/Anom_All3Steps_90sign_withBootstrapErrors_4analogs.csv") %>%
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
   filter(date >= -3000)
 
 Threebest$century <- round(as.numeric(Threebest$date),-2)

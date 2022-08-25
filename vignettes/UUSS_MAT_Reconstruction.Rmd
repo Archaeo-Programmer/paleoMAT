@@ -256,13 +256,16 @@ fossil_metadata_counts_final2 <-
   sf::st_intersection(fossil_metadata_counts, bb) %>%
   filter(!is.na(age))
 
-#readr::write_rds(fossil_metadata_counts_final2, here::here("vignettes/data/fossil_final_west_metadata.rds"))
+
+fossil_final_west_metadata_post5500BP <- fossil_metadata_counts_final2 %>% 
+  filter(age <= 5500)
+
+readr::write_rds(fossil_final_west_metadata_post5500BP, here::here("vignettes/data/fossil_final_west_metadata.rds"))
 
 
 fossil_final <-
   fossil_metadata_counts_final2 %>%
   filter(!is.na(age)) %>% 
-  #filter(age <= 5500) %>% 
   dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
   dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
@@ -288,7 +291,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 #load(file = "data/prism_1.rda")
 
 # Extract Prism climate data for modern pollen sites.
-MPCT_climate2 <- MPCT_climate2
+MPCT_climate2 <- 
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
   extract_prism_normals() %>%
@@ -383,7 +386,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 #   pull(tavg)
 
 
-#fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
+fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
 
 
 fossil_pollen <- fossil_final %>% 
@@ -413,6 +416,20 @@ rlen_results <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- resi
 stack(rlen$passive)}) %>% 
   bind_rows() %>% 
   rename("Squared_res_lengths" = 1, "sample.id" = 2)
+
+rlen_ninety5quant <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca"); as.numeric(quantile(rlen$train, probs = 0.95))}) %>% 
+  first()
+
+rlen_full_results1 <- rlen_results %>% 
+  mutate(sample.id = as.integer(levels(sample.id))) %>% 
+  filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
+  
+
+rlen_full_results2 <- structure(list(res_lengths = rlen_full_results1,
+                         quantile_95 = rlen_ninety5quant),
+                    class = "list")
+
+readr::write_rds(rlen_full_results2, here::here("vignettes/data/rlen_full_results2.rds"))
   
 
 # depths <- fossil_metadata_counts_final %>%
@@ -473,20 +490,51 @@ sig_results2 <-
     return(sig_out)
   })
 
-sig_results2b <-
-  map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-    output <- randomTF(
-      spp = spp,
-      env = data.frame(tjul = env),
-      fos = x,
-      n = 10000,
-      fun = MAT,
-      col = 2
-    )
-    sig_out <- output$sig
-    names(sig_out) <- y
-    return(sig_out)
-  })
+
+sig_results2_full <- map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+  output <- randomTF(
+    spp = spp,
+    env = data.frame(tjul = env),
+    fos = x,
+    n = 10000,
+    fun = MAT,
+    col = 1
+  )
+  prop <- output$EX
+  names(prop) <- y
+  sig_out <- output$sig
+  names(sig_out) <- y
+  return(list(prop, sig_out))
+})
+
+sig_results2_proportions <- sapply(sig_results2_full,"[[",1) %>% 
+  stack(.) %>% 
+  rename(dataset.id = ind, proportion = values)
+
+sig_results2_pvalues <- sapply(sig_results2_full,"[[",2) %>% 
+  stack(.) %>% 
+  rename(dataset.id = ind, pvalue = values)
+
+sig_results2_final <- left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>% 
+  dplyr::select(dataset.id, proportion, pvalue) %>% 
+  mutate(dataset.id = as.numeric(levels(dataset.id)))
+  
+readr::write_rds(sig_results2_final, here::here("vignettes/data/rlen_full_results2.rds"))
+
+# sig_results2b <-
+#   map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+#     output <- randomTF(
+#       spp = spp,
+#       env = data.frame(tjul = env),
+#       fos = x,
+#       n = 10000,
+#       fun = MAT,
+#       col = 2
+#     )
+#     sig_out <- output$sig
+#     names(sig_out) <- y
+#     return(sig_out)
+#   })
 
 sum(as.numeric(flatten(sig_results2))<=0.05)
 # 0.05
@@ -575,12 +623,14 @@ fossil_input <- fossil_input[, keep_cols]
 
 
 swap.mat2 <- mat(pollen_input, env, method = "SQchord")
+readr::write_rds(swap.mat2, here::here("vignettes/data/mat_calibration.rds"))
 # getK(swap.mat2)
+
 rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
 
 rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
 
-rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
+#rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
 
 mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
   tibble::rownames_to_column("sample.id") %>%
@@ -597,12 +647,12 @@ mat_prediction_4 <- as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %
   rename(s1 = 2), by = "sample.id")
 
 
-
-mat_prediction_1_analogue <- as.data.frame(rlgh.mat2b$predictions$model$predicted[1,]) %>%
-  mutate(sample.id = fossil_samples) %>% 
-  rename(value = 1) %>% 
-  mutate(bootstrap = rlgh.mat2b[["predictions"]][["bootstrap"]][["predicted"]][,1],
-         error = rlgh.mat2b[["predictions"]][["sample.errors"]][["rmsep"]][,1])
+# 
+# mat_prediction_1_analogue <- as.data.frame(rlgh.mat2b$predictions$model$predicted[1,]) %>%
+#   mutate(sample.id = fossil_samples) %>% 
+#   rename(value = 1) %>% 
+#   mutate(bootstrap = rlgh.mat2b[["predictions"]][["bootstrap"]][["predicted"]][,1],
+#          error = rlgh.mat2b[["predictions"]][["sample.errors"]][["rmsep"]][,1])
 
 # rlgh.mat2_copy <- rlgh.mat2
 # replace_names <- data.frame(sample.id = colnames(rlgh.mat2$predictions$model$predicted)) %>% 
@@ -617,7 +667,34 @@ mat_prediction_1_analogue <- as.data.frame(rlgh.mat2b$predictions$model$predicte
 #           xlab = "Age", ylab = "Temperature")
 
 
+pre_minDC_samples <- rlen_full_results1 %>%
+  filter(!sample.id %in% rlen_removal) %>%
+  left_join(.,
+    fossil_final_west_metadata_post5500BP %>%
+      dplyr::select(dataset.id, sample.id),
+    by = "sample.id"
+  ) %>%
+  filter(dataset.id %in% only_90) %>%
+  pull(sample.id)
+
 rlgh.mdc <- minDC(rlgh.mat2)
+
+minDC_results <- stack(rlgh.mdc$minDC) %>% 
+  mutate(ind = as.integer(levels(ind))) %>% 
+  filter(ind %in% pre_minDC_samples) %>% 
+  left_join(.,
+    fossil_final_west_metadata_post5500BP %>%
+      dplyr::select(sample.id, age) %>% 
+      mutate(age = BPtoBCAD(age)) %>% 
+      sf::st_drop_geometry(),
+    by = c("ind"  = "sample.id")
+  )
+
+minDC_full_results <- structure(list(minDC = minDC_results,
+                         quantiles = rlgh.mdc$quantiles),
+                    class = "list")
+
+readr::write_rds(minDC_full_results, here::here("vignettes/data/minDC_full_results.rds"))
 
 
 # This is to change the names from sample.id to age in order to get the min. dissimilarity plot.
@@ -640,11 +717,17 @@ remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
   filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
 
 
-mat_prediction_cleaned <- mat_prediction %>%
+mat_prediction_cleaned <- mat_prediction_4 %>%
   filter(!sample.id %in% remove_samples$sample.id)
+
+# Final Sample set.
+final_approved_samples <- minDC_full_results$minDC %>% 
+  filter(!ind %in% remove_samples$sample.id) %>% 
+  pull(ind)
 
 fos_90 <- mat_prediction_cleaned %>% 
   mutate(sample.id = as.integer(sample.id)) %>% 
+  filter(sample.id %in% final_approved_samples) %>% 
   dplyr::left_join(., fossil_metadata_counts_final %>% 
   dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
   #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
@@ -1656,7 +1739,7 @@ write.csv(anom_new,
 # }
 
 #Just temporary as the anomaly is actually calculated at the bottom of this code chunk.
-warmest.month = 15.6182926829268
+#warmest.month = 15.6182926829268
 
 # Put lat and long into individual columns.
 tavg_new_90 <- fos_90 %>%
@@ -1665,11 +1748,11 @@ tavg_new_90 <- fos_90 %>%
   dplyr::select(-geometry) %>% 
   sf::st_drop_geometry() %>% 
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  dplyr::filter(age < 5500) %>%
+  dplyr::filter(age <= 5500) %>%
   dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
   #mutate(observ = n()) %>% 
-  mutate(mid_period = get_midpoints(period)) %>% 
-  dplyr::mutate(anom = value - warmest.month)
+  mutate(mid_period = get_midpoints(period)) #%>% 
+  #dplyr::mutate(anom = value - warmest.month)
 
 # tavg_new_90 %>%
 #   filter(date >= -1000) %>%
@@ -1708,82 +1791,85 @@ tavg_new_90 <- fos_90 %>%
 
 
 # 
-tavg_predicted_west_new_90 <- tavg_new_90 %>%
-  # group_by(site.name, site.id) %>%
-  # summarise(observ = n())
-  # filter(!sample.id %in% sample_filter) %>% 
-  # filter(site.id != 1661) %>% 
-  filter(!site.id %in% c(1661, 2260, 2241)) %>% 
-  dplyr::group_by(site.id, site.name, elev, long, lat) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.data = data) %>%
-  dplyr::mutate(site.data = purrr::map(site.data,
-                                       function(x) {
-                                         x %>%
-                                           dplyr::group_by(age) %>%
-                                           dplyr::mutate(
-                                             value = mean(value),
-                                             anom = mean(anom)
-                                           ) %>%
-                                           dplyr::distinct(age, .keep_all = TRUE) %>%
-                                           dplyr::arrange(age)
-                                       })) %>%
-  # sf::st_as_sf(coords = c("long", "lat"),
-  #                crs = 4326) %>%
-  dplyr::mutate(mean_100yrs = purrr::map(
-    site.data,
-    .f = function(x) {
-      interpolate_time(temp_data = x,
-                       model = "tps")
-    }
-  )) %>% 
-  dplyr::select(-site.data) %>%
-  dplyr::arrange(site.name) %>% 
-  dplyr::mutate(mean_100yrs = purrr::map(mean_100yrs, setNames, c("mean_100yrs","model_fit", "plot_fit"))) %>%
-  #mutate(mean_100yrs = map(mean_100yrs, as.list)) %>% 
-  unnest(mean_100yrs) %>%
-  group_by(site.id) %>% 
-  mutate(col = row_number()) %>% 
-  pivot_wider(names_from = col, values_from = mean_100yrs) %>% 
-  dplyr::rename(mean_100yrs = 6,
-                model_fit = 7,
-                plot_fit = 8)
+# tavg_predicted_west_new_90 <- tavg_new_90 %>%
+#   # group_by(site.name, site.id) %>%
+#   # summarise(observ = n())
+#   # filter(!sample.id %in% sample_filter) %>% 
+#   # filter(site.id != 1661) %>% 
+#   filter(!site.id %in% c(1661, 2260, 2241)) %>% 
+#   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
+#   tidyr::nest() %>%
+#   dplyr::rename(site.data = data) %>%
+#   dplyr::mutate(site.data = purrr::map(site.data,
+#                                        function(x) {
+#                                          x %>%
+#                                            dplyr::group_by(age) %>%
+#                                            dplyr::mutate(
+#                                              value = mean(value),
+#                                              anom = mean(anom)
+#                                            ) %>%
+#                                            dplyr::distinct(age, .keep_all = TRUE) %>%
+#                                            dplyr::arrange(age)
+#                                        })) %>%
+#   # sf::st_as_sf(coords = c("long", "lat"),
+#   #                crs = 4326) %>%
+#   dplyr::mutate(mean_100yrs = purrr::map(
+#     site.data,
+#     .f = function(x) {
+#       interpolate_time(temp_data = x,
+#                        model = "tps")
+#     }
+#   )) %>% 
+#   dplyr::select(-site.data) %>%
+#   dplyr::arrange(site.name) %>% 
+#   dplyr::mutate(mean_100yrs = purrr::map(mean_100yrs, setNames, c("mean_100yrs","model_fit", "plot_fit"))) %>%
+#   #mutate(mean_100yrs = map(mean_100yrs, as.list)) %>% 
+#   unnest(mean_100yrs) %>%
+#   group_by(site.id) %>% 
+#   mutate(col = row_number()) %>% 
+#   pivot_wider(names_from = col, values_from = mean_100yrs) %>% 
+#   dplyr::rename(mean_100yrs = 6,
+#                 model_fit = 7,
+#                 plot_fit = 8)
 
 #saveRDS(tavg_predicted_west_new, "./output/temporal_interpolations_new.rds")
 
 
 # Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
-  dplyr::select(-model_fit,-plot_fit) %>%
-  tidyr::unnest(mean_100yrs) %>%
-  bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661, 2260, 2241)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
-  # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
-  #dplyr::filter(date >= -3550 & date <= 1800) %>%
-  arrange(date) %>% 
-  dplyr::group_by(date) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.predictions = data)
+# tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
+#   dplyr::select(-model_fit,-plot_fit) %>%
+#   tidyr::unnest(mean_100yrs) %>%
+#   bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661, 2260, 2241)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
+#   # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
+#   #dplyr::filter(date >= -3550 & date <= 1800) %>%
+#   arrange(date) %>% 
+#   dplyr::group_by(date) %>%
+#   tidyr::nest() %>%
+#   dplyr::rename(site.predictions = data)
 
 # Extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
-site.preds.unlisted <- unnest(tavg_100yrs_new, cols = site.predictions)
+#site.preds.unlisted <- unnest(tavg_100yrs_new, cols = site.predictions)
+
 modern_temperature <-
   as.data.frame(
     raster::extract(
       x = temp.raster,
-      y = site.preds.unlisted %>% ungroup() %>%
+      y = tavg_new_90 %>% ungroup() %>%
         dplyr::select(long, lat)
     )
   ) %>%
   dplyr::rename(modern = 1)
 
 site.preds.unlisted <-
-  cbind(site.preds.unlisted, modern = modern_temperature$modern)
+  cbind(tavg_new_90, modern = modern_temperature$modern)
 
 
 site.preds.unlisted.anom <- site.preds.unlisted %>%
   rowwise() %>%
   dplyr::mutate(anom = value - modern) %>% 
- # dplyr::mutate(anom_bootstrap = bootstrap - modern)
+  dplyr::mutate(anom_bootstrap = bootstrap - modern)
+
+readr::write_rds(site.preds.unlisted.anom, here::here("vignettes/data/final_paleomat_dataset.rds"))
 
 # #Modern Weighted Mean
 # site.preds.unlisted %>% 
