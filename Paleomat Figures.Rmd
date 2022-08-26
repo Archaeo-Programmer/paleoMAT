@@ -432,7 +432,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure4.png", dpi = 600)
 
 ```{r fig5, fig.cap="Low-frequency temperature reconstruction time series for this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
 Threebest$century <- round(as.numeric(Threebest$date),-2)
@@ -509,12 +509,12 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5b.png", dpi = 600)
 
 # Extracting the fit values
 
-# p <- Threebest %>%
-#   filter(date >= -3000) %>%
-#   qplot(date,anom_bootstrap,data=.) +
-#   stat_smooth(aes(outfit=fit<<-..y..), span = 0.05, n = 5000)
-# 
-# anom_loess3 <- ggplot_build(p)$data[[2]]
+p <- Threebest %>%
+  filter(date >= -3000) %>%
+  qplot(date,anom_bootstrap,data=.) +
+  stat_smooth(aes(outfit=fit<<-..y..), span = 0.15, n = 5000)
+
+anom_loess4 <- ggplot_build(p)$data[[2]]
 # 
 # ggplot(anom_loess) +
 #   geom_line(aes(x, outfit))
@@ -590,7 +590,7 @@ kaufman_standard <- read.csv("./data-raw/Kaufman 2020_Figure6Data.csv") %>%
   dplyr::select(year = time, anom = zscore, Series) %>% 
   dplyr::filter(year > -3400)
 
-temp_anom_standard <- anom_loess %>% 
+temp_anom_standard <- anom_loess4 %>% 
   dplyr::mutate(x = as.integer(x)) %>% 
   dplyr::filter(x >= -3000 & x <= 1951) %>% 
   dplyr::mutate(Series = "This study") %>% 
@@ -606,12 +606,6 @@ viau_paleomat_kaufman <- bind_rows(temp_anom_standard, viau_standard, kaufman_st
 
 
 viau_paleomat_kaufman$Series <- factor(viau_paleomat_kaufman$Series, c("Viau et al. 2006", "Kaufman et al. 2020", "This study"))
-
-ggplot(iris, aes(row.names(iris), Sepal.Width, color = Species, group = Species)) +
-  geom_line(aes(size = Species)) +
-  scale_size_manual(values = 1:3) +
-  theme_bw()
-
 
 
 # Viau and paleomat
@@ -685,7 +679,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
 
 ```{r fig7, fig.cap="July temperature anomaly from AD 100 to 1800 from this study and of Moberg et al. [2005]. Both time series have been standardized so that they can be compared using (x-mean/std) where x is temperature, the mean is of the individual time series, and the standard deviation is of the individual time series.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-temp_anom_standard <- anom_loess %>% 
+temp_anom_standard <- anom_loess4 %>% 
   dplyr::mutate(x = as.integer(x)) %>% 
   dplyr::filter(x >= 133 & x <= 1900) %>% 
   dplyr::mutate(Series = "This study") %>% 
@@ -855,18 +849,40 @@ knitr::kable(fossil.locs2,
 
 ```{r table2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
+fossil_final_west_metadata_post5500BP <-
+  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds"))
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+Threebest <-
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
-summary_table <- Threebest %>% 
-  group_by(dataset.id) %>% 
-  summarise(value_range = max(value) -  min(value), bootstrap_range = max(bootstrap) - min(bootstrap), anom_range = max(anom) - min(anom), anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap), rmsep_mean = mean(rmsep), s1_mean = mean(s1))
+summary_table <- Threebest %>%
+  group_by(dataset.id) %>%
+  summarise(
+    anom_range = max(anom) - min(anom),
+    anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap),
+    rmsep_mean = mean(rmsep),
+    s1_mean = mean(s1)
+  )
 
+summary_table_final <-
+  readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")) %>%
+  left_join(
+    .,
+    fossil_final_west_metadata_post5500BP %>% ungroup %>% dplyr::select(site.name, site.id, dataset.id) %>% distinct() %>% st_drop_geometry(),
+    by = "dataset.id"
+  ) %>% 
+  dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>% 
+  left_join(., summary_table, by = "dataset.id") %>% 
+  mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>% 
+  arrange(a, site.name) %>% 
+  dplyr::select(-a)
 
+names(summary_table_final) <- c("Site Name", "Site ID", "Dataset ID", "Proportion explained variance", "Random TF p", 
+                                "Anomaly (°C)", "Anomaly Bootstrapped (°C)", "Mean boostrap RMSEP (°C)", "Mean boostrap s1")
 
-knitr::kable(fossil.locs2,
-             caption = "Metadata for the fossil pollen records used in this study.")
+write.csv(summary_table_final, "./vignettes/data/summary_table_final.csv", row.names = FALSE)
+
 
 ```
 
@@ -967,7 +983,7 @@ as.data.frame(tbl) %>%
   ggplot(aes(x = k, y = RMSEP)) +
   geom_line(size = 1) +
   geom_label(aes(label = k), fill = "white", label.size = NA, size = 5.5) +
-  xlab("Number of Analgoues (k)") +
+  xlab("Number of Analogues (k)") +
   ylab("RMSEP") +
   scale_x_continuous(breaks=seq(0,20,2),
                      minor_breaks=seq(1, 19,by=1),
@@ -1091,7 +1107,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure3.png", dpi = 600)
 
 ```{r suppfig4}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
 Threebest %>%
@@ -1158,7 +1174,7 @@ ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
 
 ```{r suppfig5}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset.rds")) %>%
+Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
 Threebest$century <- round(as.numeric(Threebest$date),-2)

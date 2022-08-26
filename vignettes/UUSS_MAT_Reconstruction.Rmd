@@ -260,7 +260,17 @@ fossil_metadata_counts_final2 <-
 fossil_final_west_metadata_post5500BP <- fossil_metadata_counts_final2 %>% 
   filter(age <= 5500)
 
-readr::write_rds(fossil_final_west_metadata_post5500BP, here::here("vignettes/data/fossil_final_west_metadata.rds"))
+if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata.rds"))) {
+  readr::write_rds(
+    fossil_final_west_metadata_post5500BP,
+    here::here("vignettes/data/fossil_final_west_metadata.rds")
+  )
+}
+fossil_final_west_metadata_post5500BP <-
+  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds")
+  )
+
+
 
 
 fossil_final <-
@@ -429,7 +439,18 @@ rlen_full_results2 <- structure(list(res_lengths = rlen_full_results1,
                          quantile_95 = rlen_ninety5quant),
                     class = "list")
 
-readr::write_rds(rlen_full_results2, here::here("vignettes/data/rlen_full_results2.rds"))
+
+if (!file.exists(here::here("vignettes/data/rlen_full_results2.rds"))) {
+  readr::write_rds(
+    rlen_full_results2,
+    here::here("vignettes/data/rlen_full_results2.rds")
+  )
+}
+rlen_full_results2 <-
+  readr::read_rds(here::here("vignettes/data/rlen_full_results2.rds")
+  )
+
+
   
 
 # depths <- fossil_metadata_counts_final %>%
@@ -519,7 +540,16 @@ sig_results2_final <- left_join(sig_results2_proportions, sig_results2_pvalues, 
   dplyr::select(dataset.id, proportion, pvalue) %>% 
   mutate(dataset.id = as.numeric(levels(dataset.id)))
   
-readr::write_rds(sig_results2_final, here::here("vignettes/data/rlen_full_results2.rds"))
+if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
+  readr::write_rds(
+    sig_results2_final,
+    here::here("vignettes/data/sig_results2_final.rds")
+  )
+}
+sig_results2_final <-
+  readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")
+  )
+
 
 # sig_results2b <-
 #   map2(fos2$pollen, fos2$dataset.id, function(x, y) {
@@ -581,26 +611,30 @@ sum(as.numeric(flatten(sig_results2))<=0.1)
 #   filter(sig_results2 == TRUE) %>% 
 #   pull(dataset.id)
 
-only_90 <- stack(unlist(sig_results2)) %>%
-  #mutate(values = round(values, digits = 1)) %>% 
-  mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
-                                                       TRUE ~ FALSE)) %>% 
-  filter(sig_results2 == TRUE) %>% 
-  pull(ind) %>% 
-  as.numeric(levels(.))[.]
+# only_90 <- stack(unlist(sig_results2)) %>%
+#   #mutate(values = round(values, digits = 1)) %>% 
+#   mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
+#                                   TRUE ~ FALSE)) %>% 
+#   filter(sig_results2 == TRUE) %>% 
+#   pull(ind) %>% 
+#   as.numeric(levels(.))[.]
+
+only_90b <- sig_results2_final %>%
+  filter(pvalue <= 0.10) %>% 
+  pull(dataset.id)
 
 fos3_90 <- fos %>% 
-  filter(dataset.id %in% only_90)
+  filter(dataset.id %in% only_90b)
   
 
-full_fos <- randomTF(
-      spp = spp,
-      env = data.frame(tjul = env),
-      fos = bind_rows(fos3_90$pollen),
-      n = 10000,
-      fun = MAT,
-      col = 1
-    )
+# full_fos <- randomTF(
+#       spp = spp,
+#       env = data.frame(tjul = env),
+#       fos = bind_rows(fos3_90$pollen),
+#       n = 10000,
+#       fun = MAT,
+#       col = 1
+#     )
 
 
 # Step 3 - Run Mat and do prediction/reconstruction.
@@ -623,12 +657,22 @@ fossil_input <- fossil_input[, keep_cols]
 
 
 swap.mat2 <- mat(pollen_input, env, method = "SQchord")
-readr::write_rds(swap.mat2, here::here("vignettes/data/mat_calibration.rds"))
+
+if (!file.exists(here::here("vignettes/data/mat_calibration.rds"))) {
+  readr::write_rds(
+    swap.mat2,
+    here::here("vignettes/data/mat_calibration.rds")
+  )
+}
+swap.mat2 <-
+  readr::read_rds(here::here("vignettes/data/mat_calibration.rds")
+  )
 # getK(swap.mat2)
 
 rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
 
 rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
+#readr::write_rds(rlgh.mat2b4, here::here("vignettes/data/predict_mat_ouput.rds"))
 
 #rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
 
@@ -671,10 +715,10 @@ pre_minDC_samples <- rlen_full_results1 %>%
   filter(!sample.id %in% rlen_removal) %>%
   left_join(.,
     fossil_final_west_metadata_post5500BP %>%
-      dplyr::select(dataset.id, sample.id),
+      dplyr::select(dataset.id, site.id, sample.id),
     by = "sample.id"
   ) %>%
-  filter(dataset.id %in% only_90) %>%
+  filter(dataset.id %in% only_90b) %>%
   pull(sample.id)
 
 rlgh.mdc <- minDC(rlgh.mat2)
@@ -684,7 +728,7 @@ minDC_results <- stack(rlgh.mdc$minDC) %>%
   filter(ind %in% pre_minDC_samples) %>% 
   left_join(.,
     fossil_final_west_metadata_post5500BP %>%
-      dplyr::select(sample.id, age) %>% 
+      dplyr::select(sample.id, dataset.id, site.id, age) %>% 
       mutate(age = BPtoBCAD(age)) %>% 
       sf::st_drop_geometry(),
     by = c("ind"  = "sample.id")
@@ -694,20 +738,28 @@ minDC_full_results <- structure(list(minDC = minDC_results,
                          quantiles = rlgh.mdc$quantiles),
                     class = "list")
 
-readr::write_rds(minDC_full_results, here::here("vignettes/data/minDC_full_results.rds"))
+if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
+  readr::write_rds(
+    minDC_full_results,
+    here::here("vignettes/data/minDC_full_results.rds")
+  )
+}
+minDC_full_results <-
+  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds")
+  )
 
 
 # This is to change the names from sample.id to age in order to get the min. dissimilarity plot.
-rename_mindc <- fossil_metadata_counts_final %>% 
-  filter(sample.id %in% names(rlgh.mdc$minDC)) %>% 
-  dplyr::select(sample.id, age) %>% 
-  sf::st_drop_geometry()
-
-rlgh.mdc2 <- rlgh.mdc
-names(rlgh.mdc2$minDC) <- rename_mindc$age[match(names(rlgh.mdc2$minDC),rename_mindc$sample.id)]
-rlgh.mdc2$minDC <- rlgh.mdc2$minDC[order(as.numeric(names(rlgh.mdc2$minDC)))]
-
-plot(rlgh.mdc2, use.labels = TRUE, xlab = "Age (Years BP)")
+# rename_mindc <- fossil_metadata_counts_final %>% 
+#   filter(sample.id %in% names(rlgh.mdc$minDC)) %>% 
+#   dplyr::select(sample.id, age) %>% 
+#   sf::st_drop_geometry()
+# 
+# rlgh.mdc2 <- rlgh.mdc
+# names(rlgh.mdc2$minDC) <- rename_mindc$age[match(names(rlgh.mdc2$minDC),rename_mindc$sample.id)]
+# rlgh.mdc2$minDC <- rlgh.mdc2$minDC[order(as.numeric(names(rlgh.mdc2$minDC)))]
+# 
+# plot(rlgh.mdc2, use.labels = TRUE, xlab = "Age (Years BP)")
 # End diss. plot with percentiles.
 
 
@@ -739,7 +791,7 @@ fos_90 <- mat_prediction_cleaned %>%
   # filter(site.id == 246) %>% 
   sf::st_as_sf()
 
-write.csv(fos_90, "Tim_All_sig_tests_1best_analog_boostrap.csv", row.names = FALSE)
+#write.csv(fos_90, "Tim_All_sig_tests_1best_analog_boostrap.csv", row.names = FALSE)
 
 
 
@@ -1869,7 +1921,16 @@ site.preds.unlisted.anom <- site.preds.unlisted %>%
   dplyr::mutate(anom = value - modern) %>% 
   dplyr::mutate(anom_bootstrap = bootstrap - modern)
 
-readr::write_rds(site.preds.unlisted.anom, here::here("vignettes/data/final_paleomat_dataset.rds"))
+if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
+  readr::write_rds(
+    site.preds.unlisted.anom,
+    here::here("vignettes/data/final_paleomat_dataset3.rds")
+  )
+}
+site.preds.unlisted.anom <-
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")
+  )
+
 
 # #Modern Weighted Mean
 # site.preds.unlisted %>% 
@@ -1892,7 +1953,7 @@ readr::write_rds(site.preds.unlisted.anom, here::here("vignettes/data/final_pale
 # ok <- site.preds.unlisted.anom %>%   group_by(site.name, site.id) %>%
 #     summarise(observ = n(), minDate = min(date), maxDate = max(date))
 
-write.csv(site.preds.unlisted.anom, "./vignettes/data/output/Anom_All3Steps_withBootstrapErrors.csv", row.names = FALSE)
+#write.csv(site.preds.unlisted.anom, "./vignettes/data/output/Anom_All3Steps_withBootstrapErrors.csv", row.names = FALSE)
 
 # Look at the distribution:
 # ggplot(site.preds.unlisted.anom, aes(x = anom)) + geom_density(aes(y = ..count..), fill = "lightgray") +
