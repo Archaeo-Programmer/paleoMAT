@@ -850,7 +850,16 @@ knitr::kable(fossil.locs2,
 ```{r table2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
 fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds"))
+  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds")) %>% 
+    ungroup %>% 
+    dplyr::select(site.name, site.id, dataset.id) %>% 
+  filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
+      1762L, 1766L, 1970L, 2320L, 2880L, 2897L, 2950L, 3054L, 3056L, 
+      3060L, 3560L, 3561L, 3608L, 3612L, 14517L, 14547L, 14549L, 14650L, 
+      14944L, 14951L, 15106L, 15356L, 15967L, 17419L, 20304L, 20833L, 
+      20838L, 22948L, 25551L, 41580L, 42645L, 46801L)) %>% 
+  distinct() %>% 
+  st_drop_geometry()
 
 Threebest <-
   readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
@@ -869,14 +878,17 @@ summary_table_final <-
   readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")) %>%
   left_join(
     .,
-    fossil_final_west_metadata_post5500BP %>% ungroup %>% dplyr::select(site.name, site.id, dataset.id) %>% distinct() %>% st_drop_geometry(),
+    fossil_final_west_metadata_post5500BP,
     by = "dataset.id"
   ) %>% 
   dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>% 
   left_join(., summary_table, by = "dataset.id") %>% 
   mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>% 
   arrange(a, site.name) %>% 
-  dplyr::select(-a)
+  dplyr::select(-a) %>% 
+  filter(!is.na(site.name)) %>% 
+  mutate(across(c(proportion, pvalue), ~ as.numeric(.x))) %>% 
+  mutate(across(-c(site.name, site.id, dataset.id), ~ round(.x, digits=2)))
 
 names(summary_table_final) <- c("Site Name", "Site ID", "Dataset ID", "Proportion explained variance", "Random TF p", 
                                 "Anomaly (°C)", "Anomaly Bootstrapped (°C)", "Mean boostrap RMSEP (°C)", "Mean boostrap s1")
