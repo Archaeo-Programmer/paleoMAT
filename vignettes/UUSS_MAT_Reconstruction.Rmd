@@ -333,9 +333,12 @@ MPCT_climate_final <-
 ```
 
 
-# Testing
-```{r testing, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+## Finalize Modern and Fossil Datasets
+```{r finalize-datasets, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+# Modern Dataset
+
+# Clean up modern pollen and climate dataframe to prepare for transfer function and reconstruction diagnostics. Here, we transform the pollen data into proportions.
 MPCT_proportions <-
   MPCT_climate_final %>%
   dplyr::mutate(
@@ -348,54 +351,67 @@ MPCT_proportions <-
       purrr::map(climate,
                  function(x) {
                    x %>%
-                     #filter(month == 7) %>% 
                      dplyr::select(month, tavg)
                  })
   )
 
+# Put the modern pollen data into a dataframe and make the sample.id as the row names.
 spp <- bind_rows(MPCT_proportions$pollen) %>% 
   bind_cols(sample.id = MPCT_proportions$sample.id, .) %>% 
   tibble::column_to_rownames("sample.id")
 
+# Put the modern climate data into a dataframe and make the sample.id as the row names.
 climate_full <- MPCT_proportions %>% 
   dplyr::select(sample.id, climate) %>% 
-  unnest(climate) %>% 
-  filter(month %in% c(5:9))
+  unnest(climate)
 
+# Pull just the climate (tavg) values as a vector.
 env <- climate_full %>%
-  filter(month == 7) %>%
   pull(tavg)
 
+# Turn climate value (tavg) vector into a named vector with the sample ids.
 names(env) <- c(MPCT_proportions$sample.id)
 
-# env <- climate_full %>%
-#   group_by(sample.id) %>% 
-#   mutate(tavg = mean(tavg)) %>% 
-#   select(-month) %>% 
-#   distinct() %>% 
-#   pull(tavg)
+
+# Fossil Dataset
+
+if (!file.exists(here::here("vignettes/data/fossil_pollen.rds"))) {
+  # Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
+  fossil_final$pollen <-
+    purrr::map(fossil_final$pollen, function(x)
+      tibble::column_to_rownames(x, "sample.id"))
+  
+  # Transform fossil pollen data into proportions, as we did with the modern pollen data above.
+  fossil_pollen <- fossil_final %>%
+    dplyr::mutate(pollen =
+                    purrr::map(pollen,
+                               function(x) {
+                                 x / rowSums(x)
+                               }))
+  
+  readr::write_rds(fossil_pollen,
+                   here::here("vignettes/data/fossil_pollen.rds"))
+}
+fossil_pollen <-
+  readr::read_rds(here::here("vignettes/data/fossil_pollen.rds"))
+
+fossil_pollen2 <- fossil_pollen %>%
+  filter(!rows %in% c(0, 1)
+  )
 
 
-fossil_final$pollen <- purrr::map(fossil_final$pollen, function(x) tibble::column_to_rownames(x, "sample.id"))
+```
 
 
-fossil_pollen <- fossil_final %>% 
-    dplyr::mutate(
-    pollen =
-      purrr::map(pollen,
-                 function(x) {
-                   x / rowSums(x)
-                 }))
+# Reconstruction
 
-fossil_pollen2 <- fossil_pollen %>% 
-  mutate(rows = map_dbl(pollen, nrow)) %>% 
-  filter(!rows %in% c(0, 1))
+## Transfer Function and Reconstruction Diagnostics
 
+Here, we use several transfer function and reconstruction diagnostics, such as squared residual length, the proportion of variance in the fossil data explained by an environmental reconstruction, and the no-analog threshold.
 
+```{r diagnostics-reconstruction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# COMBO #2 - RUN ALL 3 STEPS (i.e., RLen removal, RandomTF removal, and no analgoue removal)
-
-# Step 1 RLen removal.
+# Step 1: We use squared residual length.
 rlen_removal <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
                     names(which(rlen$passive > quantile(rlen$train, probs = 0.95)))}) %>% 
   flatten_chr() %>% 
