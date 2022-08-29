@@ -441,7 +441,6 @@ weight <- (1 / Threebest$s1)
 
 Threebest %>%
   ggplot(aes(y = anom_bootstrap)) +
-  geom_point(aes(x = date), size=weight, shape=1) +
   geom_boxplot(
     aes(x = century, group = century),
     lwd = .25,
@@ -449,6 +448,7 @@ Threebest %>%
     outlier.shape = NA,
     position = position_dodge2(preserve = "total")
   ) +
+  geom_point(aes(x = date), size=weight, shape=1) +
   geom_hline(yintercept = 0,
              linetype = 'dashed',
              color = c('darkslategray')) +
