@@ -269,19 +269,22 @@ if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata.rds"))) {
 fossil_final_west_metadata_post5500BP <-
   readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds"))
 
-
+# Cleaning up fossil dataset.
 fossil_final <-
   fossil_metadata_counts_final2 %>%
   filter(!is.na(age)) %>% 
   dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
+  # For the pollen columns, replace any NA with a 0.
   dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
+  # For the pollen columns, replace any negative number with a 0 (in case of any errors).
   dplyr::mutate(dplyr::across(!c(dataset.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
   #tibble::column_to_rownames("sample.id") %>% 
   tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(dataset.id,
                 pollen = pollen.counts) %>% 
+  # Add column that shows the total number of samples for the core.
   mutate(n_samples = map_dbl(pollen, nrow))
 
 ```
@@ -297,8 +300,9 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 # lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
 
-# Extract Prism climate data for modern pollen sites.
-MPCT_climate2 <- 
+# Extract Prism climate data for modern pollen sites and limit to the western United States.
+if (!file.exists(here::here("vignettes/data/MPCT_climate_final.rds"))) {
+MPCT_climate <- 
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
   extract_prism_normals() %>%
@@ -318,34 +322,13 @@ MPCT_climate2 <-
 MPCT_climate_final <-
   sf::st_intersection(MPCT_climate, west_in_states)
 
-# Get the data into the final format used by the palaeoSig and rioja packages.
-MPCT_final <-
-  MPCT_climate_final %>%
-  dplyr::mutate(
-    # pollen =
-    #   purrr::map(pollen,
-    #     function(x){
-    #       x/rowSums(x)
-    #     }),
-    climate =
-      purrr::map(climate,
-                 function(x) {
-                   x %>%
-                     dplyr::select(month,
-                                   ppt,
-                                   tavg,
-                                   gdd) %>%
-                     tidyr::pivot_longer(ppt:gdd,
-                                         names_to = "element") %>%
-                     tidyr::unite("element_month", element, month) %>%
-                     tidyr::pivot_wider(names_from = element_month,
-                                        values_from = value)
-                 })) %>%
-  dplyr::select(-FID)
-
-# readr::write_rds(MPCT_final, here::here("vignettes/data/MPCT_final_west.rds"))
-# MPCT_final_whole <-
-#   readr::read_rds(here::here("vignettes/data/MPCT_final.rds"))
+  readr::write_rds(
+    MPCT_climate_final,
+    here::here("vignettes/data/MPCT_climate_final.rds")
+  )
+}
+MPCT_climate_final <-
+  readr::read_rds(here::here("vignettes/data/MPCT_climate_final.rds"))
 
 ```
 
