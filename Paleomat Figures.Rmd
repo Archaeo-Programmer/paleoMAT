@@ -834,7 +834,7 @@ knitr::kable(summary_table_final,
 
 # Supplemental Figures
 
-```{r suppfig1}
+```{r suppfig1, fig.cap="Squared residual length for the fossil assemblages vs age. Red line marks the 95% limit of the calibration set residual lengths (very poorly fitted). We removed all samples that fell above the 95% line.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 ff <- readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata_post5500BP.rds")) %>% 
   filter(!is.na(age) & age <= 5500) %>% 
@@ -908,10 +908,9 @@ ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
 ```
 
 
-```{r suppfig2}
+```{r suppfig2, fig.cap="Summary diagram of the results of a MAT model applied to predict temperature from the modern pollen data set. The leave-one-out error measure (RMSEP) shows that 4 analogs provide the optimal choice (lowest RMSEP).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 mat_calibration <- readr::read_rds(here::here("./vignettes/data/mat_calibration.rds"))
-
 
 tbl <- cbind(mat_calibration$standard$rmsep[1:20], mat_calibration$standard$r.squared[1:20],
              mat_calibration$standard$avg.bias[1:20], mat_calibration$standard$max.bias[1:20])
@@ -978,11 +977,11 @@ as.data.frame(tbl) %>%
     )
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
 
 ```
 
-```{r suppfig3}
+```{r suppfig3, fig.cap="Time series plot of the minimum dissimilarity between each core (fossil) sample and the modern pollen training set samples. The dotted, horizontal lines are drawn at various percentiles of the distribution of the pair-wise dissimilarities for the training set samples. We used the 5th percentile as the cutoff for good analogs. So, samples with distances greater than the 5th percentile (above the line) were removed.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 minDC_df <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$minDC %>% 
   arrange(age)
@@ -1044,13 +1043,13 @@ ggplot(data = minDC_df, aes(x = age, y = values)) +
     )
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure3.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure3.png", dpi = 600)
 
 
 ```
 
 
-```{r suppfig4}
+```{r suppfig4, fig.cap="Linear regression and scatterplot between temperature anomaly predicted values and the bootstrapped temperature predictions. There is a strong linear relationship across their joint ranges (r2 = 0.96; p > F < .001).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
@@ -1110,14 +1109,14 @@ Threebest %>%
     )
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
 
 
 ```
 
 
 
-```{r suppfig5}
+```{r suppfig5, fig.cap="Low-frequency weighted bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). As in Figure 5 (main text) except here the loess curve (only) is weighted by the inverse of the sample-specific errors s1; see Simpson, 2007: 21 for calculation). Bubble size α 1/s1.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
@@ -1191,7 +1190,7 @@ Threebest %>%
     )
   )
 
-ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure5.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure5.png", dpi = 600)
 
 
 ```
