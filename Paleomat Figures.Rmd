@@ -20,7 +20,7 @@ library(ggh4x)
 
 # Figures
 
-```{r fig1, fig.cap="Modern pollen samples used in this study from the Neotoma Paleoecological Database.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig1, fig.cap="Modern pollen samples used in this study from the Neotoma Paleoecological Database.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
 
 MPCT_climate_final <-
   readr::read_rds(here::here("vignettes/data/MPCT_climate_final.rds"))
@@ -65,7 +65,7 @@ ggplot() +
 
 
 
-```{r fig2, fig.cap="The Southwest United States (SWUS) as defined here, showing locations of fossil pollen samples used in this study. Background shading indicates mean July temperature for 1961 - 1990 from PRISM (Daly et al., 2008, 2015; PRISM Climate Group, 2019) at 800-m resolution. The solid gray box outlines the area studied by Bocinsky and Kohler (2014); the green dashed box shows the extent of the reconstruction in this study.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig2, fig.cap="The Southwest United States (SWUS) as defined here, showing locations of fossil pollen samples used in this study. Background shading indicates mean July temperature for 1961 - 1990 from PRISM (Daly et al., 2008, 2015; PRISM Climate Group, 2019) at 800-m resolution. The solid gray box outlines the area studied by Bocinsky and Kohler (2014); the green dashed box shows the extent of the reconstruction in this study.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
 
 # Showing extent of UUSS and the fossil pollen sites.
 
@@ -283,7 +283,7 @@ ggplot() +
 ```
 
 
-```{r fig3, fig.cap= "Temperature for the North Atlantic using Richard Alley’s (2000) Greenland ice core data for 18,000 BC to present with the Younger Dryas and the general period of the northward expansion of maize agriculture from Mesoamerica into the SWUS highlighted.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig3, fig.cap= "Temperature for the North Atlantic using Richard Alley’s (2000) Greenland ice core data for 18,000 BC to present with the Younger Dryas and the general period of the northward expansion of maize agriculture from Mesoamerica into the SWUS highlighted.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
 alley2000 <-
@@ -387,7 +387,7 @@ alley2000 %>%
 ```
 
 
-```{r fig4, fig.cap="Low-frequency component of the Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for AD 133–1925. Anomaly is calculated in comparison to the 1961–1990 average.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig4, fig.cap="Low-frequency component of the Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for AD 133–1925. Anomaly is calculated in comparison to the 1961–1990 average.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Moberg et al. 2005 low-frequency reconstruction (only).
 Moberg <-
@@ -457,7 +457,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
 ```
 
 
-```{r fig5, fig.cap="Low-frequency bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). Boxplots show estimates binned by century. Anomalies are calculated in comparison to the 1961–1990 average. The temperature predictions for each sample (not binned by century) are shown by circles; sizes of circles are inversely proportional to the sample-specific errors (size of circle ∝ 1/s1; see Simpson, 2007: 21 for calculation of s1). Anomaly estimates with larger circles are more precise.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig5, fig.cap="Low-frequency bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). Boxplots show estimates binned by century. Anomalies are calculated in comparison to the 1961–1990 average. The temperature predictions for each sample (not binned by century) are shown by circles; sizes of circles are inversely proportional to the sample-specific errors (size of circle ∝ 1/s1; see Simpson, 2007: 21 for calculation of s1). Anomaly estimates with larger circles are more precise.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
@@ -535,7 +535,7 @@ Threebest %>%
 
 ```
 
-```{r fig6 fig.cap="Low-frequency July temperature anomaly for the SWUS from this study, the North American July temperature reconstruction (Viau et al., 2006) from 3000 BC to AD 2000, and the terrestrial composite for 30–60 °N (Kaufman et al., 2020), from 3300 BC to AD 1700, in 500-year bins. All series standardized to a mean of 0 and an s of 1 over the period in this graph.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig6, fig.cap="Low-frequency July temperature anomaly for the SWUS from this study, the North American July temperature reconstruction (Viau et al., 2006) from 3000 BC to AD 2000, and the terrestrial composite for 30–60 °N (Kaufman et al., 2020), from 3300 BC to AD 1700, in 500-year bins. All series standardized to a mean of 0 and an s of 1 over the period in this graph.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
 
 #scaleFUN <- function(x) sprintf("%.2f", x)
 
@@ -640,7 +640,7 @@ viau_paleomat_kaufman %>%
 ```
 
 
-```{r fig7, fig.cap="Low-frequency July temperature anomaly for the SWUS from this study and the Northern Hemisphere low-frequency component (Moberg et al. 2005) from AD 133 to 1900. Both series have been standardized to a mean of 0 and an s of 1 for this period.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r fig7, fig.cap="Low-frequency July temperature anomaly for the SWUS from this study and the Northern Hemisphere low-frequency component (Moberg et al. 2005) from AD 133 to 1900. Both series have been standardized to a mean of 0 and an s of 1 for this period.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 temp_anom_standard <- anom_loess4 %>% 
   dplyr::mutate(x = as.integer(x)) %>% 
@@ -776,7 +776,7 @@ fossil_final_west_metadata_post5500BP <-
       14944L, 14951L, 15106L, 15356L, 15967L, 17419L, 20304L, 20833L, 
       20838L, 22948L, 25551L, 41580L, 42645L, 46801L)) %>% 
   distinct() %>%
-  st_drop_geometry()
+  sf::st_drop_geometry()
 
 Threebest <-
   readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
@@ -834,7 +834,7 @@ knitr::kable(summary_table_final,
 
 # Supplemental Figures
 
-```{r suppfig1, fig.cap="Squared residual length for the fossil assemblages vs age. Red line marks the 95% limit of the calibration set residual lengths (very poorly fitted). We removed all samples that fell above the 95% line.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r suppfig1, fig.cap="Squared residual length for the fossil assemblages vs age. Red line marks the 95% limit of the calibration set residual lengths (very poorly fitted). We removed all samples that fell above the 95% line.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 ff <- readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata_post5500BP.rds")) %>% 
   filter(!is.na(age) & age <= 5500) %>% 
@@ -908,7 +908,7 @@ ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
 ```
 
 
-```{r suppfig2, fig.cap="Summary diagram of the results of a MAT model applied to predict temperature from the modern pollen data set. The leave-one-out error measure (RMSEP) shows that 4 analogs provide the optimal choice (lowest RMSEP).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r suppfig2, fig.cap="Summary diagram of the results of a MAT model applied to predict temperature from the modern pollen data set. The leave-one-out error measure (RMSEP) shows that 4 analogs provide the optimal choice (lowest RMSEP).", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 mat_calibration <- readr::read_rds(here::here("./vignettes/data/mat_calibration.rds"))
 
@@ -981,7 +981,7 @@ as.data.frame(tbl) %>%
 
 ```
 
-```{r suppfig3, fig.cap="Time series plot of the minimum dissimilarity between each core (fossil) sample and the modern pollen training set samples. The dotted, horizontal lines are drawn at various percentiles of the distribution of the pair-wise dissimilarities for the training set samples. We used the 5th percentile as the cutoff for good analogs. So, samples with distances greater than the 5th percentile (above the line) were removed.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r suppfig3, fig.cap="Time series plot of the minimum dissimilarity between each core (fossil) sample and the modern pollen training set samples. The dotted, horizontal lines are drawn at various percentiles of the distribution of the pair-wise dissimilarities for the training set samples. We used the 5th percentile as the cutoff for good analogs. So, samples with distances greater than the 5th percentile (above the line) were removed.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 minDC_df <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$minDC %>% 
   arrange(age)
@@ -1049,7 +1049,7 @@ ggplot(data = minDC_df, aes(x = age, y = values)) +
 ```
 
 
-```{r suppfig4, fig.cap="Linear regression and scatterplot between temperature anomaly predicted values and the bootstrapped temperature predictions. There is a strong linear relationship across their joint ranges (r2 = 0.96; p > F < .001).", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r suppfig4, fig.cap="Linear regression and scatterplot between temperature anomaly predicted values and the bootstrapped temperature predictions. There is a strong linear relationship across their joint ranges (r2 = 0.96; p > F < .001).", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
@@ -1116,7 +1116,7 @@ Threebest %>%
 
 
 
-```{r suppfig5, fig.cap="Low-frequency weighted bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). As in Figure 5 (main text) except here the loess curve (only) is weighted by the inverse of the sample-specific errors s1; see Simpson, 2007: 21 for calculation). Bubble size α 1/s1.", fig.width=10.5, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
+```{r suppfig5, fig.cap="Low-frequency weighted bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). As in Figure 5 (main text) except here the loess curve (only) is weighted by the inverse of the sample-specific errors s1; see Simpson, 2007: 21 for calculation). Bubble size α 1/s1.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
