@@ -768,18 +768,9 @@ write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 ```
 
 
-# Spatial and Temporal Interpolation for analogue package
+## Anomaly Calculation
 
-```{r spatiotemporal_interpolation2, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-# get_midpoints <- function(x, dp=2){
-#     lower <- as.numeric(gsub(",.*","",gsub("\\(|\\[|\\)|\\]","", x)))
-#     upper <- as.numeric(gsub(".*,","",gsub("\\(|\\[|\\)|\\]","", x)))
-#     return(round(lower+(upper-lower)/2, dp))
-# }
-
-#Just temporary as the anomaly is actually calculated at the bottom of this code chunk.
-#warmest.month = 15.6182926829268
+```{r anomaly_calculation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Put lat and long into individual columns.
 tavg_new_90 <- fos_90 %>%
@@ -790,110 +781,25 @@ tavg_new_90 <- fos_90 %>%
   dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
   dplyr::filter(age <= 5500) %>%
   dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
-  #mutate(observ = n()) %>% 
-  mutate(mid_period = get_midpoints(period)) #%>% 
-  #dplyr::mutate(anom = value - warmest.month)
-
-# tavg_new_90 %>%
-#   filter(date >= -1000) %>%
-# ggplot(., aes(x=date, y=value, group=site.name)) +
-#   geom_line(aes(color=site.name)) +
-#   #geom_smooth(method="auto", se=TRUE, fullrange=TRUE, level=0.95) +
-#   facet_wrap(~ site.name, ncol=4)
-  
-
-# These samples are not close to other samples; therefore, I pull them out for the temporal interpolation, then they will be readded later.
-# sample_filter <- c(41285, 41284, 34305, 31510, 31511, 21844, 21845, 21846, 21847, 21848,
-#                    11534, 11535, 11536, 11537, 11538, 11539, 62039, 62041, 
-#                    57919, 57920, 57921, 57922, 57923, 57924, 57925, 57926, 57927,
-#                    58052, 58053, 58054, 58055, 58056, 58057, 58058, 58215, 58216, 58217,
-#                    61609, 61610, 61636, 61637, 62179, 62180, 62181, 62182, 62183, 62184,
-#                    136828, 136827, 154427, 154428, 192219)
-# 
-# individual_samples_filtered <- tavg_new %>% 
-#   filter(sample.id %in% sample_filter)
-# 
-# # The results for this one are extremely odd, so just removing it completely
-# remove_site <- c(9830)
-
-# tavg_new %>% 
-#   group_by(site.id) %>% 
-#   arrange(site.id, age) %>% 
-#   filter(site.id == 9830) %>% 
-#   mutate(cumbbb = date - lag(date)) %>% 
-#   ggplot(aes(x = date, y = value)) +
-#   geom_point() +
-#   geom_line()
+  mutate(mid_period = get_midpoints(period))
 
 
-  # mutate(cumbbb = date - lag(date))
-  #          cumsum((row_number() > 1) * bbb))
+# Get the PRISM modern July temperature dataset.
+modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>%
+  raster::subset(7)
+
+temp.raster <-
+  raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
 
 
-# 
-# tavg_predicted_west_new_90 <- tavg_new_90 %>%
-#   # group_by(site.name, site.id) %>%
-#   # summarise(observ = n())
-#   # filter(!sample.id %in% sample_filter) %>% 
-#   # filter(site.id != 1661) %>% 
-#   filter(!site.id %in% c(1661, 2260, 2241)) %>% 
-#   dplyr::group_by(site.id, site.name, elev, long, lat) %>%
-#   tidyr::nest() %>%
-#   dplyr::rename(site.data = data) %>%
-#   dplyr::mutate(site.data = purrr::map(site.data,
-#                                        function(x) {
-#                                          x %>%
-#                                            dplyr::group_by(age) %>%
-#                                            dplyr::mutate(
-#                                              value = mean(value),
-#                                              anom = mean(anom)
-#                                            ) %>%
-#                                            dplyr::distinct(age, .keep_all = TRUE) %>%
-#                                            dplyr::arrange(age)
-#                                        })) %>%
-#   # sf::st_as_sf(coords = c("long", "lat"),
-#   #                crs = 4326) %>%
-#   dplyr::mutate(mean_100yrs = purrr::map(
-#     site.data,
-#     .f = function(x) {
-#       interpolate_time(temp_data = x,
-#                        model = "tps")
-#     }
-#   )) %>% 
-#   dplyr::select(-site.data) %>%
-#   dplyr::arrange(site.name) %>% 
-#   dplyr::mutate(mean_100yrs = purrr::map(mean_100yrs, setNames, c("mean_100yrs","model_fit", "plot_fit"))) %>%
-#   #mutate(mean_100yrs = map(mean_100yrs, as.list)) %>% 
-#   unnest(mean_100yrs) %>%
-#   group_by(site.id) %>% 
-#   mutate(col = row_number()) %>% 
-#   pivot_wider(names_from = col, values_from = mean_100yrs) %>% 
-#   dplyr::rename(mean_100yrs = 6,
-#                 model_fit = 7,
-#                 plot_fit = 8)
+temp.raster <-
+  raster::raster("./vignettes/data/raw_data/temp.raster.tif")
 
-#saveRDS(tavg_predicted_west_new, "./output/temporal_interpolations_new.rds")
-
-
-# Next, the site data is nested together for each 100 years so that the predictions and maps are done for each 100 years.
-# tavg_100yrs_new <- tavg_predicted_west_new_90 %>%
-#   dplyr::select(-model_fit,-plot_fit) %>%
-#   tidyr::unnest(mean_100yrs) %>%
-#   bind_rows(., tavg_new_90 %>% filter(site.id %in% c(1661, 2260, 2241)) %>% dplyr::select("site.id", "site.name", "elev", "long", "lat","date"= "mid_period" , "value")) %>% #sf::st_drop_geometry() ) %>% 
-#   # bind_rows(., individual_samples_filtered %>% ungroup %>% dplyr::select("site.id", "site.name", "elev", "long", "lat", "mid_period" ,"value") %>% rename(date = "mid_period")) %>% 
-#   #dplyr::filter(date >= -3550 & date <= 1800) %>%
-#   arrange(date) %>% 
-#   dplyr::group_by(date) %>%
-#   tidyr::nest() %>%
-#   dplyr::rename(site.predictions = data)
-
-# Extract the modern temperature from the PRISM data at each of the fossil pollen locations. Then, calculate the anomaly for each fossil pollen sample.
-#site.preds.unlisted <- unnest(tavg_100yrs_new, cols = site.predictions)
-
-modern_temperature <-
+# Extract the modern mean temperature at each fossil pollen site.
+modern_temperature2 <-
   as.data.frame(
     raster::extract(
-      x = temp.raster,
+      x = temp.raster2,
       y = tavg_new_90 %>% ungroup() %>%
         dplyr::select(long, lat)
     )
