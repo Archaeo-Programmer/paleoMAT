@@ -771,38 +771,6 @@ write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 # Reconstruction
 
 
-## Apply Threshold to Reconstruction
-
-```{r clim_threshold, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
-
-# Apply a threshold to the reconstruction, so that if an analogue is too dissimilar that it will not be used in the reconstruction. Then, based on the remaining analogues, the final reconstruction and associated error will be re-calculated.
-
-#tavg
-if (!file.exists("./vignettes/data/reconst_tavg_threshold_west_3.rds")) {
-  reconst_tavg_threshold_west_3 <-
-    reconst_tavg_west_3 %>%
-    purrr::map(
-      .f = function(the.reconst) {
-        apply_threshold(x = the.reconst,
-                        qtile = .995)
-      }
-    )
-
-  readr::write_rds(reconst_tavg_threshold_west_3,
-                   "./vignettes/data/reconst_tavg_threshold_west_3.rds")
-
-} else if (!exists("reconst_tavg_threshold_west_3")) {
-  reconst_tavg_threshold_west_3 <-
-    readr::read_rds(here::here("./vignettes/data/reconst_tavg_threshold_west_3.rds"))
-
-} else {
-  stop(
-    "The SWUS reconstruction threshold has already been applied. If you would like to re-run the threshold, then delete the file from the directory."
-  )
-
-}
-
-```
 
 ## Simplify Reconstruction Output
 
