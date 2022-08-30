@@ -772,179 +772,52 @@ write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 
 ```{r anomaly_calculation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Put lat and long into individual columns.
-tavg_new_90 <- fos_90 %>%
-  mutate(long = unlist(purrr::map(.$geometry,1)),
-           lat = unlist(purrr::map(.$geometry,2))) %>% 
-  dplyr::select(-geometry) %>% 
-  sf::st_drop_geometry() %>% 
-  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
-  dplyr::filter(age <= 5500) %>%
-  dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
-  mutate(mid_period = get_midpoints(period))
-
-
 # Get the PRISM modern July temperature dataset.
-modern_temp <- brick("/Users/andrewgillreath-brown/Dropbox/WSU/SKOPEII/Figures/PRISM_tavg_monthly_normals.tif") %>%
-  raster::subset(7)
-
-temp.raster <-
-  raster::projectRaster(modern_temp, crs = CRS("+init=epsg:4326"))
-
-
 temp.raster <-
   raster::raster("./vignettes/data/raw_data/temp.raster.tif")
 
-# Extract the modern mean temperature at each fossil pollen site.
-modern_temperature2 <-
-  as.data.frame(
-    raster::extract(
+# Extract the modern mean temperature at each fossil pollen site, and then calculate the anomalies.
+if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
+  # Put lat and long into individual columns.
+  tavg_new_90 <- fos_90 %>%
+    mutate(long = unlist(purrr::map(.$geometry, 1)),
+           lat = unlist(purrr::map(.$geometry, 2))) %>%
+    dplyr::select(-geometry) %>%
+    sf::st_drop_geometry() %>%
+    dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
+    dplyr::filter(age <= 5500) %>%
+    dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
+    mutate(mid_period = get_midpoints(period))
+  
+  
+  modern_temperature2 <-
+    as.data.frame(raster::extract(
       x = temp.raster2,
       y = tavg_new_90 %>% ungroup() %>%
         dplyr::select(long, lat)
-    )
-  ) %>%
-  dplyr::rename(modern = 1)
-
-site.preds.unlisted <-
-  cbind(tavg_new_90, modern = modern_temperature$modern)
-
-
-site.preds.unlisted.anom <- site.preds.unlisted %>%
-  rowwise() %>%
-  dplyr::mutate(anom = value - modern) %>% 
-  dplyr::mutate(anom_bootstrap = bootstrap - modern)
-
-if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
+    )) %>%
+    dplyr::rename(modern = 1)
+  
+  # Bind the modern data to fossil pollen dataset.
+  site.preds.unlisted <-
+    bind_cols(tavg_new_90, modern = modern_temperature$modern)
+  
+  # Calculate the temperature anomaly and the bootstrapped temperature anomaly.
+  site.preds.unlisted.anom <- site.preds.unlisted %>%
+    rowwise() %>%
+    dplyr::mutate(anom = value - modern) %>%
+    dplyr::mutate(anom_bootstrap = bootstrap - modern)
+  
   readr::write_rds(
     site.preds.unlisted.anom,
     here::here("vignettes/data/final_paleomat_dataset3.rds")
   )
 }
 site.preds.unlisted.anom <-
-  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")
-  )
-
-
-# #Modern Weighted Mean
-# site.preds.unlisted %>% 
-#   ungroup %>% 
-#   dplyr::select(site.id, modern) %>% 
-#   distinct() %>% 
-#   left_join(tavg_new_90, ., by = "site.id") %>% 
-#   group_by(site.id) %>% 
-#   mutate(n = n()) %>% 
-#   slice(1) %>% 
-#   filter(!site.id %in% c(1661, 1609)) %>% 
-#   ungroup %>% 
-#   summarise(modern = (n * modern)) %>% 
-#   summarise(sum(modern)/818)
-
-# ok <- site.preds.unlisted.anom %>% 
-# sf::st_as_sf(coords = c("long", "lat"),
-#                   crs = 4326) 
-
-# ok <- site.preds.unlisted.anom %>%   group_by(site.name, site.id) %>%
-#     summarise(observ = n(), minDate = min(date), maxDate = max(date))
-
-#write.csv(site.preds.unlisted.anom, "./vignettes/data/output/Anom_All3Steps_withBootstrapErrors.csv", row.names = FALSE)
-
-# Look at the distribution:
-# ggplot(site.preds.unlisted.anom, aes(x = anom)) + geom_density(aes(y = ..count..), fill = "lightgray") +
-#     geom_vline(aes(xintercept = mean(anom)), 
-#                linetype = "dashed", size = 0.6,
-#                color = "#FC4E07")
-
-# here, we nest the data into each time bin.
-site.preds.unlisted.anom.nested <- site.preds.unlisted.anom %>%
-  arrange(date) %>% 
-  dplyr::group_by(date) %>%
-  tidyr::nest() %>%
-  dplyr::rename(site.predictions = data)
-
-
-x_range <-
-  as.numeric(c(-112.81446,-105.52416))  # min/max longitude of the interpolation area
-y_range <-
-  as.numeric(c(32.65757, 38.089))  # min/max latitude of the interpolation area
-# create an empty grid of values ranging from the xmin-xmax, ymin-ymax
-grd <- expand.grid(
-  x = seq(from = x_range[1],
-          to = x_range[2],
-          by = 2.0),
-  y = seq(from = y_range[1], to = y_range[2],
-          by = 2.0)
-)
-
-# expand points to grid
-coordinates(grd) <- ~ x + y
-# turn into a spatial pixels object
-gridded(grd) <- TRUE
-
-
-# Do the interpolation using the inverse distance weighted method from gstat.
-tavg_idw <-
-  purrr::map(
-    site.preds.unlisted.anom.nested$site.predictions,
-    .f = function(x) {
-      coordinates(x) <- ~ long + lat
-      idw_pow2 <- gstat::idw(
-        formula = anom ~ 1,
-        locations = x,
-        newdata = grd,
-        idp = 1
-      )
-      idw_pow3 <- raster(idw_pow2)
-      crs(idw_pow3) <-
-        "+proj=longlat +datum=WGS84 +no_defs +ellps=WGS84 +towgs84=0,0,0"
-      return(idw_pow3)
-    }
-  )
-
-date_name_list_BC <- paste0("BC", gsub("-", "", site.preds.unlisted.anom.nested$date[site.preds.unlisted.anom.nested$date < 0]))
-date_name_list_AD <- paste0("AD", gsub("-", "", site.preds.unlisted.anom.nested$date[site.preds.unlisted.anom.nested$date > 0]))
-date_name_list <- c(date_name_list_BC, date_name_list_AD)
-
-tavg_idw_stack <- raster::stack(tavg_idw)
-names(tavg_idw_stack) <- date_name_list
-  
-  # c("BC950","BC850","BC750", "BC650", "BC550","BC450", "BC350", "BC250", "BC150", "BC50", "AD50", "AD150", "AD250", "AD350", "AD450", "AD550", "AD650", "AD750", "AD850","AD950", "AD1050", "AD1150", "AD1250", "AD1350", "AD1450", "AD1550", "AD1650", "AD1750")
-
-tavg_idw_brick <- raster::stack(tavg_idw)
-names(tavg_idw_brick) <- date_name_list
-
-# writeRaster(
-#   tavg_idw_brick,
-#   filename = "./output/paleomat-rasters.tif",
-#   options = "INTERLEAVE=BAND",
-#   overwrite = TRUE
-# )
-
-plot(tavg_idw_stack[[1:16]], col = colors, zlim=c(-4.0, 3.0))
-plot(tavg_idw_stack[[17:32]], col = colors, zlim=c(-4.0, 3.0))
-plot(tavg_idw_stack[[33:48]], col = colors, zlim=c(-4.0, 3.0))
-plot(tavg_idw_stack[[49:55]], col = colors, zlim=c(-4.0, 3.0))
-
-
-# Calculate the anomaly across time for entire area (to produce line graph).
-anom_new <- purrr::map(tavg_idw, cellStats, mean) %>%
-  as.data.frame() %>%
-  t() %>% 
-  data.frame(row.names = NULL) %>%
-  dplyr::mutate(date = site.preds.unlisted.anom.nested$date) %>%
-  dplyr::rename(anom = 1, year = 2)
-
-# Write results to a csv.
-write.csv(anom_new,
-          "./output/paleomat-temp-anomaly-final.csv",
-          row.names = FALSE)
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds"))
 
 
 # For figures for journal article, please see "Paleomat Figures.Rmd".
-
-
-
-# plot list of tavg_preds_temp3 and raster stack tavg_idw_stack
 
 ```
 
