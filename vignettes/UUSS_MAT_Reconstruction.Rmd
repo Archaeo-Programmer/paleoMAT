@@ -478,273 +478,179 @@ fos2 <-
 ```{r randomTF, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance. 
-sig_results2 <-
-  map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-    output <- randomTF(
-      spp = spp,
-      env = data.frame(tjul = env),
-      fos = x,
-      n = 100,
-      fun = MAT,
-      col = 1
-    )
-    sig_out <- output$sig
-    names(sig_out) <- y
-    return(sig_out)
-  })
-
-
-sig_results2_full <- map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-  output <- randomTF(
-    spp = spp,
-    env = data.frame(tjul = env),
-    fos = x,
-    n = 10000,
-    fun = MAT,
-    col = 1
-  )
-  prop <- output$EX
-  names(prop) <- y
-  sig_out <- output$sig
-  names(sig_out) <- y
-  return(list(prop, sig_out))
-})
-
-sig_results2_proportions <- sapply(sig_results2_full,"[[",1) %>% 
-  stack(.) %>% 
-  rename(dataset.id = ind, proportion = values)
-
-sig_results2_pvalues <- sapply(sig_results2_full,"[[",2) %>% 
-  stack(.) %>% 
-  rename(dataset.id = ind, pvalue = values)
-
-sig_results2_final <- left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>% 
-  dplyr::select(dataset.id, proportion, pvalue) %>% 
-  mutate(dataset.id = as.numeric(levels(dataset.id)))
-  
 if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
-  readr::write_rds(
-    sig_results2_final,
-    here::here("vignettes/data/sig_results2_final.rds")
-  )
+  sig_results2_full <-
+    map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+      output <- randomTF(
+        spp = spp,
+        env = data.frame(tjul = env),
+        fos = x,
+        n = 10000,
+        fun = MAT,
+        col = 1
+      )
+      prop <- output$EX
+      names(prop) <- y
+      sig_out <- output$sig
+      names(sig_out) <- y
+      return(list(prop, sig_out))
+    })
+  
+  # Extract the proportion explained variance and the dataset ID.
+  sig_results2_proportions <- sapply(sig_results2_full, "[[", 1) %>%
+    stack(.) %>%
+    rename(dataset.id = ind, proportion = values)
+  
+  # Extract the p-values and the dataset ID.
+  sig_results2_pvalues <- sapply(sig_results2_full, "[[", 2) %>%
+    stack(.) %>%
+    rename(dataset.id = ind, pvalue = values)
+  
+  # Put the proportion of variance and p-value into the same dataframe.
+  sig_results2_final <-
+    left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>%
+    dplyr::select(dataset.id, proportion, pvalue) %>%
+    mutate(dataset.id = as.numeric(levels(dataset.id)))
+  
+  readr::write_rds(sig_results2_final,
+                   here::here("vignettes/data/sig_results2_final.rds"))
 }
 sig_results2_final <-
   readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")
   )
 
-
-# sig_results2b <-
-#   map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-#     output <- randomTF(
-#       spp = spp,
-#       env = data.frame(tjul = env),
-#       fos = x,
-#       n = 10000,
-#       fun = MAT,
-#       col = 2
-#     )
-#     sig_out <- output$sig
-#     names(sig_out) <- y
-#     return(sig_out)
-#   })
-
-sum(as.numeric(flatten(sig_results2))<=0.05)
-# 0.05
-# 11
-sum(as.numeric(flatten(sig_results2))<=0.1)
-# 0.1
-# 19
-
-# ok %>% 
-#   filter(values < 0.05) %>% 
-#   mutate(test = values <= 0.05 & values2 <= 0.05) %>% view
-
-
-# All_sig_tests <- read.csv("All_sig_tests.csv", header = T, row.names = NULL)[,1:10]
-# names(All_sig_tests) <- c(names(All_sig_tests)[-1], "drop")
-# All_sig_tests <- All_sig_tests[, -ncol(All_sig_tests)]
-  
-
-
-# only_95 <- All_sig_tests %>%
-#   select(dataset.id, sig_results2) %>% 
-#   mutate(sig_results2 = case_when(sig_results2 <= 0.051 ~ TRUE,
-#                                                        sig_results2 > 0.05 & sig_results2 <= 0.1 ~ FALSE,
-#                                                        TRUE ~ FALSE)) %>% 
-#   filter(sig_results2 == TRUE) %>% 
-#   pull(dataset.id)
-
-# only_95 <- stack(unlist(sig_results2)) %>%
-#   mutate(sig_results2 = case_when(values <= 0.051 ~ TRUE,
-#                                                        values > 0.05 & values <= 0.1 ~ FALSE,
-#                                                        TRUE ~ FALSE)) %>% 
-#   filter(sig_results2 == TRUE) %>% 
-#   pull(ind) %>% 
-#   as.numeric(levels(.))[.]
-# 
-# fos2_95 <- fos %>% 
-#   filter(dataset.id %in% only_95)
-
-
-# only_90 <- All_sig_tests %>%
-#   select(dataset.id, sig_results2) %>% 
-#   mutate(sig_results2 = case_when(sig_results2 <= 0.1 ~ TRUE,
-#                                                        TRUE ~ FALSE)) %>% 
-#   filter(sig_results2 == TRUE) %>% 
-#   pull(dataset.id)
-
-# only_90 <- stack(unlist(sig_results2)) %>%
-#   #mutate(values = round(values, digits = 1)) %>% 
-#   mutate(sig_results2 = case_when(values <= 0.1 ~ TRUE,
-#                                   TRUE ~ FALSE)) %>% 
-#   filter(sig_results2 == TRUE) %>% 
-#   pull(ind) %>% 
-#   as.numeric(levels(.))[.]
-
+# Pull out the dataset IDs that have p-values less than the 0.10.
 only_90b <- sig_results2_final %>%
   filter(pvalue <= 0.10) %>% 
   pull(dataset.id)
 
+# Finally, subset the fossil pollen dataset by keeping only the dataset IDs that passed randomTF.
 fos3_90 <- fos %>% 
   filter(dataset.id %in% only_90b)
-  
 
-# full_fos <- randomTF(
-#       spp = spp,
-#       env = data.frame(tjul = env),
-#       fos = bind_rows(fos3_90$pollen),
-#       n = 10000,
-#       fun = MAT,
-#       col = 1
-#     )
+```
 
 
-# Step 3 - Run Mat and do prediction/reconstruction.
+### MAT Transfer Function and Prediction
 
+```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+
+# Step 3: Run MAT and do prediction/reconstruction.
+
+# Remove any columns in the modern pollen dataset that have 0 for the pollen taxa. 
 pollen_input <- spp %>% 
   dplyr::select(which(colSums(.) > 0))
 
-#sfossil_samples <- unlist(map(fos3_90$pollen, function(x) row.names(x)))
-
-# Run for 90%
+# Remove any columns in the fossil pollen dataset that have 0 for the pollen taxa. 
 fossil_input <- do.call(rbind, unname(fos3_90$pollen)) %>% 
-  #dplyr::bind_rows(fos3_90$pollen) %>% 
   dplyr::select(which(colSums(.) > 0))
 
+# Keep only columns that are the same between the modern and fossil pollen dataset, as they need to be the same to run MAT.
 keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
 keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
 
 pollen_input <- pollen_input[, keep_cols]
 fossil_input <- fossil_input[, keep_cols]
 
-
-swap.mat2 <- mat(pollen_input, env, method = "SQchord")
-
+# Save output of MAT if not alaready created.
 if (!file.exists(here::here("vignettes/data/mat_calibration.rds"))) {
-  readr::write_rds(
-    swap.mat2,
-    here::here("vignettes/data/mat_calibration.rds")
-  )
+  # Create the transfer function using mat from the analogue package.
+  swap.mat2 <- mat(pollen_input, env, method = "SQchord")
+  
+  readr::write_rds(swap.mat2,
+                   here::here("vignettes/data/mat_calibration.rds"))
 }
 swap.mat2 <-
-  readr::read_rds(here::here("vignettes/data/mat_calibration.rds")
-  )
-# getK(swap.mat2)
+  readr::read_rds(here::here("vignettes/data/mat_calibration.rds"))
 
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
+# Here, we run the prediction twice, so that we can extract the minimum dissimilarity from the predict.mat object.
 
-rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
-#readr::write_rds(rlgh.mat2b4, here::here("vignettes/data/predict_mat_ouput.rds"))
+if (!file.exists(here::here("vignettes/data/mat_prediction.rds"))) {
+  # Create the transfer function using mat from the analogue package.
+  rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
+  
+  readr::write_rds(rlgh.mat2,
+                   here::here("vignettes/data/mat_prediction.rds"))
+}
+rlgh.mat2 <-
+  readr::read_rds(here::here("vignettes/data/mat_prediction.rds"))
 
-#rlgh.mat2b1 <- predict(object = swap.mat2, newdata = fossil_input, k = 1, bootstrap = T)
+# Here, we run the prediction again in order to get the bootstrap estimates.
+if (!file.exists(here::here("vignettes/data/mat_prediction_bootstrap.rds"))) {
+  # Create the transfer function using mat from the analogue package.
+  rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
+  
+  readr::write_rds(rlgh.mat2b4,
+                   here::here("vignettes/data/mat_prediction_bootstrap.rds"))
+}
+rlgh.mat2b4 <-
+  readr::read_rds(here::here("vignettes/data/mat_prediction_bootstrap.rds"))
 
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(value = 2)
-
+# Here, we pull out the data from the predict.mat object. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the fourth record here.
 mat_prediction_4 <- as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(value = 2) %>% 
+  # Pull out the bootstrap predicted values.
   left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
   rename(bootstrap = 2), by = "sample.id") %>% 
+  # Pull out the bootstrap rmsep.
   left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
   rename(rmsep = 2), by = "sample.id") %>% 
+  # Pull out the bootstrap s1 errors.
     left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
   rename(s1 = 2), by = "sample.id")
 
-
-# 
-# mat_prediction_1_analogue <- as.data.frame(rlgh.mat2b$predictions$model$predicted[1,]) %>%
-#   mutate(sample.id = fossil_samples) %>% 
-#   rename(value = 1) %>% 
-#   mutate(bootstrap = rlgh.mat2b[["predictions"]][["bootstrap"]][["predicted"]][,1],
-#          error = rlgh.mat2b[["predictions"]][["sample.errors"]][["rmsep"]][,1])
-
-# rlgh.mat2_copy <- rlgh.mat2
-# replace_names <- data.frame(sample.id = colnames(rlgh.mat2$predictions$model$predicted)) %>% 
-#   mutate(sample.id = as.integer(sample.id)) %>% 
-#   left_join(., fossil_metadata_counts_final %>% select(sample.id, age), by = "sample.id") %>% 
-#   pull(age)
-# colnames(rlgh.mat2_copy$predictions$model$predicted) <- replace_names
-# 
-# rlgh.mat2_copy$predictions$model$predicted <- rlgh.mat2_copy$predictions$model$predicted[ , order(colnames(rlgh.mat2_copy$predictions$model$predicted))]
-# 
-# reconPlot(rlgh.mat2_copy, replace_names, use.labels = F, display.error = "bars",
-#           xlab = "Age", ylab = "Temperature")
+```
 
 
-pre_minDC_samples <- rlen_full_results1 %>%
-  filter(!sample.id %in% rlen_removal) %>%
-  left_join(.,
-    fossil_final_west_metadata_post5500BP %>%
-      dplyr::select(dataset.id, site.id, sample.id),
-    by = "sample.id"
-  ) %>%
-  filter(dataset.id %in% only_90b) %>%
-  pull(sample.id)
+### No Analog Threshold (or Minimum Dissimilarity)
 
-rlgh.mdc <- minDC(rlgh.mat2)
+```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-minDC_results <- stack(rlgh.mdc$minDC) %>% 
-  mutate(ind = as.integer(levels(ind))) %>% 
-  filter(ind %in% pre_minDC_samples) %>% 
-  left_join(.,
-    fossil_final_west_metadata_post5500BP %>%
-      dplyr::select(sample.id, dataset.id, site.id, age) %>% 
-      mutate(age = BPtoBCAD(age)) %>% 
-      sf::st_drop_geometry(),
-    by = c("ind"  = "sample.id")
-  )
-
-minDC_full_results <- structure(list(minDC = minDC_results,
-                         quantiles = rlgh.mdc$quantiles),
-                    class = "list")
-
+# Step 4: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
 if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
-  readr::write_rds(
-    minDC_full_results,
-    here::here("vignettes/data/minDC_full_results.rds")
-  )
+  # Get a list of the samples that remain in the fossil pollen dataset after rlen and the randomTF removal steps.
+  pre_minDC_samples <- rlen_full_results1 %>%
+    filter(!sample.id %in% rlen_removal) %>%
+    left_join(
+      .,
+      fossil_final_west_metadata_post5500BP %>%
+        dplyr::select(dataset.id, site.id, sample.id),
+      by = "sample.id"
+    ) %>%
+    filter(dataset.id %in% only_90b) %>%
+    pull(sample.id)
+  
+  # Get the minimum dissimilarity for each sample.
+  rlgh.mdc <- minDC(rlgh.mat2)
+  
+  # Put the results into a list.
+  minDC_results <- stack(rlgh.mdc$minDC) %>%
+    mutate(ind = as.integer(levels(ind))) %>%
+    filter(ind %in% pre_minDC_samples) %>%
+    left_join(
+      .,
+      fossil_final_west_metadata_post5500BP %>%
+        dplyr::select(sample.id, dataset.id, site.id, age) %>%
+        mutate(age = BPtoBCAD(age)) %>%
+        sf::st_drop_geometry(),
+      by = c("ind"  = "sample.id")
+    )
+  
+  minDC_full_results <- structure(list(minDC = minDC_results,
+                                       quantiles = rlgh.mdc$quantiles),
+                                  class = "list")
+  
+  readr::write_rds(minDC_full_results,
+                   here::here("vignettes/data/minDC_full_results.rds"))
 }
 minDC_full_results <-
-  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds")
-  )
+  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds"))
 
 
-# This is to change the names from sample.id to age in order to get the min. dissimilarity plot.
-# rename_mindc <- fossil_metadata_counts_final %>% 
-#   filter(sample.id %in% names(rlgh.mdc$minDC)) %>% 
-#   dplyr::select(sample.id, age) %>% 
-#   sf::st_drop_geometry()
-# 
-# rlgh.mdc2 <- rlgh.mdc
-# names(rlgh.mdc2$minDC) <- rename_mindc$age[match(names(rlgh.mdc2$minDC),rename_mindc$sample.id)]
-# rlgh.mdc2$minDC <- rlgh.mdc2$minDC[order(as.numeric(names(rlgh.mdc2$minDC)))]
-# 
-# plot(rlgh.mdc2, use.labels = TRUE, xlab = "Age (Years BP)")
-# End diss. plot with percentiles.
 
 
+if (!file.exists(here::here("vignettes/data/minDC_summary.rds"))) {
 remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
   tibble::rownames_to_column("sample.id") %>%
   rename(dissimilarity = 2) %>%
@@ -758,6 +664,17 @@ mat_prediction_cleaned <- mat_prediction_4 %>%
 final_approved_samples <- minDC_full_results$minDC %>% 
   filter(!ind %in% remove_samples$sample.id) %>% 
   pull(ind)
+
+minDC_summary <- list(remove_samples = remove_samples,
+                      mat_prediction_cleaned = mat_prediction_cleaned,
+                      final_approved_samples = final_approved_samples)
+
+  readr::write_rds(minDC_summary,
+                   here::here("vignettes/data/minDC_summary.rds"))
+}
+minDC_summary <-
+  readr::read_rds(here::here("vignettes/data/minDC_summary.rds"))
+
 
 fos_90 <- mat_prediction_cleaned %>% 
   mutate(sample.id = as.integer(sample.id)) %>% 
