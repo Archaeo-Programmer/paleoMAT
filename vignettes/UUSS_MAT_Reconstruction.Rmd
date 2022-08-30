@@ -256,18 +256,18 @@ fossil_metadata_counts_final2 <-
 
 
 # Limit samples to post 5500 BP.
-if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata.rds"))) {
+if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))) {
   fossil_final_west_metadata_post5500BP <-
     fossil_metadata_counts_final2 %>%
     filter(age <= 5500)
   
   readr::write_rds(
     fossil_final_west_metadata_post5500BP,
-    here::here("vignettes/data/fossil_final_west_metadata.rds")
+    here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds")
   )
 }
 fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata.rds"))
+  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))
 
 # Cleaning up fossil dataset.
 fossil_final <-
@@ -395,10 +395,6 @@ if (!file.exists(here::here("vignettes/data/fossil_pollen.rds"))) {
 fossil_pollen <-
   readr::read_rds(here::here("vignettes/data/fossil_pollen.rds"))
 
-fossil_pollen2 <- fossil_pollen %>%
-  filter(!rows %in% c(0, 1)
-  )
-
 
 ```
 
@@ -409,89 +405,79 @@ fossil_pollen2 <- fossil_pollen %>%
 
 Here, we use several transfer function and reconstruction diagnostics, such as squared residual length, the proportion of variance in the fossil data explained by an environmental reconstruction, and the no-analog threshold.
 
-```{r diagnostics-reconstruction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+### Squared-residual Length
 
-# Step 1: We use squared residual length.
-rlen_removal <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
-                    names(which(rlen$passive > quantile(rlen$train, probs = 0.95)))}) %>% 
-  flatten_chr() %>% 
-  as.numeric()
+```{r squared-residual-length, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+# Step 1: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
+rlen_results <-
+  purrr::map(
+    fossil_pollen$pollen,
+    .f = function(x) {
+      rlen <- residLen(spp, env, x, method = "cca")
+      
+      list(res_lengths = stack(rlen$passive),
+           quantile_95 = as.numeric(quantile(rlen$train, probs = 0.95)))
+    }
+  )
 
-rlen_results <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca");
-stack(rlen$passive)}) %>% 
-  bind_rows() %>% 
-  rename("Squared_res_lengths" = 1, "sample.id" = 2)
+# Extract the 0.95 quantile baseline to be used for sample removal.
+rlen_ninety5quant <- rlen_results[[1]]$quantile_95
 
-rlen_ninety5quant <- purrr::map(fossil_pollen2$pollen, .f = function(x) {rlen <- residLen(spp, env, x, method="cca"); as.numeric(quantile(rlen$train, probs = 0.95))}) %>% 
-  first()
+# Put the squared residual length and sample.id into one dataframe.
+rlen_results <- purrr::map_dfr(rlen_results, `[[`, 1) %>%
+  dplyr::rename("Squared_res_lengths" = 1, "sample.id" = 2)
 
-rlen_full_results1 <- rlen_results %>% 
-  mutate(sample.id = as.integer(levels(sample.id))) %>% 
+# Extract the sample.ids for samples that will need to be removed since they did not meet the 0.95 threshold.
+rlen_removal <-
+  as.numeric(levels(rlen_results$sample.id))[rlen_results$Squared_res_lengths > rlen_ninety5quant]
+
+# Results
+rlen_full_results1 <- rlen_results %>%
+  mutate(sample.id = as.integer(levels(sample.id))) %>%
   filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
-  
-
-rlen_full_results2 <- structure(list(res_lengths = rlen_full_results1,
-                         quantile_95 = rlen_ninety5quant),
-                    class = "list")
-
 
 if (!file.exists(here::here("vignettes/data/rlen_full_results2.rds"))) {
-  readr::write_rds(
-    rlen_full_results2,
-    here::here("vignettes/data/rlen_full_results2.rds")
-  )
+  rlen_full_results2 <-
+    structure(list(res_lengths = rlen_full_results1,
+                   quantile_95 = rlen_ninety5quant),
+              class = "list")
+  
+  readr::write_rds(rlen_full_results2,
+                   here::here("vignettes/data/rlen_full_results2.rds"))
 }
 rlen_full_results2 <-
-  readr::read_rds(here::here("vignettes/data/rlen_full_results2.rds")
-  )
+  readr::read_rds(here::here("vignettes/data/rlen_full_results2.rds"))
 
 
+# Remove samples that did not meet the 0.95 threshold from the fossil pollen dataset.
+if (!file.exists(here::here("vignettes/data/fos2.rds"))) {
+  fos <- fossil_pollen
+  fos$pollen <-
+    purrr::map(
+      fos$pollen,
+      ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id")
+    )
   
+  # Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
+  fos2 <- fos %>%
+    dplyr::select(-n_samples) %>%
+    mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>%
+    filter(!rows %in% c(0, 1))
+  
+  readr::write_rds(fos2,
+                   here::here("vignettes/data/fos2.rds"))
+}
+fos2 <-
+  readr::read_rds(here::here("vignettes/data/fos2.rds"))
 
-# depths <- fossil_metadata_counts_final %>%
-#   #filter(!is.na(age) & !sample.id %in% rlen_removal) %>%
-#   filter(!is.na(age)) %>%
-#   pull(depth)
-# 
-# rlen<-residLen(spp, env, bind_rows(fossil_pollen$pollen), method="cca")
-# plot(rlen) # distribution of modern and fossil residual lengths
-# plot(depths, rlen$passive, ylab="Squared residual length", xlab="Depth")
-# abline(h=quantile(rlen$train, probs = c(0.9,0.95)), col=c("orange", "red"))
+```
 
-fos <- fossil_pollen
-fos$pollen <- purrr::map(fos$pollen, ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id"))
+### randomTF Testing
 
-fos2 <- fos %>% 
-  dplyr::select(-n_samples) %>% 
-  mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
-  filter(!rows %in% c(0, 1))
+```{r randomTF, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# sig_results1 <-
-#   map2(fos$pollen, fos$dataset.id, function(x, y) {
-#     output <- randomTF(
-#       spp = spp * 100,
-#       env = data.frame(tjul = env),
-#       fos = x * 100,
-#       n = 1000,
-#       fun = MAT,
-#       col = 1
-#     )
-#     sig_out <- output$sig
-#     names(sig_out) <- y
-#     return(sig_out)
-#   })
-# 
-# sum(as.numeric(flatten(sig_results1))<=0.05)
-# # 0.05
-# # 11
-# sum(as.numeric(flatten(sig_results1))<=0.1)
-# # 0.1
-# # 19
-
-
-
-# Step 2 - Random TF testing remove sites where tJuly can't explain most at 90%. 
+# Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance. 
 sig_results2 <-
   map2(fos2$pollen, fos2$dataset.id, function(x, y) {
     output <- randomTF(
