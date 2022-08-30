@@ -1,29 +1,36 @@
 Package: paleomat
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: Who to complain to <yourfault@somewhere.net>
-Description: More about what it does (maybe more than one line)
-License: What license is it under?
-LazyData: TRUE
-Suggests: testthat
+Title: Creates Temperature Reconstructions from Pollen Data
+Version: 1.0.0
+Date: 2022-08-31
+Authors@R: 
+    c(
+    person(given = "Andrew",
+           family = "Gillreath-Brown",
+           role = c("aut", "cre"),
+           email = "andrew.d.brown@wsu.edu",
+           comment = c(ORCID = "0000-0002-2272-5542")),
+    person(given = "Kyle",
+           family = "Bocinsky",
+           role = c("aut", "ctb"),
+           email = "bocinsky@gmail.com",
+           comment = c(ORCID = "0000-0003-1862-3428")),
+    person(given = "Timothy",
+           family = "Kohler",
+           role = c("aut", "ctb"),
+           email = "tako@wsu.edu",
+           comment = c(ORCID = "0000-0002-3414-6660"))
+           )
+Maintainer: Andrew Gillreath-Brown <andrew.d.brown@wsu.edu>
+Description: This R package repository is to accompany the submission for Gillreath-Brown et al. 2022, which preforms paleoclimate 
+    (i.e., temperature) reconstruction from pollen data using the modern analog technique (MAT). This package contains all code 
+    associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2022 (submitted): 
+    Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2022). A Low-Frequency Summer Temperature Reconstruction for the United 
+    States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene*.
+License: MIT + file LICENSE
 Depends: 
     magrittr,
-    R (>= 2.10),
-    neotoma,
-    rioja,
-    readr,
-    purrr,
-    dplyr,
-    tibble,
-    tidyr,
-    analogue,
-    palaeoSig,
-    raster,
-    reshape2, 
-    mgcv,
-    ggplot2
+    R (>= 2.10)
 Imports: 
     rebus.numbers,
     leaflet,
@@ -37,4 +44,28 @@ Imports:
     rcarbon, 
     DescTools, 
     fields,
-    sf
+    sf,
+    neotoma,
+    rioja,
+    readr,
+    purrr,
+    dplyr,
+    tibble,
+    tidyr,
+    analogue,
+    palaeoSig,
+    raster,
+    reshape2, 
+    mgcv,
+    ggplot2
+Suggests:
+    devtools,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    knitr
+LazyData: TRUE
+Suggests: testthat
+Encoding: UTF-8
+URL: https://github.com/Archaeo-Programmer/paleomat
+BugReports: https://github.com/Archaeo-Programmer/paleomat/issues
+RoxygenNote: 7.1.1
