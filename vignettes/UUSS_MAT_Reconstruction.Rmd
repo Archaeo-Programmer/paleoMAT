@@ -449,16 +449,16 @@ if (!file.exists(here::here("vignettes/data/rlen_full_results2.rds"))) {
 rlen_full_results2 <-
   readr::read_rds(here::here("vignettes/data/rlen_full_results2.rds"))
 
+fos <- fossil_pollen
+fos$pollen <-
+  purrr::map(
+    fos$pollen,
+    ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id")
+  )
+
 
 # Remove samples that did not meet the 0.95 threshold from the fossil pollen dataset.
 if (!file.exists(here::here("vignettes/data/fos2.rds"))) {
-  fos <- fossil_pollen
-  fos$pollen <-
-    purrr::map(
-      fos$pollen,
-      ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id")
-    )
-  
   # Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
   fos2 <- fos %>%
     dplyr::select(-n_samples) %>%
@@ -648,27 +648,28 @@ minDC_full_results <-
   readr::read_rds(here::here("vignettes/data/minDC_full_results.rds"))
 
 
-
-
+# Put data into a list. Create list of samples that did and did not meet the threshold, and subset the fossil pollen data to the samples that did pass the minDC test.
 if (!file.exists(here::here("vignettes/data/minDC_summary.rds"))) {
-remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(dissimilarity = 2) %>%
-  filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
-
-
-mat_prediction_cleaned <- mat_prediction_4 %>%
-  filter(!sample.id %in% remove_samples$sample.id)
-
-# Final Sample set.
-final_approved_samples <- minDC_full_results$minDC %>% 
-  filter(!ind %in% remove_samples$sample.id) %>% 
-  pull(ind)
-
-minDC_summary <- list(remove_samples = remove_samples,
-                      mat_prediction_cleaned = mat_prediction_cleaned,
-                      final_approved_samples = final_approved_samples)
-
+  remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
+    tibble::rownames_to_column("sample.id") %>%
+    rename(dissimilarity = 2) %>%
+    filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
+  
+  
+  mat_prediction_cleaned <- mat_prediction_4 %>%
+    filter(!sample.id %in% remove_samples$sample.id)
+  
+  # Final Sample set.
+  final_approved_samples <- minDC_full_results$minDC %>%
+    filter(!ind %in% remove_samples$sample.id) %>%
+    pull(ind)
+  
+  minDC_summary <- list(
+    remove_samples = remove_samples,
+    mat_prediction_cleaned = mat_prediction_cleaned,
+    final_approved_samples = final_approved_samples
+  )
+  
   readr::write_rds(minDC_summary,
                    here::here("vignettes/data/minDC_summary.rds"))
 }
@@ -676,21 +677,29 @@ minDC_summary <-
   readr::read_rds(here::here("vignettes/data/minDC_summary.rds"))
 
 
-fos_90 <- mat_prediction_cleaned %>% 
-  mutate(sample.id = as.integer(sample.id)) %>% 
-  filter(sample.id %in% final_approved_samples) %>% 
-  dplyr::left_join(., fossil_metadata_counts_final %>% 
-  dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
-  #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
-  filter(age <= 5500) %>% 
-  dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
-  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-  dplyr::select(-age.y, -age.x) %>%
-  dplyr::mutate(age = round(age)) %>% 
-  # filter(site.id == 246) %>% 
-  sf::st_as_sf()
+# Clean up fossil pollen data to create the final dataset of samples.
+if (!file.exists(here::here("vignettes/data/fos_90.rds"))) {
+  fos_90 <- mat_prediction_cleaned %>%
+    mutate(sample.id = as.integer(sample.id)) %>%
+    filter(sample.id %in% final_approved_samples) %>%
+    dplyr::left_join(.,
+                     fossil_metadata_counts_final %>%
+                       dplyr::select(dataset.id:pub_year),
+                     by = "sample.id") %>%
+    filter(age <= 5500) %>%
+    dplyr::left_join(updated_age_models,
+                     by = c("site.id", "dataset.id", "sample.id")) %>%
+    dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
+    dplyr::select(-age.y, -age.x) %>%
+    dplyr::mutate(age = round(age)) %>%
+    sf::st_as_sf()
+  
+  readr::write_rds(fos_90,
+                   here::here("vignettes/data/fos_90.rds"))
+}
+fos_90 <-
+  readr::read_rds(here::here("vignettes/data/fos_90.rds"))
 
-#write.csv(fos_90, "Tim_All_sig_tests_1best_analog_boostrap.csv", row.names = FALSE)
 
 
 
@@ -751,91 +760,6 @@ fos_90 <- mat_prediction_cleaned %>%
   sf::st_as_sf()
 
 write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
-
-full_fos <- randomTF(
-      spp = pollen_input,
-      env = data.frame(tjul = climate_input),
-      fos = fossil_input,
-      n = 100,
-      fun = MAT,
-      col = 1
-    )
-
-
-
-
-# COMBO #1 - FULL RECONSTRUCTION - ALL SITES.
-
-fos <- fossil_pollen
-fos2 <- fos %>% 
-  select(-n_samples) %>% 
-  mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
-  filter(!rows %in% c(0, 1))
-
-pollen_input <- spp %>% 
-  select(which(colSums(.) > 0))
-
-fossil_input <- do.call(rbind, unname(fos2$pollen))%>% 
-  select(which(colSums(.) > 0))
-
-keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
-keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
-
-pollen_input <- pollen_input[, keep_cols]
-fossil_input <- fossil_input[, keep_cols]
-
-
-swap.mat2 <- mat(pollen_input, climate_input, method = "SQchord")
-
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 5)
-
-
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[5,]) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(value = 2)
-
-mat_prediction_cleaned <- mat_prediction
-
-fos_90 <- mat_prediction_cleaned %>% 
-  mutate(sample.id = as.integer(sample.id)) %>% 
-  dplyr::left_join(., fossil_metadata_counts_final %>% 
-  dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
-  #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
-  filter(age <= 5500) %>% 
-  dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
-  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-  dplyr::select(-age.y, -age.x) %>%
-  dplyr::mutate(age = round(age)) %>% 
-  # filter(site.id == 246) %>% 
-  sf::st_as_sf()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ```
 
