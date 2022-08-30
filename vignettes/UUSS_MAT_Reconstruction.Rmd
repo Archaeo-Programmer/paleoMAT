@@ -320,7 +320,8 @@ MPCT_climate <-
 
 # Do an intersection and keep only the sites that are within the western continental United States.
 MPCT_climate_final <-
-  sf::st_intersection(MPCT_climate, west_in_states)
+  sf::st_intersection(MPCT_climate, west_in_states) %>% 
+  dplyr::select(-FID)
 
   readr::write_rds(
     MPCT_climate_final,
@@ -816,9 +817,9 @@ if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
 site.preds.unlisted.anom <-
   readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds"))
 
-
-# For figures for journal article, please see "Paleomat Figures.Rmd".
-
 ```
 
-# END OF SCRIPT
+For figures and tables in the journal article, please see "Paleomat Figures.Rmd".
+
+
+
