@@ -1,5 +1,5 @@
 ---
-  title: "Upland United States Southwest Pollen-based Climate Reconstruction"
+title: "Upland United States Southwest Pollen-based Climate Reconstruction"
 author: "Andrew Gillreath-Brown"
 mainfont: Calibri
 output:
@@ -56,7 +56,7 @@ NAID <-
 
 if (!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))) {
   MP_metadata_counts <-
-    get_modern_pollen(gpid = NAID) %T>%
+    paleomat::get_modern_pollen(gpid = NAID) %T>%
     readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
 }
 MP_metadata_counts <-
@@ -64,7 +64,7 @@ MP_metadata_counts <-
 
 if (!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))) {
   NAfossil_metadata_counts <-
-    get_fossil_pollen(gpid = NAID) %T>%
+    paleomat::get_fossil_pollen(gpid = NAID) %T>%
     readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
 }
 NAfossil_metadata_counts <-
@@ -78,7 +78,7 @@ NAfossil_metadata_counts <-
 
 ```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
-# This was originally used to pull the core top data; however, the SSL certificate has now expired. The data was saved and can be loaded below.
+# This was originally used to pull the core top data; however, the SSL certificate has now expired. The data was saved and can be loaded from the .rds file.
 # coreTops <-
 #   paleomat::get_coreTops() %>%
 #   dplyr::rename(dataset.id = DatasetID,
@@ -88,7 +88,7 @@ coreTops <-
   readr::read_rds(here::here("vignettes/data/coreTops.rds"))
 
 
-if(!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))) {
+if(!file.exists(here::here("vignettes/data/CT_metadata_counts.rds"))) {
   CT_metadata_counts <-
     dplyr::left_join(coreTops,
                      NAfossil_metadata_counts,
@@ -122,7 +122,7 @@ if (!file.exists(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))) {
     sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
   
   # Keep only modern sites in the continental United States.
-  # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of continental United States.
+  # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of the continental United States.
   states <-
     rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp",
                    layer = 'statesp010g')
@@ -161,10 +161,6 @@ if (!file.exists(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))) {
     sf::st_intersection(MPCT_metadata_counts, buffer)
   MPCT_metadata_counts_final <- sites_in_states3
   
-  # Drop the columns from the states shapefile.
-  # MPCT_metadata_counts_final <-
-  #   dplyr::select (sites_in_states3, -c(NAME:PRIM_MILES))
-  
   readr::write_rds(
     MPCT_metadata_counts_final,
     here::here("vignettes/data/MPCT_metadata_counts_final.rds")
@@ -184,7 +180,7 @@ if (!file.exists(here::here("vignettes/data/raw_data/west_in_states.shp"))) {
                full.names = TRUE)
   
   # Then, apply the st_read function to the list of shapefiles.
-  myfiles <- lapply(temp, st_read, crs = 4326)
+  myfiles <- lapply(temp, sf::st_read, crs = 4326)
   
   # Then, set the name of each list element (each shapefile) to its respective file name.
   names(myfiles) <- gsub(
@@ -203,7 +199,7 @@ if (!file.exists(here::here("vignettes/data/raw_data/west_in_states.shp"))) {
   all_west <- st_union(all_west$geometry)
   west_in_states <- all_west
   
-  write_sf(west_in_states,
+  sf::write_sf(west_in_states,
            dsn = "vignettes/data/raw_data/",
            layer = 'west_in_states',
            driver = "ESRI Shapefile")
@@ -243,7 +239,7 @@ if (!file.exists(here::here("vignettes/data/fossil_metadata_counts_final2.rds"))
   # Do an intersection and keep only the sites that are within the southwestern United States, and remove any samples that do not have an age.
   fossil_metadata_counts_final2 <-
     sf::st_intersection(fossil_metadata_counts, bb) %>%
-    filter(!is.na(age))
+    dplyr::filter(!is.na(age))
   
   readr::write_rds(
     fossil_metadata_counts_final2,
@@ -259,7 +255,7 @@ fossil_metadata_counts_final2 <-
 if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))) {
   fossil_final_west_metadata_post5500BP <-
     fossil_metadata_counts_final2 %>%
-    filter(age <= 5500)
+    dplyr::filter(age <= 5500)
   
   readr::write_rds(
     fossil_final_west_metadata_post5500BP,
@@ -269,23 +265,31 @@ if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata_post5500B
 fossil_final_west_metadata_post5500BP <-
   readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))
 
-# Cleaning up fossil dataset.
+# Cleaning up the fossil dataset.
+if (!file.exists(here::here("vignettes/data/fossil_final.rds"))) {
+  fossil_final <-
+    fossil_metadata_counts_final2 %>%
+    # Remove any rows that do not have age data.
+    dplyr::filter(!is.na(age)) %>%
+    dplyr::select(!c(site.id, site.name:pub_year)) %>%
+    tibble::as_tibble() %>%
+    # For the pollen columns, replace any NA with a 0.
+    dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
+    # For the pollen columns, replace any negative number with a 0 (in case of any errors).
+    dplyr::mutate(dplyr::across(!c(dataset.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
+    # Nest the pollen data into a nested dataframe.
+    tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
+    sf::st_as_sf() %>%
+    dplyr::select(dataset.id, pollen = pollen.counts) %>%
+    # Add column that shows the total number of samples for each core.
+    mutate(n_samples = map_dbl(pollen, nrow))
+  
+  readr::write_rds(fossil_final,
+                   here::here("vignettes/data/fossil_final.rds"))
+}
 fossil_final <-
-  fossil_metadata_counts_final2 %>%
-  filter(!is.na(age)) %>% 
-  dplyr::select(!c(site.id, site.name:pub_year)) %>%
-  tibble::as_tibble() %>%
-  # For the pollen columns, replace any NA with a 0.
-  dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
-  # For the pollen columns, replace any negative number with a 0 (in case of any errors).
-  dplyr::mutate(dplyr::across(!c(dataset.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
-  #tibble::column_to_rownames("sample.id") %>% 
-  tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
-  sf::st_as_sf() %>%
-  dplyr::select(dataset.id,
-                pollen = pollen.counts) %>% 
-  # Add column that shows the total number of samples for the core.
-  mutate(n_samples = map_dbl(pollen, nrow))
+  readr::read_rds(here::here("vignettes/data/fossil_final.rds"))
+
 
 ```
 
@@ -296,8 +300,8 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 ```{r extract_prism_normals, echo = FALSE, warning=FALSE}
 
 #Load prism data. Note: This is only if having trouble installing/loading paleomat package.
-# filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
-# lapply(filenames,load,.GlobalEnv)
+#filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
+#lapply(filenames,load,.GlobalEnv)
 #load(file = "data/prism_1.rda")
 
 # Extract Prism climate data for modern pollen sites and limit to the western United States.
@@ -305,14 +309,14 @@ if (!file.exists(here::here("vignettes/data/MPCT_climate_final.rds"))) {
 MPCT_climate <- 
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
-  extract_prism_normals() %>%
+  paleomat::extract_prism_normals() %>%
   sf::st_drop_geometry() %>%
   dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>%
   dplyr::select(sample.id,
                 prism.normals,
                 geometry,
                 ABIES:XANTHIUM) %>%
-  tidyr::nest(pollen.counts = c(-sample.id,-prism.normals,-geometry)) %>%
+  tidyr::nest(pollen.counts = -c(sample.id,prism.normals,geometry)) %>%
   sf::st_as_sf() %>%
   dplyr::select(sample.id,
                 climate = prism.normals,
@@ -357,18 +361,18 @@ MPCT_proportions <-
   )
 
 # Put the modern pollen data into a dataframe and make the sample.id as the row names.
-spp <- bind_rows(MPCT_proportions$pollen) %>% 
-  bind_cols(sample.id = MPCT_proportions$sample.id, .) %>% 
+spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>% 
+  dplyr::bind_cols(sample.id = MPCT_proportions$sample.id, .) %>% 
   tibble::column_to_rownames("sample.id")
 
 # Put the modern climate data into a dataframe and make the sample.id as the row names.
 climate_full <- MPCT_proportions %>% 
   dplyr::select(sample.id, climate) %>% 
-  unnest(climate)
+  tidyr::unnest(climate)
 
 # Pull just the climate (tavg) values as a vector.
 env <- climate_full %>%
-  pull(tavg)
+  dplyr::pull(tavg)
 
 # Turn climate value (tavg) vector into a named vector with the sample ids.
 names(env) <- c(MPCT_proportions$sample.id)
@@ -400,26 +404,31 @@ fossil_pollen <-
 ```
 
 
-# Reconstruction
-
-## Transfer Function and Reconstruction Diagnostics
+# Transfer Function and Reconstruction Diagnostics and Reconstruction
 
 Here, we use several transfer function and reconstruction diagnostics, such as squared residual length, the proportion of variance in the fossil data explained by an environmental reconstruction, and the no-analog threshold.
 
-### Squared-residual Length
+## Squared-residual Length
 
-```{r squared-residual-length, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r squared_residual_length, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Step 1: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
+if (!file.exists(here::here("vignettes/data/rlen_results.rds"))) {
+  rlen_results <-
+    purrr::map(
+      fossil_pollen$pollen,
+      .f = function(x) {
+        rlen <- analogue::residLen(spp, env, x, method = "cca")
+        
+        list(res_lengths = stack(rlen$passive),
+             quantile_95 = as.numeric(quantile(rlen$train, probs = 0.95)))
+      }
+    )
+  readr::write_rds(rlen_results,
+                   here::here("vignettes/data/rlen_results.rds"))
+}
 rlen_results <-
-  purrr::map(
-    fossil_pollen$pollen,
-    .f = function(x) {
-      rlen <- residLen(spp, env, x, method = "cca")
-      
-      list(res_lengths = stack(rlen$passive),
-           quantile_95 = as.numeric(quantile(rlen$train, probs = 0.95)))
-    }
+  readr::read_rds(here::here("vignettes/data/rlen_results.rds")
   )
 
 # Extract the 0.95 quantile baseline to be used for sample removal.
@@ -435,8 +444,8 @@ rlen_removal <-
 
 # Results
 rlen_full_results1 <- rlen_results %>%
-  mutate(sample.id = as.integer(levels(sample.id))) %>%
-  filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
+  dplyr::mutate(sample.id = as.integer(levels(sample.id))) %>%
+  dplyr::filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
 
 if (!file.exists(here::here("vignettes/data/rlen_full_results2.rds"))) {
   rlen_full_results2 <-
@@ -454,7 +463,7 @@ fos <- fossil_pollen
 fos$pollen <-
   purrr::map(
     fos$pollen,
-    ~ .x %>% tibble::rownames_to_column("sample.id") %>% filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id")
+    ~ .x %>% tibble::rownames_to_column("sample.id") %>% dplyr::filter(!sample.id %in% rlen_removal) %>% tibble::column_to_rownames("sample.id")
   )
 
 
@@ -474,15 +483,15 @@ fos2 <-
 
 ```
 
-### randomTF Testing
+## randomTF Testing
 
 ```{r randomTF, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance. 
 if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
   sig_results2_full <-
-    map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-      output <- randomTF(
+    purrr::map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+      output <- palaeoSig::randomTF(
         spp = spp,
         env = data.frame(tjul = env),
         fos = x,
@@ -500,18 +509,18 @@ if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
   # Extract the proportion explained variance and the dataset ID.
   sig_results2_proportions <- sapply(sig_results2_full, "[[", 1) %>%
     stack(.) %>%
-    rename(dataset.id = ind, proportion = values)
+    dplyr::rename(dataset.id = ind, proportion = values)
   
   # Extract the p-values and the dataset ID.
   sig_results2_pvalues <- sapply(sig_results2_full, "[[", 2) %>%
     stack(.) %>%
-    rename(dataset.id = ind, pvalue = values)
+    dplyr::rename(dataset.id = ind, pvalue = values)
   
   # Put the proportion of variance and p-value into the same dataframe.
   sig_results2_final <-
-    left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>%
+    dplyr::left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>%
     dplyr::select(dataset.id, proportion, pvalue) %>%
-    mutate(dataset.id = as.numeric(levels(dataset.id)))
+    dplyr::mutate(dataset.id = as.numeric(levels(dataset.id)))
   
   readr::write_rds(sig_results2_final,
                    here::here("vignettes/data/sig_results2_final.rds"))
@@ -522,17 +531,16 @@ sig_results2_final <-
 
 # Pull out the dataset IDs that have p-values less than the 0.10.
 only_90b <- sig_results2_final %>%
-  filter(pvalue <= 0.10) %>% 
-  pull(dataset.id)
+  dplyr::filter(pvalue <= 0.10) %>% 
+  dplyr::pull(dataset.id)
 
 # Finally, subset the fossil pollen dataset by keeping only the dataset IDs that passed randomTF.
 fos3_90 <- fos %>% 
-  filter(dataset.id %in% only_90b)
+  dplyr::filter(dataset.id %in% only_90b)
 
 ```
 
-
-### MAT Transfer Function and Prediction
+## MAT Transfer Function and Prediction
 
 ```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -556,7 +564,7 @@ fossil_input <- fossil_input[, keep_cols]
 # Save output of MAT if not alaready created.
 if (!file.exists(here::here("vignettes/data/mat_calibration.rds"))) {
   # Create the transfer function using mat from the analogue package.
-  swap.mat2 <- mat(pollen_input, env, method = "SQchord")
+  swap.mat2 <- analogue::mat(pollen_input, env, method = "SQchord")
   
   readr::write_rds(swap.mat2,
                    here::here("vignettes/data/mat_calibration.rds"))
@@ -568,7 +576,7 @@ swap.mat2 <-
 
 if (!file.exists(here::here("vignettes/data/mat_prediction.rds"))) {
   # Create the transfer function using mat from the analogue package.
-  rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input, k = 4)
+  rlgh.mat2 <- analogue:::predict.mat(object = swap.mat2, newdata = fossil_input, k = 4)
   
   readr::write_rds(rlgh.mat2,
                    here::here("vignettes/data/mat_prediction.rds"))
@@ -579,7 +587,7 @@ rlgh.mat2 <-
 # Here, we run the prediction again in order to get the bootstrap estimates.
 if (!file.exists(here::here("vignettes/data/mat_prediction_bootstrap.rds"))) {
   # Create the transfer function using mat from the analogue package.
-  rlgh.mat2b4 <- predict(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = T)
+  rlgh.mat2b4 <- analogue:::predict.mat(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = TRUE)
   
   readr::write_rds(rlgh.mat2b4,
                    here::here("vignettes/data/mat_prediction_bootstrap.rds"))
@@ -588,23 +596,35 @@ rlgh.mat2b4 <-
   readr::read_rds(here::here("vignettes/data/mat_prediction_bootstrap.rds"))
 
 # Here, we pull out the data from the predict.mat object. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the fourth record here.
-mat_prediction_4 <- as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %>%
+mat_prediction_4 <-
+  as.data.frame(rlgh.mat2b4$predictions$model$predicted[4, ]) %>%
   tibble::rownames_to_column("sample.id") %>%
-  rename(value = 2) %>% 
+  dplyr::rename(value = 2) %>%
   # Pull out the bootstrap predicted values.
-  left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
-  rename(bootstrap = 2), by = "sample.id") %>% 
+  dplyr::left_join(
+    .,
+    as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
+      dplyr::rename(bootstrap = 2),
+    by = "sample.id"
+  ) %>%
   # Pull out the bootstrap rmsep.
-  left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
-  rename(rmsep = 2), by = "sample.id") %>% 
+  dplyr::left_join(
+    .,
+    as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
+      dplyr::rename(rmsep = 2),
+    by = "sample.id"
+  ) %>%
   # Pull out the bootstrap s1 errors.
-    left_join(., as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][,4]) %>% tibble::rownames_to_column("sample.id") %>%
-  rename(s1 = 2), by = "sample.id")
+  dplyr::left_join(
+    .,
+    as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
+      dplyr::rename(s1 = 2),
+    by = "sample.id"
+  )
 
 ```
 
-
-### No Analog Threshold (or Minimum Dissimilarity)
+## No Analog Threshold (or Minimum Dissimilarity)
 
 ```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -612,28 +632,28 @@ mat_prediction_4 <- as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %
 if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
   # Get a list of the samples that remain in the fossil pollen dataset after rlen and the randomTF removal steps.
   pre_minDC_samples <- rlen_full_results1 %>%
-    filter(!sample.id %in% rlen_removal) %>%
-    left_join(
+    dplyr::filter(!sample.id %in% rlen_removal) %>%
+    dplyr::left_join(
       .,
       fossil_final_west_metadata_post5500BP %>%
         dplyr::select(dataset.id, site.id, sample.id),
       by = "sample.id"
     ) %>%
-    filter(dataset.id %in% only_90b) %>%
-    pull(sample.id)
+    dplyr::filter(dataset.id %in% only_90b) %>%
+    dplyr::pull(sample.id)
   
   # Get the minimum dissimilarity for each sample.
-  rlgh.mdc <- minDC(rlgh.mat2)
+  rlgh.mdc <- analogue::minDC(rlgh.mat2)
   
   # Put the results into a list.
   minDC_results <- stack(rlgh.mdc$minDC) %>%
-    mutate(ind = as.integer(levels(ind))) %>%
-    filter(ind %in% pre_minDC_samples) %>%
-    left_join(
+    dplyr::mutate(ind = as.integer(levels(ind))) %>%
+    dplyr::filter(ind %in% pre_minDC_samples) %>%
+    dplyr::left_join(
       .,
       fossil_final_west_metadata_post5500BP %>%
         dplyr::select(sample.id, dataset.id, site.id, age) %>%
-        mutate(age = BPtoBCAD(age)) %>%
+        dplyr::mutate(age = BPtoBCAD(age)) %>%
         sf::st_drop_geometry(),
       by = c("ind"  = "sample.id")
     )
@@ -646,24 +666,25 @@ if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
                    here::here("vignettes/data/minDC_full_results.rds"))
 }
 minDC_full_results <-
-  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds"))
+  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds")
+  )
 
 
 # Put data into a list. Create list of samples that did and did not meet the threshold, and subset the fossil pollen data to the samples that did pass the minDC test.
 if (!file.exists(here::here("vignettes/data/minDC_summary.rds"))) {
   remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
     tibble::rownames_to_column("sample.id") %>%
-    rename(dissimilarity = 2) %>%
-    filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
+    dplyr::rename(dissimilarity = 2) %>%
+    dplyr::filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
   
   
   mat_prediction_cleaned <- mat_prediction_4 %>%
-    filter(!sample.id %in% remove_samples$sample.id)
+    dplyr::filter(!sample.id %in% remove_samples$sample.id)
   
   # Final Sample set.
   final_approved_samples <- minDC_full_results$minDC %>%
-    filter(!ind %in% remove_samples$sample.id) %>%
-    pull(ind)
+    dplyr::filter(!ind %in% remove_samples$sample.id) %>%
+    dplyr::pull(ind)
   
   minDC_summary <- list(
     remove_samples = remove_samples,
@@ -685,17 +706,17 @@ updated_age_models <-
 # Clean up fossil pollen data to create the final dataset of samples.
 if (!file.exists(here::here("vignettes/data/fos_90.rds"))) {
   fos_90 <- mat_prediction_cleaned %>%
-    mutate(sample.id = as.integer(sample.id)) %>%
-    filter(sample.id %in% final_approved_samples) %>%
+    dplyr::mutate(sample.id = as.integer(sample.id)) %>%
+    dplyr::filter(sample.id %in% final_approved_samples) %>%
     dplyr::left_join(.,
                      fossil_metadata_counts_final %>%
                        dplyr::select(dataset.id:pub_year),
                      by = "sample.id") %>%
-    filter(age <= 5500) %>%
+    dplyr::filter(age <= 5500) %>%
     dplyr::left_join(updated_age_models,
                      by = c("site.id", "dataset.id", "sample.id")) %>%
     dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-    dplyr::select(-age.y,-age.x) %>%
+    dplyr::select(-c(age.y, age.x)) %>%
     dplyr::mutate(age = round(age)) %>%
     sf::st_as_sf()
   
@@ -703,7 +724,8 @@ if (!file.exists(here::here("vignettes/data/fos_90.rds"))) {
                    here::here("vignettes/data/fos_90.rds"))
 }
 fos_90 <-
-  readr::read_rds(here::here("vignettes/data/fos_90.rds"))
+  readr::read_rds(here::here("vignettes/data/fos_90.rds")
+  )
 
 
 
@@ -714,62 +736,61 @@ fos_90 <-
 
 # COMBO #3 - ONLY NO ANALOGUE REMOVAL.
 
-fos <- fossil_pollen
-fos2 <- fos %>% 
-  dplyr::select(-n_samples) %>% 
-  mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
-  filter(!rows %in% c(0, 1))
-
-pollen_input <- spp %>% 
-  dplyr::select(which(colSums(.) > 0))
-
-fossil_input <- do.call(rbind, unname(fos2$pollen)) %>% 
-  dplyr::select(which(colSums(.) > 0))
-
-keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
-keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
-
-pollen_input <- pollen_input[, keep_cols]
-fossil_input <- fossil_input[, keep_cols]
-
-
-swap.mat2 <- mat(pollen_input, env, method = "SQchord")
-
-rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
-
-mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(value = 2)
-
-rlgh.mdc <- minDC(rlgh.mat2)
-
-remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  rename(dissimilarity = 2) %>%
-  filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
-
-mat_prediction_cleaned <- mat_prediction %>%
-  filter(!sample.id %in% remove_samples$sample.id)
-
-fos_90 <- mat_prediction_cleaned %>% 
-  mutate(sample.id = as.integer(sample.id)) %>% 
-  dplyr::left_join(., fossil_metadata_counts_final %>% 
-  dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
-  #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
-  filter(age <= 5500) %>% 
-  dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
-  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-  dplyr::select(-age.y, -age.x) %>%
-  dplyr::mutate(age = round(age)) %>% 
-  # filter(site.id == 246) %>% 
-  sf::st_as_sf()
-
-write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
+# fos <- fossil_pollen
+# fos2 <- fos %>% 
+#   dplyr::select(-n_samples) %>% 
+#   mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
+#   filter(!rows %in% c(0, 1))
+# 
+# pollen_input <- spp %>% 
+#   dplyr::select(which(colSums(.) > 0))
+# 
+# fossil_input <- do.call(rbind, unname(fos2$pollen)) %>% 
+#   dplyr::select(which(colSums(.) > 0))
+# 
+# keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
+# keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
+# 
+# pollen_input <- pollen_input[, keep_cols]
+# fossil_input <- fossil_input[, keep_cols]
+# 
+# 
+# swap.mat2 <- mat(pollen_input, env, method = "SQchord")
+# 
+# rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
+# 
+# mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
+#   tibble::rownames_to_column("sample.id") %>%
+#   rename(value = 2)
+# 
+# rlgh.mdc <- minDC(rlgh.mat2)
+# 
+# remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
+#   tibble::rownames_to_column("sample.id") %>%
+#   rename(dissimilarity = 2) %>%
+#   filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
+# 
+# mat_prediction_cleaned <- mat_prediction %>%
+#   filter(!sample.id %in% remove_samples$sample.id)
+# 
+# fos_90 <- mat_prediction_cleaned %>% 
+#   mutate(sample.id = as.integer(sample.id)) %>% 
+#   dplyr::left_join(., fossil_metadata_counts_final %>% 
+#   dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
+#   #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
+#   filter(age <= 5500) %>% 
+#   dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
+#   dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
+#   dplyr::select(-age.y, -age.x) %>%
+#   dplyr::mutate(age = round(age)) %>% 
+#   # filter(site.id == 246) %>% 
+#   sf::st_as_sf()
+# 
+# write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 
 ```
 
-
-## Anomaly Calculation
+# Anomaly Calculation
 
 ```{r anomaly_calculation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
@@ -781,31 +802,31 @@ temp.raster <-
 if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
   # Put lat and long into individual columns.
   tavg_new_90 <- fos_90 %>%
-    mutate(long = unlist(purrr::map(.$geometry, 1)),
+    dplyr::mutate(long = unlist(purrr::map(.$geometry, 1)),
            lat = unlist(purrr::map(.$geometry, 2))) %>%
     dplyr::select(-geometry) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
     dplyr::filter(age <= 5500) %>%
     dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
-    mutate(mid_period = get_midpoints(period))
+    dplyr::mutate(mid_period = paleomat::get_midpoints(period))
   
   
   modern_temperature2 <-
     as.data.frame(raster::extract(
-      x = temp.raster2,
-      y = tavg_new_90 %>% ungroup() %>%
+      x = temp.raster,
+      y = tavg_new_90 %>% dplyr::ungroup() %>%
         dplyr::select(long, lat)
     )) %>%
     dplyr::rename(modern = 1)
   
   # Bind the modern data to fossil pollen dataset.
   site.preds.unlisted <-
-    bind_cols(tavg_new_90, modern = modern_temperature$modern)
+    dplyr::bind_cols(tavg_new_90, modern = modern_temperature$modern)
   
   # Calculate the temperature anomaly and the bootstrapped temperature anomaly.
   site.preds.unlisted.anom <- site.preds.unlisted %>%
-    rowwise() %>%
+    dplyr::rowwise() %>%
     dplyr::mutate(anom = value - modern) %>%
     dplyr::mutate(anom_bootstrap = bootstrap - modern)
   

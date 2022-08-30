@@ -13,7 +13,7 @@ get_modern_pollen <- function(...){
   # Get the modern pollen datasets in North America and use purrr::map to apply the compile function to simply return a list of the metadata of each sample.
   # Then, combine the rows from the datasets together so that they are now in one tibble.
   MP_metadata <- MP_datasets %>%
-    purrr::map_dfr(compile_pollen) %>%
+    purrr::map_dfr(paleomat::compile_pollen) %>%
     dplyr::mutate(type = "surface sample")
 
   MP_pub_date <- MP_pubs %>%
@@ -37,10 +37,10 @@ get_modern_pollen <- function(...){
   MP_counts <- MP_datasets %>%
     purrr::map("counts") %>%
     purrr::map(as_tibble) %>%
-    purrr::map(compile_taxa,
+    purrr::map(neotoma::compile_taxa,
                list.name = "WhitmoreFull") %>%
     purrr::map(as_tibble) %>%
-    bind_rows(.id = "dataset.id") %>%
+    dplyr::bind_rows(.id = "dataset.id") %>%
     dplyr::mutate(dataset.id = as.integer(dataset.id))
 
   # Sort the taxa to be in alphabetical order.

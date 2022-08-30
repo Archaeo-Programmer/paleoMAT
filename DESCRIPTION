@@ -57,7 +57,9 @@ Imports:
     raster,
     reshape2, 
     mgcv,
-    ggplot2
+    ggplot2,
+    maps,
+    ggh4x
 Suggests:
     devtools,
     rmarkdown,

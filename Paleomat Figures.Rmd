@@ -12,9 +12,8 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 
 library(paleomat)
-library(maps)
 data(us.cities)
-library(ggh4x)
+require(ggh4x)
 
 ```
 

@@ -66,20 +66,6 @@ get_fossil_pollen <- function(...){
   # Sort the taxa to be in alphabetical order.
   NAfossil_counts <- NAfossil_counts[,c(names(NAfossil_counts)[1:2], sort(names(NAfossil_counts)[3:ncol(NAfossil_counts)]))]
 
-  # Check that Modern pollen dataset has the same columns as the fossil pollen dataset.
-  # sameVariables <- function(x,y) {
-  #     for (i in names(x)) {
-  #         if (!(i %in% names(y))) {
-  #             print('Warning: Names are not the same!')
-  #             break
-  #         }
-  #         else if(i==tail(names(y),n=1)) {
-  #             print('Names are identical.')
-  #         }
-  #     }
-  # }
-  #
-  # sameVariables(NAfossil_counts, MPCT_counts_noNAs)
 
   # Now, we have three tibbles, one has the metadata, one has the publication year, and the other has the taxa and counts data. These are both in the same order, so now we can bind them together.
 
