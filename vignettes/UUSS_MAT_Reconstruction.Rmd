@@ -62,13 +62,19 @@ if (!file.exists(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.
 MP_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.rds"))
 
-if (!file.exists(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"
+))) {
   NAfossil_metadata_counts <-
     paleomat::get_fossil_pollen(gpid = NAID) %T>%
-    readr::write_rds(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))
+    readr::write_rds(here::here(
+      "vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"
+    ))
 }
 NAfossil_metadata_counts <-
-  readr::read_rds(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"
+  ))
 
 ```
 
@@ -84,11 +90,11 @@ NAfossil_metadata_counts <-
 #   dplyr::rename(dataset.id = DatasetID,
 #                 site.id = SiteID,
 #                 sample.id = SampleID)
-coreTops <- 
+coreTops <-
   readr::read_rds(here::here("vignettes/data/pollen_downloads/coreTops.rds"))
 
 
-if(!file.exists(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))) {
   CT_metadata_counts <-
     dplyr::left_join(coreTops,
                      NAfossil_metadata_counts,
@@ -100,7 +106,6 @@ if(!file.exists(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds
 CT_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))
 
-
 ```
 
 The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples, representing `r ncol(MP_metadata_counts %>% dplyr::select(ABIES:tail(names(.), 1)))` different pollen taxa.
@@ -110,7 +115,9 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 #Combine the modern and core top data, then keep only sites that fall within the continental United states
-if (!file.exists(here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"
+))) {
   # Now, the two dataframes (i.e., the modern data and core top data) can be combined using this function, then sort the rows by dataset.id.
   MPCT_metadata_counts <-
     dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
@@ -163,12 +170,16 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_
   
   readr::write_rds(
     MPCT_metadata_counts_final,
-    here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds")
+    here::here(
+      "vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"
+    )
   )
   
 }
 MPCT_metadata_counts_final <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"
+  ))
 
 
 # Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
@@ -200,9 +211,9 @@ if (!file.exists(here::here("vignettes/data/spatial/west_in_states.shp"))) {
   west_in_states <- all_west
   
   sf::write_sf(west_in_states,
-           dsn = "vignettes/data/spatial/",
-           layer = 'west_in_states',
-           driver = "ESRI Shapefile")
+               dsn = "vignettes/data/spatial/",
+               layer = 'west_in_states',
+               driver = "ESRI Shapefile")
   
 }
 west_in_states <-
@@ -214,7 +225,9 @@ west_in_states <-
 ```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Remove the core tops from the fossil pollen dataset, and then limit fossil pollen sites to just the southwestern United States.
-if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"
+))) {
   # Remove the coretop samples from the fossil pollen dataset.
   fossil_metadata_counts <-
     dplyr::anti_join(NAfossil_metadata_counts,
@@ -243,27 +256,41 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_metadata_count
   
   readr::write_rds(
     fossil_metadata_counts_final2,
-    here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds")
+    here::here(
+      "vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"
+    )
   )
   
 }
 fossil_metadata_counts_final2 <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"
+  ))
 
 
 # Limit samples to post 5500 BP.
-if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"))) {
+if (!file.exists(
+  here::here(
+    "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+  )
+)) {
   fossil_final_west_metadata_post5500BP <-
     fossil_metadata_counts_final2 %>%
     dplyr::filter(age <= 5500)
   
   readr::write_rds(
     fossil_final_west_metadata_post5500BP,
-    here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")
+    here::here(
+      "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+    )
   )
 }
 fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"))
+  readr::read_rds(
+    here::here(
+      "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+    )
+  )
 
 # Cleaning up the fossil dataset.
 if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))) {
@@ -290,7 +317,6 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))) 
 fossil_final <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))
 
-
 ```
 
 ## Load Prism Climate Data
@@ -306,27 +332,27 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 
 # Extract Prism climate data for modern pollen sites and limit to the western United States.
 if (!file.exists(here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds"))) {
-MPCT_climate <- 
-  MPCT_metadata_counts_final %>%
-  dplyr::select(sample.id) %>%
-  paleomat::extract_prism_normals() %>%
-  sf::st_drop_geometry() %>%
-  dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>%
-  dplyr::select(sample.id,
-                prism.normals,
-                geometry,
-                ABIES:XANTHIUM) %>%
-  tidyr::nest(pollen.counts = -c(sample.id,prism.normals,geometry)) %>%
-  sf::st_as_sf() %>%
-  dplyr::select(sample.id,
-                climate = prism.normals,
-                pollen = pollen.counts)
-
-# Do an intersection and keep only the sites that are within the western continental United States.
-MPCT_climate_final <-
-  sf::st_intersection(MPCT_climate, west_in_states) %>% 
-  dplyr::select(-FID)
-
+  MPCT_climate <-
+    MPCT_metadata_counts_final %>%
+    dplyr::select(sample.id) %>%
+    paleomat::extract_prism_normals() %>%
+    sf::st_drop_geometry() %>%
+    dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>%
+    dplyr::select(sample.id,
+                  prism.normals,
+                  geometry,
+                  ABIES:XANTHIUM) %>%
+    tidyr::nest(pollen.counts = -c(sample.id, prism.normals, geometry)) %>%
+    sf::st_as_sf() %>%
+    dplyr::select(sample.id,
+                  climate = prism.normals,
+                  pollen = pollen.counts)
+  
+  # Do an intersection and keep only the sites that are within the western continental United States.
+  MPCT_climate_final <-
+    sf::st_intersection(MPCT_climate, west_in_states) %>%
+    dplyr::select(-FID)
+  
   readr::write_rds(
     MPCT_climate_final,
     here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds")
@@ -361,13 +387,13 @@ MPCT_proportions <-
   )
 
 # Put the modern pollen data into a dataframe and make the sample.id as the row names.
-spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>% 
-  dplyr::bind_cols(sample.id = MPCT_proportions$sample.id, .) %>% 
+spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>%
+  dplyr::bind_cols(sample.id = MPCT_proportions$sample.id, .) %>%
   tibble::column_to_rownames("sample.id")
 
 # Put the modern climate data into a dataframe and make the sample.id as the row names.
-climate_full <- MPCT_proportions %>% 
-  dplyr::select(sample.id, climate) %>% 
+climate_full <- MPCT_proportions %>%
+  dplyr::select(sample.id, climate) %>%
   tidyr::unnest(climate)
 
 # Pull just the climate (tavg) values as a vector.
@@ -400,7 +426,6 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds")))
 fossil_pollen <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
 
-
 ```
 
 
@@ -413,7 +438,9 @@ Here, we use several transfer function and reconstruction diagnostics, such as s
 ```{r squared_residual_length, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Step 1: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
-if (!file.exists(here::here("vignettes/data/rlen_results.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/rlen_results.rds"
+))) {
   rlen_results <-
     purrr::map(
       fossil_pollen$pollen,
@@ -424,12 +451,17 @@ if (!file.exists(here::here("vignettes/data/rlen_results.rds"))) {
              quantile_95 = as.numeric(quantile(rlen$train, probs = 0.95)))
       }
     )
-  readr::write_rds(rlen_results,
-                   here::here("vignettes/data/rlen_results.rds"))
+  readr::write_rds(
+    rlen_results,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/rlen_results.rds"
+    )
+  )
 }
 rlen_results <-
-  readr::read_rds(here::here("vignettes/data/rlen_results.rds")
-  )
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/rlen_results.rds"
+  ))
 
 # Extract the 0.95 quantile baseline to be used for sample removal.
 rlen_ninety5quant <- rlen_results[[1]]$quantile_95
@@ -447,17 +479,25 @@ rlen_full_results1 <- rlen_results %>%
   dplyr::mutate(sample.id = as.integer(levels(sample.id))) %>%
   dplyr::filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
 
-if (!file.exists(here::here("vignettes/data/rlen_full_results2.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"
+))) {
   rlen_full_results2 <-
     structure(list(res_lengths = rlen_full_results1,
                    quantile_95 = rlen_ninety5quant),
               class = "list")
   
-  readr::write_rds(rlen_full_results2,
-                   here::here("vignettes/data/rlen_full_results2.rds"))
+  readr::write_rds(
+    rlen_full_results2,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"
+    )
+  )
 }
 rlen_full_results2 <-
-  readr::read_rds(here::here("vignettes/data/rlen_full_results2.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"
+  ))
 
 fos <- fossil_pollen
 fos$pollen <-
@@ -468,7 +508,7 @@ fos$pollen <-
 
 
 # Remove samples that did not meet the 0.95 threshold from the fossil pollen dataset.
-if (!file.exists(here::here("vignettes/data/fos2.rds"))) {
+if (!file.exists(here::here("vignettes/data/diagnostics_reconstruction/fos2.rds"))) {
   # Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
   fos2 <- fos %>%
     dplyr::select(-n_samples) %>%
@@ -476,10 +516,10 @@ if (!file.exists(here::here("vignettes/data/fos2.rds"))) {
     filter(!rows %in% c(0, 1))
   
   readr::write_rds(fos2,
-                   here::here("vignettes/data/fos2.rds"))
+                   here::here("vignettes/data/diagnostics_reconstruction/fos2.rds"))
 }
 fos2 <-
-  readr::read_rds(here::here("vignettes/data/fos2.rds"))
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/fos2.rds"))
 
 ```
 
@@ -487,8 +527,10 @@ fos2 <-
 
 ```{r randomTF, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
-# Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance. 
-if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
+# Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance.
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
+))) {
   sig_results2_full <-
     purrr::map2(fos2$pollen, fos2$dataset.id, function(x, y) {
       output <- palaeoSig::randomTF(
@@ -522,20 +564,25 @@ if (!file.exists(here::here("vignettes/data/sig_results2_final.rds"))) {
     dplyr::select(dataset.id, proportion, pvalue) %>%
     dplyr::mutate(dataset.id = as.numeric(levels(dataset.id)))
   
-  readr::write_rds(sig_results2_final,
-                   here::here("vignettes/data/sig_results2_final.rds"))
+  readr::write_rds(
+    sig_results2_final,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
+    )
+  )
 }
 sig_results2_final <-
-  readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")
-  )
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
+  ))
 
 # Pull out the dataset IDs that have p-values less than the 0.10.
 only_90b <- sig_results2_final %>%
-  dplyr::filter(pvalue <= 0.10) %>% 
+  dplyr::filter(pvalue <= 0.10) %>%
   dplyr::pull(dataset.id)
 
 # Finally, subset the fossil pollen dataset by keeping only the dataset IDs that passed randomTF.
-fos3_90 <- fos %>% 
+fos3_90 <- fos %>%
   dplyr::filter(dataset.id %in% only_90b)
 
 ```
@@ -546,12 +593,12 @@ fos3_90 <- fos %>%
 
 # Step 3: Run MAT and do prediction/reconstruction.
 
-# Remove any columns in the modern pollen dataset that have 0 for the pollen taxa. 
-pollen_input <- spp %>% 
+# Remove any columns in the modern pollen dataset that have 0 for the pollen taxa.
+pollen_input <- spp %>%
   dplyr::select(which(colSums(.) > 0))
 
-# Remove any columns in the fossil pollen dataset that have 0 for the pollen taxa. 
-fossil_input <- do.call(rbind, unname(fos3_90$pollen)) %>% 
+# Remove any columns in the fossil pollen dataset that have 0 for the pollen taxa.
+fossil_input <- do.call(rbind, unname(fos3_90$pollen)) %>%
   dplyr::select(which(colSums(.) > 0))
 
 # Keep only columns that are the same between the modern and fossil pollen dataset, as they need to be the same to run MAT.
@@ -562,42 +609,79 @@ pollen_input <- pollen_input[, keep_cols]
 fossil_input <- fossil_input[, keep_cols]
 
 # Save output of MAT if not alaready created.
-if (!file.exists(here::here("vignettes/data/mat_calibration.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/mat_calibration.rds"
+))) {
   # Create the transfer function using mat from the analogue package.
   swap.mat2 <- analogue::mat(pollen_input, env, method = "SQchord")
   
-  readr::write_rds(swap.mat2,
-                   here::here("vignettes/data/mat_calibration.rds"))
+  readr::write_rds(
+    swap.mat2,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/mat_calibration.rds"
+    )
+  )
 }
 swap.mat2 <-
-  readr::read_rds(here::here("vignettes/data/mat_calibration.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/mat_calibration.rds"
+  ))
 
 # Here, we run the prediction twice, so that we can extract the minimum dissimilarity from the predict.mat object.
 
-if (!file.exists(here::here("vignettes/data/mat_prediction.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/mat_prediction.rds"
+))) {
   # Create the transfer function using mat from the analogue package.
-  rlgh.mat2 <- analogue:::predict.mat(object = swap.mat2, newdata = fossil_input, k = 4)
+  rlgh.mat2 <-
+    analogue:::predict.mat(object = swap.mat2,
+                           newdata = fossil_input,
+                           k = 4)
   
-  readr::write_rds(rlgh.mat2,
-                   here::here("vignettes/data/mat_prediction.rds"))
+  readr::write_rds(
+    rlgh.mat2,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/mat_prediction.rds"
+    )
+  )
 }
 rlgh.mat2 <-
-  readr::read_rds(here::here("vignettes/data/mat_prediction.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/mat_prediction.rds"
+  ))
 
 # Here, we run the prediction again in order to get the bootstrap estimates.
-if (!file.exists(here::here("vignettes/data/mat_prediction_bootstrap.rds"))) {
+if (!file.exists(
+  here::here(
+    "vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"
+  )
+)) {
   # Create the transfer function using mat from the analogue package.
-  rlgh.mat2b4 <- analogue:::predict.mat(object = swap.mat2, newdata = fossil_input, k = 4, bootstrap = TRUE)
+  rlgh.mat2b4 <-
+    analogue:::predict.mat(
+      object = swap.mat2,
+      newdata = fossil_input,
+      k = 4,
+      bootstrap = TRUE
+    )
   
-  readr::write_rds(rlgh.mat2b4,
-                   here::here("vignettes/data/mat_prediction_bootstrap.rds"))
+  readr::write_rds(
+    rlgh.mat2b4,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"
+    )
+  )
 }
 rlgh.mat2b4 <-
-  readr::read_rds(here::here("vignettes/data/mat_prediction_bootstrap.rds"))
+  readr::read_rds(
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"
+    )
+  )
 
 # Here, we pull out the data from the predict.mat object. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the fourth record here.
 mat_prediction_4 <-
-  as.data.frame(rlgh.mat2b4$predictions$model$predicted[4, ]) %>%
+  as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %>%
   tibble::rownames_to_column("sample.id") %>%
   dplyr::rename(value = 2) %>%
   # Pull out the bootstrap predicted values.
@@ -628,8 +712,11 @@ mat_prediction_4 <-
 
 ```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
+
 # Step 4: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
-if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"
+))) {
   # Get a list of the samples that remain in the fossil pollen dataset after rlen and the randomTF removal steps.
   pre_minDC_samples <- rlen_full_results1 %>%
     dplyr::filter(!sample.id %in% rlen_removal) %>%
@@ -662,16 +749,23 @@ if (!file.exists(here::here("vignettes/data/minDC_full_results.rds"))) {
                                        quantiles = rlgh.mdc$quantiles),
                                   class = "list")
   
-  readr::write_rds(minDC_full_results,
-                   here::here("vignettes/data/minDC_full_results.rds"))
+  readr::write_rds(
+    minDC_full_results,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"
+    )
+  )
 }
 minDC_full_results <-
-  readr::read_rds(here::here("vignettes/data/minDC_full_results.rds")
-  )
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"
+  ))
 
 
 # Put data into a list. Create list of samples that did and did not meet the threshold, and subset the fossil pollen data to the samples that did pass the minDC test.
-if (!file.exists(here::here("vignettes/data/minDC_summary.rds"))) {
+if (!file.exists(here::here(
+  "vignettes/data/diagnostics_reconstruction/minDC_summary.rds"
+))) {
   remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
     tibble::rownames_to_column("sample.id") %>%
     dplyr::rename(dissimilarity = 2) %>%
@@ -692,11 +786,17 @@ if (!file.exists(here::here("vignettes/data/minDC_summary.rds"))) {
     final_approved_samples = final_approved_samples
   )
   
-  readr::write_rds(minDC_summary,
-                   here::here("vignettes/data/minDC_summary.rds"))
+  readr::write_rds(
+    minDC_summary,
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/minDC_summary.rds"
+    )
+  )
 }
 minDC_summary <-
-  readr::read_rds(here::here("vignettes/data/minDC_summary.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/diagnostics_reconstruction/minDC_summary.rds"
+  ))
 
 # Need to update age models for some fossil pollen sites that have not been updated with the Bacon age models. Here, we read in the updated age models from individual .csv files.
 updated_age_models <-
@@ -704,7 +804,7 @@ updated_age_models <-
   map_dfr(read.csv)
 
 # Clean up fossil pollen data to create the final dataset of samples.
-if (!file.exists(here::here("vignettes/data/fos_90.rds"))) {
+if (!file.exists(here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))) {
   fos_90 <- mat_prediction_cleaned %>%
     dplyr::mutate(sample.id = as.integer(sample.id)) %>%
     dplyr::filter(sample.id %in% final_approved_samples) %>%
@@ -721,12 +821,10 @@ if (!file.exists(here::here("vignettes/data/fos_90.rds"))) {
     sf::st_as_sf()
   
   readr::write_rds(fos_90,
-                   here::here("vignettes/data/fos_90.rds"))
+                   here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))
 }
 fos_90 <-
-  readr::read_rds(here::here("vignettes/data/fos_90.rds")
-  )
-
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))
 
 
 
@@ -799,11 +897,15 @@ temp.raster <-
   raster::raster("./vignettes/data/spatial/temp.raster.tif")
 
 # Extract the modern mean temperature at each fossil pollen site, and then calculate the anomalies.
-if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
+if (!file.exists(
+  here::here(
+    "vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds"
+  )
+)) {
   # Put lat and long into individual columns.
   tavg_new_90 <- fos_90 %>%
     dplyr::mutate(long = unlist(purrr::map(.$geometry, 1)),
-           lat = unlist(purrr::map(.$geometry, 2))) %>%
+                  lat = unlist(purrr::map(.$geometry, 2))) %>%
     dplyr::select(-geometry) %>%
     sf::st_drop_geometry() %>%
     dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
@@ -811,13 +913,14 @@ if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
     dplyr::group_by(period = cut(date, breaks = seq(-5500, 2100, 100))) %>%
     dplyr::mutate(mid_period = paleomat::get_midpoints(period))
   
-  
   modern_temperature2 <-
-    as.data.frame(raster::extract(
-      x = temp.raster,
-      y = tavg_new_90 %>% dplyr::ungroup() %>%
-        dplyr::select(long, lat)
-    )) %>%
+    as.data.frame(
+      raster::extract(
+        x = temp.raster,
+        y = tavg_new_90 %>% dplyr::ungroup() %>%
+          dplyr::select(long, lat)
+      )
+    ) %>%
     dplyr::rename(modern = 1)
   
   # Bind the modern data to fossil pollen dataset.
@@ -832,14 +935,19 @@ if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
   
   readr::write_rds(
     site.preds.unlisted.anom,
-    here::here("vignettes/data/final_paleomat_dataset3.rds")
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds"
+    )
   )
 }
 site.preds.unlisted.anom <-
-  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds"))
+  readr::read_rds(
+    here::here(
+      "vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds"
+    )
+  )
 
 ```
 
 For figures and tables in the journal article, please see "Paleomat Figures.Rmd".
-
 
