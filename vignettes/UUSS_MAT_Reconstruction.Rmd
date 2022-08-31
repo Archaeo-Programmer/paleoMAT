@@ -54,21 +54,21 @@ NAID <-
   GeoPoliticalID
 
 
-if (!file.exists(here::here("vignettes/data/MP_metadata_counts.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.rds"))) {
   MP_metadata_counts <-
     paleomat::get_modern_pollen(gpid = NAID) %T>%
-    readr::write_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
+    readr::write_rds(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.rds"))
 }
 MP_metadata_counts <-
-  readr::read_rds(here::here("vignettes/data/MP_metadata_counts.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.rds"))
 
-if (!file.exists(here::here("vignettes/data/NAfossil_metadata_counts.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))) {
   NAfossil_metadata_counts <-
     paleomat::get_fossil_pollen(gpid = NAID) %T>%
-    readr::write_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
+    readr::write_rds(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))
 }
 NAfossil_metadata_counts <-
-  readr::read_rds(here::here("vignettes/data/NAfossil_metadata_counts.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))
 
 ```
 
@@ -85,7 +85,7 @@ NAfossil_metadata_counts <-
 #                 site.id = SiteID,
 #                 sample.id = SampleID)
 coreTops <- 
-  readr::read_rds(here::here("vignettes/data/coreTops.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_downloads/coreTops.rds"))
 
 
 if(!file.exists(here::here("vignettes/data/CT_metadata_counts.rds"))) {
