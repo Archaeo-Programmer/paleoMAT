@@ -7,18 +7,6 @@
 /Figures/*
 /raw_data
 /raw_data/*
-data-raw/LT81_800M
-data-raw/LT81_800M/*
-vignettes/data/US_reconst_gdd_7analog.rds
-vignettes/data/US_reconst_gdd_7analog.rds/*
-vignettes/data/US_reconst_gdd.rds
-vignettes/data/US_reconst_gdd.rds/*
-vignettes/data/US_reconst_tavg.rds
-vignettes/data/US_reconst_tavg.rds/*
-vignettes/data/reconst_tavg.rds
-vignettes/data/reconst_tavg.rds/*
-vignettes/data/reconst_gdd.rds
-vignettes/data/reconst_gdd.rds/*
 
 # Mac trash files
 .DS_Store
@@ -39,3 +27,4 @@ yoursession.RData
 # RStudio files
 .Rproj.user/
 .Rproj.user
+.Ruserdata
