@@ -8,7 +8,7 @@ This is the official R package for [paleomat](https://github.com/Archaeo-Program
 which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2022 (submitted): 
 
 Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2022). A Low-Frequency Summer Temperature Reconstruction for the United 
-    States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene*.
+    States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene* for review.
 
 ## Installation
 
