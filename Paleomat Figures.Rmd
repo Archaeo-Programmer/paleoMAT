@@ -286,7 +286,7 @@ ggplot() +
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
 alley2000 <-
-  read.csv(file = "data-raw/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
+  read.csv(file = "./vignettes/data/external_datasets/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
   dplyr::mutate(Age = Age * 1000)  %>%
   dplyr::filter(Age <= 20000) %>% 
   dplyr::mutate(Age = BPtoBCAD(Age))
@@ -391,7 +391,7 @@ alley2000 %>%
 # Moberg et al. 2005 low-frequency reconstruction (only).
 Moberg <-
   read.delim(
-    "./data-raw/nhtemp-moberg2005.txt",
+    "./vignettes/data/external_datasets/nhtemp-moberg2005.txt",
     header = TRUE,
     sep = "\t",
     dec = "."
@@ -546,10 +546,10 @@ p <- Threebest %>%
 
 anom_loess4 <- ggplot_build(p)$data[[2]]
 
-viau <- read.csv("./data-raw/viau.csv") %>% 
+viau <- read.csv("./vignettes/data/external_datasets/viau.csv") %>% 
   dplyr::mutate(time = BPtoBCAD(time))
 
-kaufman_standard <- read.csv("./data-raw/Kaufman 2020_Figure6Data.csv") %>% 
+kaufman_standard <- read.csv("./vignettes/data/external_datasets/Kaufman 2020_Figure6Data.csv") %>% 
   dplyr::mutate(time = BPtoBCAD(time_bp),
                 Series = "Kaufman et al. 2020") %>% 
   dplyr::select(year = time, anom = zscore, Series) %>% 
