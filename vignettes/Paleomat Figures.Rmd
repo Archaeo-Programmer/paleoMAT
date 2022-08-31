@@ -28,7 +28,7 @@ usa <-
   sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE)) %>%
   sf::st_transform(., crs = 4326)
 
-ggplot() +
+ggplot2::ggplot() +
   geom_sf(data = usa, fill = NA) +
   geom_sf(data = MPCT_climate_final,
           inherit.aes = FALSE,
@@ -59,9 +59,7 @@ ggplot() +
 
 # ggsave("vignettes/figures/Figure1.png", dpi = 600)
 
-
 ```
-
 
 
 ```{r fig2, fig.cap="The Southwest United States (SWUS) as defined here, showing locations of fossil pollen samples used in this study. Background shading indicates mean July temperature for 1961 - 1990 from PRISM (Daly et al., 2008, 2015; PRISM Climate Group, 2019) at 800-m resolution. The solid gray box outlines the area studied by Bocinsky and Kohler (2014); the green dashed box shows the extent of the reconstruction in this study.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
@@ -70,9 +68,11 @@ ggplot() +
 
 # Get locations of the fossil pollen sites.
 fossil.locs <-
-  readr::read_rds(here::here(
-    "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
-  )) %>%
+  readr::read_rds(
+    here::here(
+      "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+    )
+  ) %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
   dplyr::select(-geometry) %>%
   dplyr::group_by(site.name) %>%
@@ -118,7 +118,7 @@ cities3$name <-
     pattern = "NM|AZ|CO",
     replacement = "",
     cities3$name,
-    perl = T
+    perl = TRUE
   ))
 
 cities <- cities2  %>%
@@ -127,7 +127,7 @@ cities <- cities2  %>%
 fossil.sites <- fossil.locs %>%
   sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
 
-crs(temp.raster) <-
+raster::crs(temp.raster) <-
   "+proj=lcc +lat_1=49 +lat_2=77 +lat_0=0 +lon_0=-95 +x_0=0 +y_0=0 +ellps=GRS80 +datum=WGS84 +units=m +no_defs"
 temperature <- as.data.frame(temp.raster, xy = TRUE)
 names(temperature) <- c("long", "lat", "tavg")
@@ -278,29 +278,32 @@ ggplot() +
 
 #ggsave("vignettes/figures/Figure2.png", dpi = 600)
 
-
 ```
 
 
 ```{r fig3, fig.cap= "Temperature for the North Atlantic using Richard Alley’s (2000) Greenland ice core data for 18,000 BC to present with the Younger Dryas and the general period of the northward expansion of maize agriculture from Mesoamerica into the SWUS highlighted.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
-# Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 
+# Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 alley2000 <-
   read.csv(file = "./vignettes/data/external_datasets/gisp2_temp_accum_alley2000.csv", header = TRUE) %>%
   dplyr::mutate(Age = Age * 1000)  %>%
-  dplyr::filter(Age <= 20000) %>% 
-  dplyr::mutate(Age = BPtoBCAD(Age))
+  dplyr::filter(Age <= 20000) %>%
+  dplyr::mutate(Age = paleomat::BPtoBCAD(Age))
 
 alley2000 %>%
   ggplot(aes(x = Age, y = Temperature)) +
   geom_line(size = 2) +
-  scale_x_continuous(breaks = seq(-18000, 2000, 2000),
-                     limits = c(-18000, 2000),
-                     minor_breaks=seq(-17000, 2000,by=1000),
-                     guide = "axis_minor") +
-  scale_y_continuous(breaks = seq(-50, -28, 2),
-                     minor_breaks=seq(-49, -29,by=1),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    breaks = seq(-18000, 2000, 2000),
+    limits = c(-18000, 2000),
+    minor_breaks = seq(-17000, 2000, by = 1000),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    breaks = seq(-50,-28, 2),
+    minor_breaks = seq(-49,-29, by = 1),
+    guide = "axis_minor"
+  ) +
   theme_classic() +
   xlab("Years BC/AD") +
   ylab("Temperature °C") +
@@ -348,8 +351,8 @@ alley2000 %>%
     label = "Northward Expansion \n of Agriculture",
     size = 8
   ) +
-    theme(
-    axis.ticks.length=unit(0.125,"inch"),
+  theme(
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -382,7 +385,6 @@ alley2000 %>%
 
 #ggsave("vignettes/figures/Figure3.png", dpi = 600)
 
-
 ```
 
 
@@ -402,17 +404,26 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
   geom_line(size = 2, color = "#A60F2D") +
   xlab("Years AD") +
   ylab("Temperature Anomaly (°C)") +
-  scale_x_continuous(breaks=seq(0,2000,200),
-                     minor_breaks=seq(100, 1900,by=200),
-                     guide = "axis_minor") +
-  scale_y_continuous(breaks = seq(-0.7, 0, 0.1), 
-                     limits = c(-0.7, 0),
-                     minor_breaks=seq(-0.65, -0.05,by=0.05),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    breaks = seq(0, 2000, 200),
+    minor_breaks = seq(100, 1900, by = 200),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    breaks = seq(-0.7, 0, 0.1),
+    limits = c(-0.7, 0),
+    minor_breaks = seq(-0.65,-0.05, by = 0.05),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
-  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd=1.25) +
+  geom_hline(
+    yintercept = 0,
+    color = "darkgrey",
+    lty = 2,
+    lwd = 1.25
+  ) +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -458,10 +469,11 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
 
 ```{r fig5, fig.cap="Low-frequency bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). Boxplots show estimates binned by century. Anomalies are calculated in comparison to the 1961–1990 average. The temperature predictions for each sample (not binned by century) are shown by circles; sizes of circles are inversely proportional to the sample-specific errors (size of circle ∝ 1/s1; see Simpson, 2007: 21 for calculation of s1). Anomaly estimates with larger circles are more precise.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
-  filter(date >= -3000)
+Threebest <-
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
+  dplyr::filter(date >= -3000)
 
-Threebest$century <- round(as.numeric(Threebest$date),-2)
+Threebest$century <- round(as.numeric(Threebest$date), -2)
 
 weight <- (1 / Threebest$s1)
 
@@ -474,24 +486,36 @@ Threebest %>%
     outlier.shape = NA,
     position = position_dodge2(preserve = "total")
   ) +
-  geom_point(aes(x = date), size=weight, shape=1) +
-  geom_hline(yintercept = 0,
-             linetype = 'dashed',
-             color = c('darkslategray')) +
-  geom_smooth(method = "loess", span = 0.15, aes(x = date), size = 2, colour = "cornflowerblue") +
-  scale_x_continuous(limits = c(-3000, 2100),
-                     breaks = seq(-3000, 2000, 500),
-                     minor_breaks=seq(-2900, 2000,by=100),
-                     guide = "axis_minor") +
-  scale_y_continuous(limits = c(-8, 8),
-                     breaks = seq(-8, 8, 2),
-                     minor_breaks=seq(-7, 7,by=1),
-                     guide = "axis_minor") +
+  geom_point(aes(x = date), size = weight, shape = 1) +
+  geom_hline(
+    yintercept = 0,
+    linetype = 'dashed',
+    color = c('darkslategray')
+  ) +
+  geom_smooth(
+    method = "loess",
+    span = 0.15,
+    aes(x = date),
+    size = 2,
+    colour = "cornflowerblue"
+  ) +
+  scale_x_continuous(
+    limits = c(-3000, 2100),
+    breaks = seq(-3000, 2000, 500),
+    minor_breaks = seq(-2900, 2000, by = 100),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    limits = c(-8, 8),
+    breaks = seq(-8, 8, 2),
+    minor_breaks = seq(-7, 7, by = 1),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
   xlab("Years BC/AD") +
   ylab("Temperature Anomaly (°C)") +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -540,58 +564,80 @@ Threebest %>%
 
 # For our reconstruction, we first extract the fitted values from the loess line, as plotting above.
 p <- Threebest %>%
-  filter(date >= -3000) %>%
-  qplot(date, anom_bootstrap, data = .) +
-  stat_smooth(aes(outfit = fit <<- ..y..), span = 0.15, n = 5000)
+  dplyr::filter(date >= -3000) %>%
+  ggplot2::qplot(date, anom_bootstrap, data = .) +
+  ggplot2::stat_smooth(
+    method = "loess",
+    formula = y ~ x,
+    aes(outfit = fit <<-
+          ..y..),
+    span = 0.15,
+    n = 5000
+  )
 
-anom_loess4 <- ggplot_build(p)$data[[2]]
+anom_loess4 <- ggplot2::ggplot_build(p)$data[[2]]
 
-viau <- read.csv("./vignettes/data/external_datasets/viau.csv") %>% 
-  dplyr::mutate(time = BPtoBCAD(time))
+viau <- read.csv("./vignettes/data/external_datasets/viau.csv") %>%
+  dplyr::mutate(time = paleomat::BPtoBCAD(time))
 
-kaufman_standard <- read.csv("./vignettes/data/external_datasets/Kaufman 2020_Figure6Data.csv") %>% 
-  dplyr::mutate(time = BPtoBCAD(time_bp),
-                Series = "Kaufman et al. 2020") %>% 
-  dplyr::select(year = time, anom = zscore, Series) %>% 
+kaufman_standard <-
+  read.csv("./vignettes/data/external_datasets/Kaufman 2020_Figure6Data.csv") %>%
+  dplyr::mutate(time = paleomat::BPtoBCAD(time_bp),
+                Series = "Kaufman et al. 2020") %>%
+  dplyr::select(year = time, anom = zscore, Series) %>%
   dplyr::filter(year > -3400)
 
-temp_anom_standard <- anom_loess4 %>% 
-  dplyr::mutate(x = as.integer(x)) %>% 
-  dplyr::filter(x >= -3000 & x <= 1951) %>% 
-  dplyr::mutate(Series = "This study") %>% 
+temp_anom_standard <- anom_loess4 %>%
+  dplyr::mutate(x = as.integer(x)) %>%
+  dplyr::filter(x >= -3000 & x <= 1951) %>%
+  dplyr::mutate(Series = "This study") %>%
   dplyr::select(year = x, anom = y, Series)
 
-viau_standard <- viau %>% 
-  dplyr::mutate(Series = "Viau et al. 2006") %>% 
-  dplyr::select(year = time, anom = temp, Series) %>% 
-  filter(year >= -3000 & year <= 1951)
+viau_standard <- viau %>%
+  dplyr::mutate(Series = "Viau et al. 2006") %>%
+  dplyr::select(year = time, anom = temp, Series) %>%
+  dplyr::filter(year >= -3000 & year <= 1951)
 
-viau_paleomat_kaufman <- bind_rows(temp_anom_standard, viau_standard, kaufman_standard)
+viau_paleomat_kaufman <-
+  dplyr::bind_rows(temp_anom_standard, viau_standard, kaufman_standard)
 
-viau_paleomat_kaufman$Series <- factor(viau_paleomat_kaufman$Series, c("Viau et al. 2006", "Kaufman et al. 2020", "This study"))
+viau_paleomat_kaufman$Series <-
+  factor(viau_paleomat_kaufman$Series,
+         c("Viau et al. 2006", "Kaufman et al. 2020", "This study"))
 
 # Viau and paleomat
-viau_paleomat_kaufman %>% 
-  mutate(Alpha = case_when(Series == "This study" ~ 1,
-                           TRUE ~ 0.65)) %>% 
-  group_by(Series) %>% 
-  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
-  ggplot(aes(x = year, y = update, colour = Series, alpha = Alpha)) +
-  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
+viau_paleomat_kaufman %>%
+  dplyr::mutate(Alpha = case_when(Series == "This study" ~ 1,
+                                  TRUE ~ 0.65)) %>%
+  dplyr::group_by(Series) %>%
+  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>%
+  ggplot(aes(
+    x = year,
+    y = update,
+    colour = Series,
+    alpha = Alpha
+  )) +
+  geom_hline(
+    yintercept = 0,
+    color = "darkgrey",
+    lty = 2,
+    lwd = 1.25
+  ) +
   geom_line(aes(size = Series)) +
   scale_size_manual(values = c(0.75, 0.75, 2)) +
   scale_alpha_identity() +
-  scale_color_manual(values=c("darkolivegreen", "#D55E00", "cornflowerblue")) +
+  scale_color_manual(values = c("darkolivegreen", "#D55E00", "cornflowerblue")) +
   scale_x_continuous(
-                     breaks = seq(-3500, 2000, 500), 
-                     minor_breaks=seq(-3400,1900,by=100),
-                     guide = "axis_minor") +
+    breaks = seq(-3500, 2000, 500),
+    minor_breaks = seq(-3400, 1900, by = 100),
+    guide = "axis_minor"
+  ) +
   scale_y_continuous(breaks = seq(-2, 3.5, 0.5)) +
   xlab("Years BC/AD") +
   ylab("Standardized Temperature Values (Z-Scores)") +
   theme_bw() +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -635,43 +681,50 @@ viau_paleomat_kaufman %>%
 
 #ggsave("vignettes/figures/Figure6.png", dpi = 600)
 
-
 ```
 
 
 ```{r fig7, fig.cap="Low-frequency July temperature anomaly for the SWUS from this study and the Northern Hemisphere low-frequency component (Moberg et al. 2005) from AD 133 to 1900. Both series have been standardized to a mean of 0 and an s of 1 for this period.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-temp_anom_standard <- anom_loess4 %>% 
-  dplyr::mutate(x = as.integer(x)) %>% 
-  dplyr::filter(x >= 133 & x <= 1900) %>% 
-  dplyr::mutate(Series = "This study") %>% 
+temp_anom_standard <- anom_loess4 %>%
+  dplyr::mutate(x = as.integer(x)) %>%
+  dplyr::filter(x >= 133 & x <= 1900) %>%
+  dplyr::mutate(Series = "This study") %>%
   dplyr::select(year = x, anom = y, Series)
 
-Moberg_standard <- Moberg %>% 
-  dplyr::mutate(Series = "Moberg et al. 2005") %>% 
-  dplyr::select(year = date, anom = LF, Series) %>% 
-  filter(year >= 133 & year <= 1900)
+Moberg_standard <- Moberg %>%
+  dplyr::mutate(Series = "Moberg et al. 2005") %>%
+  dplyr::select(year = date, anom = LF, Series) %>%
+  dplyr::filter(year >= 133 & year <= 1900)
 
-Moberg_paleomat <- bind_rows(temp_anom_standard, Moberg_standard)
+Moberg_paleomat <-
+  dplyr::bind_rows(temp_anom_standard, Moberg_standard)
 
 # Moberg LF and paleomat
-Moberg_paleomat %>% 
-  group_by(Series) %>% 
-  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>% 
+Moberg_paleomat %>%
+  dplyr::group_by(Series) %>%
+  dplyr::mutate(update = (anom - mean(anom)) / sd(anom)) %>%
   ggplot(aes(x = year, y = update, colour = Series)) +
-  geom_hline(yintercept = 0, color = "darkgrey", lty = 2, lwd = 1.25) +
+  geom_hline(
+    yintercept = 0,
+    color = "darkgrey",
+    lty = 2,
+    lwd = 1.25
+  ) +
   geom_line(size = 2.0) +
-  scale_color_manual(values=c("#A60F2D", "cornflowerblue")) +
+  scale_color_manual(values = c("#A60F2D", "cornflowerblue")) +
   xlab("Years AD") +
   ylab("Standardized Temperature Values (Z-Scores)") +
-  scale_x_continuous(limits = c(100, 1900),
-                     breaks = seq(100, 1900, 200), 
-                     minor_breaks=seq(200,1800,by=200),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    limits = c(100, 1900),
+    breaks = seq(100, 1900, 200),
+    minor_breaks = seq(200, 1800, by = 200),
+    guide = "axis_minor"
+  ) +
   scale_y_continuous(breaks = seq(-2, 3, 0.5)) +
   theme_bw() +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -725,19 +778,21 @@ Moberg_paleomat %>%
 # Pulling together information for Table 1, except for references, which are done elsewhere.
 
 fossil_metadata_counts_final2 <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))
+  readr::read_rds(here::here(
+    "vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"
+  ))
 
 sig_pass <-
   readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")) %>%
-  mutate(pass = ifelse(pvalue <= 0.10, "Yes", "No")) %>%
+  dplyr::mutate(pass = ifelse(pvalue <= 0.10, "Yes", "No")) %>%
   dplyr::select(dataset.id, pass)
 
 table1 <-
   fossil_metadata_counts_final2 %>%
-  filter(age <= 5500) %>%
+  dplyr::filter(age <= 5500) %>%
   dplyr::select(site.name, site.id, dataset.id, elev) %>%
-  group_by(site.name, site.id, dataset.id, elev) %>%
-  count() %>%
+  dplyr::group_by(site.name, site.id, dataset.id, elev) %>%
+  dplyr::count() %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
   dplyr::select(-geometry) %>%
   dplyr::arrange(site.name) %>%
@@ -754,9 +809,9 @@ table1 <-
     "Pass significance test?" = pass
   )
 
-if (!file.exists(here::here("./vignettes/figures/table1.csv"))) {
+if (!file.exists(here::here("./vignettes/tables/table1.csv"))) {
   write.csv(table1,
-            "./vignettes/figures/table1.csv",
+            "./vignettes/tables/table1.csv",
             row.names = FALSE)
 }
 
@@ -773,23 +828,23 @@ knitr::kable(table1,
 
 fossil_final_west_metadata_post5500BP <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")) %>%
-  ungroup %>%
+  dplyr::ungroup %>%
   dplyr::select(site.name, site.id, dataset.id) %>% 
-  filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
+  dplyr::filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
       1762L, 1766L, 1970L, 2320L, 2880L, 2897L, 2950L, 3054L, 3056L, 
       3060L, 3560L, 3561L, 3608L, 3612L, 14517L, 14547L, 14549L, 14650L, 
       14944L, 14951L, 15106L, 15356L, 15967L, 17419L, 20304L, 20833L, 
       20838L, 22948L, 25551L, 41580L, 42645L, 46801L)) %>% 
-  distinct() %>%
+  dplyr::distinct() %>%
   sf::st_drop_geometry()
 
 Threebest <-
   readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
-  filter(date >= -3000)
+  dplyr::filter(date >= -3000)
 
 summary_table <- Threebest %>%
-  group_by(dataset.id) %>%
-  summarise(
+  dplyr::group_by(dataset.id) %>%
+  dplyr::summarise(
     anom_range = max(anom) - min(anom),
     anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap),
     rmsep_mean = mean(rmsep),
@@ -798,18 +853,18 @@ summary_table <- Threebest %>%
 
 summary_table_final <-
   readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")) %>%
-  left_join(.,
-            fossil_final_west_metadata_post5500BP,
-            by = "dataset.id") %>%
+  dplyr::left_join(.,
+                   fossil_final_west_metadata_post5500BP,
+                   by = "dataset.id") %>%
   dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>%
-  left_join(., summary_table, by = "dataset.id") %>%
-  mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>%
-  arrange(a, site.name) %>%
+  dplyr::left_join(., summary_table, by = "dataset.id") %>%
+  dplyr::mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>%
+  dplyr::arrange(a, site.name) %>%
   dplyr::select(-a) %>%
-  filter(!is.na(site.name)) %>%
-  mutate(across(c(proportion, pvalue), ~ as.numeric(.x))) %>%
-  mutate(across(-c(site.name, site.id, dataset.id), ~ round(.x, digits =
-                                                              2)))
+  dplyr::filter(!is.na(site.name)) %>%
+  dplyr::mutate(across(c(proportion, pvalue), ~ as.numeric(.x))) %>%
+  dplyr::mutate(across(-c(site.name, site.id, dataset.id), ~ round(.x, digits =
+                                                                     2)))
 
 names(summary_table_final) <-
   c(
@@ -824,51 +879,90 @@ names(summary_table_final) <-
     "Mean boostrap s1"
   )
 
-if (!file.exists(here::here("./vignettes/figures/supp_table_s1.csv"))) {
+if (!file.exists(here::here("./vignettes/tables/supp_table_s1.csv"))) {
   write.csv(summary_table_final,
-            "./vignettes/figures/supp_table_s1.csv",
+            "./vignettes/tables/supp_table_s1.csv",
             row.names = FALSE)
 }
 
 knitr::kable(summary_table_final,
-             caption = "Metadata for the fossil pollen records used in this study.")
+             caption = "Results of random TF tests and summaries of MAT prediction output for the fossil pollen cores. Random TF test output is shown for the fossil pollen datasets that were included in the random TF test (36 sites or 40 datasets), which was after some samples were removed using squared residual length. An NA denotes that the site was removed after not passing the significance test.")
 
 
 ```
 
+```{r supptable2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
+
+paleomat_reconstruction <- anom_loess4 %>%
+  dplyr::mutate(x = as.integer(x)) %>%
+  dplyr::filter(x >= -3000 & !duplicated(x)) %>%
+  dplyr::mutate(CI = abs(y - ymin)) %>%
+  dplyr::select(
+    Year = x,
+    "Temperature Anomaly (°C)" = y,
+    "Confidence Interval" = CI,
+    "Standard Error" = se
+  )
+
+if (!file.exists(here::here("./vignettes/tables/supp_table_s2.csv"))) {
+  write.csv(paleomat_reconstruction,
+            "./vignettes/tables/supp_table_s2.csv",
+            row.names = FALSE)
+}
+
+knitr::kable(paleomat_reconstruction,
+             caption = "Final reconstruction output from the loess model for 2999 BC to AD 1996.")
+
+```
 
 # Supplemental Figures
 
 ```{r suppfig1, fig.cap="Squared residual length for the fossil assemblages vs age. Red line marks the 95% limit of the calibration set residual lengths (very poorly fitted). We removed all samples that fell above the 95% line.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-ff <- readr::read_rds(here::here("./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")) %>% 
-  filter(!is.na(age) & age <= 5500) %>% 
-  dplyr::select(sample.id, age) %>% 
-  mutate(age = BPtoBCAD(age)) %>% 
+ff <-
+  readr::read_rds(
+    here::here(
+      "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+    )
+  ) %>%
+  filter(!is.na(age) & age <= 5500) %>%
+  dplyr::select(sample.id, age) %>%
+  mutate(age = paleomat::BPtoBCAD(age)) %>%
   sf::st_drop_geometry()
 
 
-rlen_results_filtered <- readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$res_lengths %>% 
+rlen_results_filtered <-
+  readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$res_lengths %>%
   left_join(., ff, by = "sample.id")
 
-ninety5quant <- readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$quantile_95
+ninety5quant <-
+  readr::read_rds(here::here("./vignettes/data/rlen_full_results2.rds"))$quantile_95
 
 ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
   geom_point() +
   xlab("Years BC/AD") +
   ylab("Squared Residual Length") +
-  scale_x_continuous(limits = c(-3500, 2100),
-                     breaks = seq(-3500, 2000, 500),
-                     minor_breaks=seq(-3400, 1900,by = 100),
-                     guide = "axis_minor") +
-  scale_y_continuous(limits = c(0, 260),
-                     breaks = seq(0, 260, 20),
-                     minor_breaks=seq(10, 240, 10),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    limits = c(-3500, 2100),
+    breaks = seq(-3500, 2000, 500),
+    minor_breaks = seq(-3400, 1900, by = 100),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    limits = c(0, 260),
+    breaks = seq(0, 260, 20),
+    minor_breaks = seq(10, 240, 10),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
-  geom_hline(yintercept = ninety5quant, color = "red", lty = 1, lwd=0.5) +
+  geom_hline(
+    yintercept = ninety5quant,
+    color = "red",
+    lty = 1,
+    lwd = 0.5
+  ) +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -907,43 +1001,55 @@ ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure1.png", dpi = 600)
-
+#ggsave("vignettes/figures/SuppFigure1.png", dpi = 600)
 
 ```
 
 
 ```{r suppfig2, fig.cap="Summary diagram of the results of a MAT model applied to predict temperature from the modern pollen data set. The leave-one-out error measure (RMSEP) shows that 4 analogs provide the optimal choice (lowest RMSEP).", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-mat_calibration <- readr::read_rds(here::here("./vignettes/data/mat_calibration.rds"))
+mat_calibration <-
+  readr::read_rds(here::here("./vignettes/data/mat_calibration.rds"))
 
-tbl <- cbind(mat_calibration$standard$rmsep[1:20], mat_calibration$standard$r.squared[1:20],
-             mat_calibration$standard$avg.bias[1:20], mat_calibration$standard$max.bias[1:20])
+tbl <-
+  cbind(
+    mat_calibration$standard$rmsep[1:20],
+    mat_calibration$standard$r.squared[1:20],
+    mat_calibration$standard$avg.bias[1:20],
+    mat_calibration$standard$max.bias[1:20]
+  )
 
 tbl <- as.matrix(format(tbl, digits = 3))
 
 tbl <- cbind(as.integer(1:20), tbl)
 
 rownames(tbl) <- rep("", nrow(tbl))
-colnames(tbl) <- c("k", "RMSEP","R2","Avg Bias","Max Bias")
+colnames(tbl) <- c("k", "RMSEP", "R2", "Avg Bias", "Max Bias")
 
-as.data.frame(tbl) %>% 
-  mutate(across(everything(), ~ as.numeric(.x))) %>% 
+as.data.frame(tbl) %>%
+  mutate(across(everything(), ~ as.numeric(.x))) %>%
   ggplot(aes(x = k, y = RMSEP)) +
   geom_line(size = 1) +
-  geom_label(aes(label = k), fill = "white", label.size = NA, size = 5.5) +
+  geom_label(aes(label = k),
+             fill = "white",
+             label.size = NA,
+             size = 5.5) +
   xlab("Number of Analogues (k)") +
   ylab("RMSEP") +
-  scale_x_continuous(breaks=seq(0,20,2),
-                     minor_breaks=seq(1, 19,by=1),
-                     guide = "axis_minor") +
-  scale_y_continuous(breaks = seq(2.10, 2.45, 0.05), 
-                     limits = c(2.10, 2.45),
-                     minor_breaks=seq(2.11, 2.44,by=0.01),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    breaks = seq(0, 20, 2),
+    minor_breaks = seq(1, 19, by = 1),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    breaks = seq(2.10, 2.45, 0.05),
+    limits = c(2.10, 2.45),
+    minor_breaks = seq(2.11, 2.44, by = 0.01),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -982,34 +1088,52 @@ as.data.frame(tbl) %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure2.png", dpi = 600)
+#ggsave("vignettes/figures/SuppFigure2.png", dpi = 600)
 
 ```
 
 ```{r suppfig3, fig.cap="Time series plot of the minimum dissimilarity between each core (fossil) sample and the modern pollen training set samples. The dotted, horizontal lines are drawn at various percentiles of the distribution of the pair-wise dissimilarities for the training set samples. We used the 5th percentile as the cutoff for good analogs. So, samples with distances greater than the 5th percentile (above the line) were removed.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-minDC_df <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$minDC %>% 
+minDC_df <-
+  readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$minDC %>%
   arrange(age)
 
 # Keeping only 1%, 2.5%, and 5%, as I don't want to plot 10%.
-minDC_quantiles <- readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$quantiles[1:3]
+minDC_quantiles <-
+  readr::read_rds(here::here("./vignettes/data/minDC_full_results.rds"))$quantiles[1:3]
 
 ggplot(data = minDC_df, aes(x = age, y = values)) +
   xlab("Years BC/AD") +
   ylab("Dissimilarity") +
-  scale_x_continuous(limits = c(-3500, 2100),
-                     breaks = seq(-3500, 2000, 500),
-                     minor_breaks=seq(-3400, 1900,by = 100),
-                     guide = "axis_minor") +
+  scale_x_continuous(
+    limits = c(-3500, 2100),
+    breaks = seq(-3500, 2000, 500),
+    minor_breaks = seq(-3400, 1900, by = 100),
+    guide = "axis_minor"
+  ) +
   scale_y_continuous(limits = c(0, 0.35),
                      breaks = seq(0, 0.35, 0.05)) +
   theme_bw() +
-  annotate("label", x = Inf, y = c(0.1139258, 0.1650981, 0.2171289), label = c("1%", "2.5%", "5%"), hjust = 0, size = 8, fill = "white", label.size = NA) +
+  annotate(
+    "label",
+    x = Inf,
+    y = c(0.1139258, 0.1650981, 0.2171289),
+    label = c("1%", "2.5%", "5%"),
+    hjust = 0,
+    size = 8,
+    fill = "white",
+    label.size = NA
+  ) +
   coord_cartesian(xlim = c(-3500, 2000), clip = "off") +
-  geom_hline(yintercept = minDC_quantiles, color = "red", lty = "dashed", lwd=0.5) +
+  geom_hline(
+    yintercept = minDC_quantiles,
+    color = "red",
+    lty = "dashed",
+    lwd = 0.5
+  ) +
   geom_point() +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -1048,7 +1172,7 @@ ggplot(data = minDC_df, aes(x = age, y = values)) +
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure3.png", dpi = 600)
+#ggsave("vignettes/figures/SuppFigure3.png", dpi = 600)
 
 
 ```
@@ -1056,26 +1180,31 @@ ggplot(data = minDC_df, aes(x = age, y = values)) +
 
 ```{r suppfig4, fig.cap="Linear regression and scatterplot between temperature anomaly predicted values and the bootstrapped temperature predictions. There is a strong linear relationship across their joint ranges (r2 = 0.96; p > F < .001).", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
+Threebest <-
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
 Threebest %>%
   ggplot(aes(x = anom, y = anom_bootstrap)) +
-    geom_point() +
+  geom_point() +
   stat_smooth(method = "lm", col = "red") +
-  scale_x_continuous(limits = c(-9, 9),
-                     breaks = seq(-9, 9, 2),
-                     minor_breaks=seq(-8, 8,by=1),
-                     guide = "axis_minor") +
-  scale_y_continuous(limits = c(-9, 9),
-                     breaks = seq(-9, 9, 2),
-                     minor_breaks=seq(-8, 8,by=1),
-                     guide = "axis_minor") +  
+  scale_x_continuous(
+    limits = c(-9, 9),
+    breaks = seq(-9, 9, 2),
+    minor_breaks = seq(-8, 8, by = 1),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    limits = c(-9, 9),
+    breaks = seq(-9, 9, 2),
+    minor_breaks = seq(-8, 8, by = 1),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
   xlab("Temperature Anomaly Predicted Values") +
   ylab("Bootstrapped Temperature Predictions") +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -1114,7 +1243,7 @@ Threebest %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure4.png", dpi = 600)
+#ggsave("vignettes/figures/SuppFigure4.png", dpi = 600)
 
 
 ```
@@ -1123,16 +1252,17 @@ Threebest %>%
 
 ```{r suppfig5, fig.cap="Low-frequency weighted bootstrapped temperature anomaly loess reconstruction from this study (blue) with standard error (gray). As in Figure 5 (main text) except here the loess curve (only) is weighted by the inverse of the sample-specific errors s1; see Simpson, 2007: 21 for calculation). Bubble size α 1/s1.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-Threebest <- readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
+Threebest <-
+  readr::read_rds(here::here("vignettes/data/final_paleomat_dataset3.rds")) %>%
   filter(date >= -3000)
 
-Threebest$century <- round(as.numeric(Threebest$date),-2)
+Threebest$century <- round(as.numeric(Threebest$date), -2)
 
 weight <- (1 / Threebest$s1)
 
 Threebest %>%
   ggplot(aes(y = anom_bootstrap)) +
-  geom_point(aes(x = date), size=weight, shape=1) +
+  geom_point(aes(x = date), size = weight, shape = 1) +
   geom_boxplot(
     aes(x = century, group = century),
     lwd = .25,
@@ -1140,23 +1270,35 @@ Threebest %>%
     outlier.shape = NA,
     position = position_dodge2(preserve = "total")
   ) +
-  geom_hline(yintercept = 0,
-             linetype = 'dashed',
-             color = c('darkslategray')) +
-  geom_smooth(method = "loess", span = 0.15, aes(x = date, weight = weight), size = 2, colour = "cornflowerblue") +
-  scale_x_continuous(limits = c(-3000, 2100),
-                     breaks = seq(-3000, 2000, 500),
-                     minor_breaks=seq(-2900, 2000,by=100),
-                     guide = "axis_minor") +
-  scale_y_continuous(limits = c(-8, 8),
-                     breaks = seq(-8, 8, 2),
-                     minor_breaks=seq(-7, 7,by=1),
-                     guide = "axis_minor") +
+  geom_hline(
+    yintercept = 0,
+    linetype = 'dashed',
+    color = c('darkslategray')
+  ) +
+  geom_smooth(
+    method = "loess",
+    span = 0.15,
+    aes(x = date, weight = weight),
+    size = 2,
+    colour = "cornflowerblue"
+  ) +
+  scale_x_continuous(
+    limits = c(-3000, 2100),
+    breaks = seq(-3000, 2000, 500),
+    minor_breaks = seq(-2900, 2000, by = 100),
+    guide = "axis_minor"
+  ) +
+  scale_y_continuous(
+    limits = c(-8, 8),
+    breaks = seq(-8, 8, 2),
+    minor_breaks = seq(-7, 7, by = 1),
+    guide = "axis_minor"
+  ) +
   theme_bw() +
   xlab("Years BC/AD") +
   ylab("Temperature Anomaly (°C)") +
   theme(
-    axis.ticks.length=unit(0.125,"inch"),
+    axis.ticks.length = unit(0.125, "inch"),
     ggh4x.axis.ticks.length.minor = rel(0.5),
     panel.border = element_blank(),
     panel.grid.major = element_blank(),
@@ -1195,7 +1337,7 @@ Threebest %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/SuppFigure5.png", dpi = 600)
+#ggsave("vignettes/figures/SuppFigure5.png", dpi = 600)
 
 
 ```

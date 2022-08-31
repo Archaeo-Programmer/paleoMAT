@@ -23,6 +23,7 @@ vignettes/data/reconst_gdd.rds/*
 # Mac trash files
 .DS_Store
 */.DS_Store
+.Icon?
 
 # History files
 .Rhistory
