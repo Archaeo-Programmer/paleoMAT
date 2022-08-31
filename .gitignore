@@ -12,6 +12,8 @@
 .DS_Store
 */.DS_Store
 .Icon?
+.Icon\r
+.Icon
 
 # History files
 .Rhistory
