@@ -843,4 +843,3 @@ site.preds.unlisted.anom <-
 For figures and tables in the journal article, please see "Paleomat Figures.Rmd".
 
 
-

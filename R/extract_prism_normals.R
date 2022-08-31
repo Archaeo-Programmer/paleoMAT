@@ -54,7 +54,7 @@ extract_prism_normals <-
       dplyr::mutate(tavg =
                       ((tmax + tmin) / 2))  %>%
       dplyr::rowwise() %>%
-      dplyr::mutate(gdd = (calc_gdd(
+      dplyr::mutate(gdd = (paleomat::calc_gdd(
         tmin = tmin,
         tmax = tmax,
         t.base = 10,

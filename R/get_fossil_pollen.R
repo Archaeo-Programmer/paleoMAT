@@ -23,7 +23,7 @@ get_fossil_pollen <- function(...){
   # Then, combine the rows from the datasets together so that they are now in one tibble.
   NAfossil_metadata <-
     NAfossil_datasets %>%
-    purrr::map_dfr(compile_pollen) %>%
+    purrr::map_dfr(paleomat::compile_pollen) %>%
     dplyr::mutate(type = "fossil") %>%
     dplyr::mutate(dataset.id = as.integer(dataset.id),
            site.id = as.integer(site.id))
