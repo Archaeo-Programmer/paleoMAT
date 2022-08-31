@@ -276,7 +276,7 @@ ggplot() +
     legend.title = element_text(size = 19, family = "Helvetica")
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2b.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
 
 
 ```
@@ -530,7 +530,7 @@ Threebest %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5b.png", dpi = 600)
+#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5.png", dpi = 600)
 
 ```
 
