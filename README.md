@@ -19,7 +19,7 @@ if (!require("devtools")) install.packages("devtools")
 devtools::install_github("Archaeo-Programmer/paleomat")
 ```
 
-## Repository contents
+## Repository Contents
 
 The [:file\_folder: vignettes](vignettes) directory contains:
 
