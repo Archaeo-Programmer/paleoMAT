@@ -22,7 +22,7 @@ require(ggh4x)
 ```{r fig1, fig.cap="Modern pollen samples used in this study from the Neotoma Paleoecological Database.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
 
 MPCT_climate_final <-
-  readr::read_rds(here::here("vignettes/data/MPCT_climate_final.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds"))
 
 usa <-
   sf::st_as_sf(maps::map("state", fill = TRUE, plot = FALSE)) %>%
@@ -71,7 +71,7 @@ ggplot() +
 # Get locations of the fossil pollen sites.
 fossil.locs <-
   readr::read_rds(here::here(
-    "./vignettes/data/fossil_final_west_metadata_post5500BP.rds"
+    "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
   )) %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
   dplyr::select(-geometry) %>%
@@ -725,7 +725,7 @@ Moberg_paleomat %>%
 # Pulling together information for Table 1, except for references, which are done elsewhere.
 
 fossil_metadata_counts_final2 <-
-  readr::read_rds(here::here("vignettes/data/fossil_metadata_counts_final2.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))
 
 sig_pass <-
   readr::read_rds(here::here("vignettes/data/sig_results2_final.rds")) %>%
@@ -772,7 +772,7 @@ knitr::kable(table1,
 ```{r supptable1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
 fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds")) %>%
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")) %>%
   ungroup %>%
   dplyr::select(site.name, site.id, dataset.id) %>% 
   filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
@@ -841,7 +841,7 @@ knitr::kable(summary_table_final,
 
 ```{r suppfig1, fig.cap="Squared residual length for the fossil assemblages vs age. Red line marks the 95% limit of the calibration set residual lengths (very poorly fitted). We removed all samples that fell above the 95% line.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
-ff <- readr::read_rds(here::here("./vignettes/data/fossil_final_west_metadata_post5500BP.rds")) %>% 
+ff <- readr::read_rds(here::here("./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")) %>% 
   filter(!is.na(age) & age <= 5500) %>% 
   dplyr::select(sample.id, age) %>% 
   mutate(age = BPtoBCAD(age)) %>% 

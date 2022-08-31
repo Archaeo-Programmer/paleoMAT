@@ -88,17 +88,17 @@ coreTops <-
   readr::read_rds(here::here("vignettes/data/pollen_downloads/coreTops.rds"))
 
 
-if(!file.exists(here::here("vignettes/data/CT_metadata_counts.rds"))) {
+if(!file.exists(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))) {
   CT_metadata_counts <-
     dplyr::left_join(coreTops,
                      NAfossil_metadata_counts,
                      by  = c("dataset.id", "site.id", "sample.id")) %>%
     dplyr::mutate(type = "core top") %>%
     dplyr::arrange(dataset.id) %T>%
-    readr::write_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
+    readr::write_rds(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))
 }
 CT_metadata_counts <-
-  readr::read_rds(here::here("vignettes/data/CT_metadata_counts.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))
 
 
 ```
@@ -110,7 +110,7 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples
 ```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 #Combine the modern and core top data, then keep only sites that fall within the continental United states
-if (!file.exists(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"))) {
   # Now, the two dataframes (i.e., the modern data and core top data) can be combined using this function, then sort the rows by dataset.id.
   MPCT_metadata_counts <-
     dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>%
@@ -163,12 +163,12 @@ if (!file.exists(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))) {
   
   readr::write_rds(
     MPCT_metadata_counts_final,
-    here::here("vignettes/data/MPCT_metadata_counts_final.rds")
+    here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds")
   )
   
 }
 MPCT_metadata_counts_final <-
-  readr::read_rds(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"))
 
 
 # Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
@@ -214,7 +214,7 @@ west_in_states <-
 ```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
 
 # Remove the core tops from the fossil pollen dataset, and then limit fossil pollen sites to just the southwestern United States.
-if (!file.exists(here::here("vignettes/data/fossil_metadata_counts_final2.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))) {
   # Remove the coretop samples from the fossil pollen dataset.
   fossil_metadata_counts <-
     dplyr::anti_join(NAfossil_metadata_counts,
@@ -243,30 +243,30 @@ if (!file.exists(here::here("vignettes/data/fossil_metadata_counts_final2.rds"))
   
   readr::write_rds(
     fossil_metadata_counts_final2,
-    here::here("vignettes/data/fossil_metadata_counts_final2.rds")
+    here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds")
   )
   
 }
 fossil_metadata_counts_final2 <-
-  readr::read_rds(here::here("vignettes/data/fossil_metadata_counts_final2.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))
 
 
 # Limit samples to post 5500 BP.
-if (!file.exists(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"))) {
   fossil_final_west_metadata_post5500BP <-
     fossil_metadata_counts_final2 %>%
     dplyr::filter(age <= 5500)
   
   readr::write_rds(
     fossil_final_west_metadata_post5500BP,
-    here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds")
+    here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")
   )
 }
 fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/fossil_final_west_metadata_post5500BP.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"))
 
 # Cleaning up the fossil dataset.
-if (!file.exists(here::here("vignettes/data/fossil_final.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))) {
   fossil_final <-
     fossil_metadata_counts_final2 %>%
     # Remove any rows that do not have age data.
@@ -285,10 +285,10 @@ if (!file.exists(here::here("vignettes/data/fossil_final.rds"))) {
     mutate(n_samples = map_dbl(pollen, nrow))
   
   readr::write_rds(fossil_final,
-                   here::here("vignettes/data/fossil_final.rds"))
+                   here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))
 }
 fossil_final <-
-  readr::read_rds(here::here("vignettes/data/fossil_final.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))
 
 
 ```
@@ -305,7 +305,7 @@ The first step is to get the locations of the Modern Pollen samples. Next, we us
 #load(file = "data/prism_1.rda")
 
 # Extract Prism climate data for modern pollen sites and limit to the western United States.
-if (!file.exists(here::here("vignettes/data/MPCT_climate_final.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds"))) {
 MPCT_climate <- 
   MPCT_metadata_counts_final %>%
   dplyr::select(sample.id) %>%
@@ -329,11 +329,11 @@ MPCT_climate_final <-
 
   readr::write_rds(
     MPCT_climate_final,
-    here::here("vignettes/data/MPCT_climate_final.rds")
+    here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds")
   )
 }
 MPCT_climate_final <-
-  readr::read_rds(here::here("vignettes/data/MPCT_climate_final.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds"))
 
 ```
 
@@ -380,7 +380,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 
 # Fossil Dataset
 
-if (!file.exists(here::here("vignettes/data/fossil_pollen.rds"))) {
+if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))) {
   # Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
   fossil_final$pollen <-
     purrr::map(fossil_final$pollen, function(x)
@@ -395,10 +395,10 @@ if (!file.exists(here::here("vignettes/data/fossil_pollen.rds"))) {
                                }))
   
   readr::write_rds(fossil_pollen,
-                   here::here("vignettes/data/fossil_pollen.rds"))
+                   here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
 }
 fossil_pollen <-
-  readr::read_rds(here::here("vignettes/data/fossil_pollen.rds"))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
 
 
 ```
