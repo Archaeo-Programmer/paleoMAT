@@ -57,7 +57,7 @@ ggplot() +
     axis.line = element_blank()
   )
 
-# ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure1.png", dpi = 600)
+# ggsave("vignettes/figures/Figure1.png", dpi = 600)
 
 
 ```
@@ -276,7 +276,7 @@ ggplot() +
     legend.title = element_text(size = 19, family = "Helvetica")
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure2.png", dpi = 600)
+#ggsave("vignettes/figures/Figure2.png", dpi = 600)
 
 
 ```
@@ -380,7 +380,7 @@ alley2000 %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure3.png", dpi = 600)
+#ggsave("vignettes/figures/Figure3.png", dpi = 600)
 
 
 ```
@@ -451,7 +451,7 @@ ggplot(data = Moberg, aes(x = date, y = LF)) +
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure4.png", dpi = 600)
+#ggsave("vignettes/figures/Figure4.png", dpi = 600)
 
 ```
 
@@ -530,7 +530,7 @@ Threebest %>%
     )
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure5.png", dpi = 600)
+#ggsave("vignettes/figures/Figure5.png", dpi = 600)
 
 ```
 
@@ -633,7 +633,7 @@ viau_paleomat_kaufman %>%
   )
 
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure6.png", dpi = 600)
+#ggsave("vignettes/figures/Figure6.png", dpi = 600)
 
 
 ```
@@ -712,7 +712,7 @@ Moberg_paleomat %>%
     legend.title = element_blank()
   )
 
-#ggsave("~/Dropbox/WSU/SKOPEII/model/Final_Figures/Figure7.png", dpi = 600)
+#ggsave("vignettes/figures/Figure7.png", dpi = 600)
 
 
 ```
@@ -753,6 +753,12 @@ table1 <-
     "Latitude" = lat,
     "Pass significance test?" = pass
   )
+
+if (!file.exists(here::here("./vignettes/figures/table1.csv"))) {
+  write.csv(table1,
+            "./vignettes/figures/table1.csv",
+            row.names = FALSE)
+}
 
 knitr::kable(table1,
              caption = "Metadata for the fossil pollen records (37 sites or 41 datasets) used in this study that have data after 3,550 BC. All data were downloaded from the Neotoma Paleoecological Database (Williams et al., 2018).")
@@ -818,9 +824,9 @@ names(summary_table_final) <-
     "Mean boostrap s1"
   )
 
-if (!file.exists(here::here("./vignettes/data/summary_table_final.csv"))) {
+if (!file.exists(here::here("./vignettes/figures/supp_table_s1.csv"))) {
   write.csv(summary_table_final,
-            "./vignettes/data/summary_table_final.csv",
+            "./vignettes/figures/supp_table_s1.csv",
             row.names = FALSE)
 }
 
