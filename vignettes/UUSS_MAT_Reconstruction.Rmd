@@ -182,39 +182,9 @@ MPCT_metadata_counts_final <-
   ))
 
 
-# Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
+# Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States. See extract_WS_pollen_ranges.R for more information.
 if (!file.exists(here::here("vignettes/data/spatial/west_in_states.shp"))) {
-  # Read in all the western shapefiles.
-  temp <-
-    list.files(path = "vignettes/data/spatial/Williams and Shuman 2008 Supplementary",
-               pattern = "*WEST.shp$",
-               full.names = TRUE)
-  
-  # Then, apply the st_read function to the list of shapefiles.
-  myfiles <- lapply(temp, sf::st_read, crs = 4326)
-  
-  # Then, set the name of each list element (each shapefile) to its respective file name.
-  names(myfiles) <- gsub(
-    "*WEST.shp$",
-    "",
-    list.files(
-      "vignettes/data/spatial/Williams and Shuman 2008 Supplementary",
-      pattern = "*WEST.shp$",
-      full.names = FALSE
-    ),
-    fixed = TRUE
-  )
-  
-  # Combine all the shapefiles into 1 shapefile with 1 layer.
-  all_west <- sf::st_as_sf(data.table::rbindlist(myfiles))
-  all_west <- st_union(all_west$geometry)
-  west_in_states <- all_west
-  
-  sf::write_sf(west_in_states,
-               dsn = "vignettes/data/spatial/",
-               layer = 'west_in_states',
-               driver = "ESRI Shapefile")
-  
+  west_in_states <- paleomat::extract_WS_pollen_ranges()
 }
 west_in_states <-
   sf::read_sf("vignettes/data/spatial/west_in_states.shp")

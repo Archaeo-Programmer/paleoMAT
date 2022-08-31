@@ -14,22 +14,7 @@ extract_prism_normals <-
       dplyr::group_by(month) %>%
       dplyr::summarise(`days` = mean(n))
 
-    # If you want to loan all 12 months, then you can use this as the first line rather than ("prism_extraction <- list(prism_7) %>%") below.
-    # prism_extraction <- list(prism_1,
-    #      prism_2,
-    #      prism_3,
-    #      prism_4,
-    #      prism_5,
-    #      prism_6,
-    #      prism_7,
-    #      prism_8,
-    #      prism_9,
-    #      prism_10,
-    #      prism_11,
-    #      prism_12) %>%
-
-    # Here, to save some time for the extraction, we limit to just the month of July. If you want to run the full 12 months,
-    # then the function can be altered like above.
+    # Here, we limit to just the month of July.
     suppressWarnings(prism_extraction <- list(prism_7) %>%
       dplyr::bind_rows() %>%
       dplyr::arrange(element, month) %>%
