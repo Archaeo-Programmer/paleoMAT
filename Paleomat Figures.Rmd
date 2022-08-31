@@ -82,7 +82,7 @@ fossil.locs <-
 
 # Get the PRISM modern July temperature dataset.
 temp.raster <-
-  raster::raster("./vignettes/data/raw_data/temp.raster.tif")
+  raster::raster("./vignettes/data/spatial/temp.raster.tif")
 
 # Create a bounding box for the upper united states southwest
 bb <-

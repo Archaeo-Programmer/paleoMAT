@@ -124,7 +124,7 @@ if (!file.exists(here::here("vignettes/data/MPCT_metadata_counts_final.rds"))) {
   # Keep only modern sites in the continental United States.
   # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of the continental United States.
   states <-
-    rgdal::readOGR("vignettes/data/raw_data/statesp010g/statesp010g.shp",
+    rgdal::readOGR("vignettes/data/spatial/statesp010g/statesp010g.shp",
                    layer = 'statesp010g')
   
   # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
@@ -172,10 +172,10 @@ MPCT_metadata_counts_final <-
 
 
 # Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States.
-if (!file.exists(here::here("vignettes/data/raw_data/west_in_states.shp"))) {
+if (!file.exists(here::here("vignettes/data/spatial/west_in_states.shp"))) {
   # Read in all the western shapefiles.
   temp <-
-    list.files(path = "vignettes/data/raw_data/Williams and Shuman 2008 Supplementary",
+    list.files(path = "vignettes/data/spatial/Williams and Shuman 2008 Supplementary",
                pattern = "*WEST.shp$",
                full.names = TRUE)
   
@@ -187,7 +187,7 @@ if (!file.exists(here::here("vignettes/data/raw_data/west_in_states.shp"))) {
     "*WEST.shp$",
     "",
     list.files(
-      "vignettes/data/raw_data/Williams and Shuman 2008 Supplementary",
+      "vignettes/data/spatial/Williams and Shuman 2008 Supplementary",
       pattern = "*WEST.shp$",
       full.names = FALSE
     ),
@@ -200,13 +200,13 @@ if (!file.exists(here::here("vignettes/data/raw_data/west_in_states.shp"))) {
   west_in_states <- all_west
   
   sf::write_sf(west_in_states,
-           dsn = "vignettes/data/raw_data/",
+           dsn = "vignettes/data/spatial/",
            layer = 'west_in_states',
            driver = "ESRI Shapefile")
   
 }
 west_in_states <-
-  sf::read_sf("vignettes/data/raw_data/west_in_states.shp")
+  sf::read_sf("vignettes/data/spatial/west_in_states.shp")
 
 ```
 
@@ -796,7 +796,7 @@ fos_90 <-
 
 # Get the PRISM modern July temperature dataset.
 temp.raster <-
-  raster::raster("./vignettes/data/raw_data/temp.raster.tif")
+  raster::raster("./vignettes/data/spatial/temp.raster.tif")
 
 # Extract the modern mean temperature at each fossil pollen site, and then calculate the anomalies.
 if (!file.exists(here::here("vignettes/data/final_paleomat_dataset3.rds"))) {
