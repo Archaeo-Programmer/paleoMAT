@@ -8,7 +8,7 @@
 An object of class \code{tibble}.
 }
 \source{
-\urlhttps://www.neotomadb.org/}
+\url{https://www.neotomadb.org/}
 }
 \usage{
 MPCT_proportions

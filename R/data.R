@@ -29,5 +29,5 @@
 #' A `tibble` containing proportional modern pollen for western United States.
 #'
 #' @format An object of class `tibble`.
-#' @source \urlhttps://www.neotomadb.org/}
+#' @source \url{https://www.neotomadb.org/}
 "MPCT_proportions"
