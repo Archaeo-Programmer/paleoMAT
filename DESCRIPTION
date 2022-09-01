@@ -62,7 +62,8 @@ Imports:
     ggh4x,
     usmap,
     shadowtext,
-    knitr
+    knitr,
+    data.table
 LazyData: TRUE
 Suggests: testthat
 Encoding: UTF-8

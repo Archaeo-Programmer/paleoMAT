@@ -1,28 +1,25 @@
 ---
-title: "Upland United States Southwest Pollen-based Climate Reconstruction"
+html_document:
+  toc: yes
+  toc_depth: 2
+  toc_float: yes
+  number_sections: no
+  code_folding: hide
 author: "Andrew Gillreath-Brown"
-mainfont: Calibri
+date: "September 1, 2022"
 output:
   html_document:
-  code_folding: show
-keep_md: yes
-number_sections: yes
-theme: sandstone
-toc: yes
-toc_depth: 3
-toc_float: yes
-pdf_document:
-  toc: yes
-toc_depth: '3'
-always_allow_html: yes
+    df_print: paged
+title: "Upland United States Southwest Pollen-based Climate Reconstruction"
+mainfont: Calibri
 editor_options:
   chunk_output_type: console
+keep_md: yes
 ---
 
 ```{r setup, include=FALSE, results='hide'}
 
-knitr::opts_chunk$set(echo = TRUE,
-                      cache = TRUE)
+knitr::opts_chunk$set(echo = TRUE)
 
 # devtools::install()
 # devtools::load_all()
@@ -37,7 +34,7 @@ Pollen data can be used to do paleo-temperature reconstructions. However, this t
 This program allows you to reconstruct the climate for multiple locations across the southwestern United States. In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008), so that there will be columns of taxa with counts and associated metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too. Here, we use the Neotoma package, version 1.7.4.
 
 # Get fossil, modern, and coretop pollen data.
-```{r function_model, echo = FALSE, cache=TRUE, message=FALSE, warning=FALSE}
+```{r function_model, cache=TRUE, message=FALSE, warning=FALSE}
 
 # Use gpids to get the United States and Canada (or their geopolitical units) in North America. Then, get the datasets for the pollen data from each of the gpids.
 
@@ -62,9 +59,7 @@ if (!file.exists(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.
 MP_metadata_counts <-
   readr::read_rds(here::here("vignettes/data/pollen_downloads/MP_metadata_counts.rds"))
 
-if (!file.exists(here::here(
-  "vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"
-))) {
+if (!file.exists(here::here("vignettes/data/pollen_downloads/NAfossil_metadata_counts.rds"))) {
   NAfossil_metadata_counts <-
     paleomat::get_fossil_pollen(gpid = NAID) %T>%
     readr::write_rds(here::here(
@@ -82,7 +77,7 @@ NAfossil_metadata_counts <-
 
 ## Modern Pollen Data from "Core tops" of the Fossil Pollen Dataset in Neotoma
 
-```{r load_modernPollenFromFossil, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r load_modernPollenFromFossil, message=FALSE, warning=FALSE, results='hide'}
 
 # This was originally used to pull the core top data; however, the SSL certificate has now expired. The data was saved and can be loaded from the .rds file.
 # coreTops <-
@@ -112,7 +107,7 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples
 
 ## Combine Core Top and Modern Pollen Data for Continental United States
 
-```{r Combine_CT_MP, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r Combine_CT_MP, message=FALSE, warning=FALSE, results='hide'}
 
 #Combine the modern and core top data, then keep only sites that fall within the continental United states
 if (!file.exists(here::here(
@@ -187,12 +182,12 @@ if (!file.exists(here::here("vignettes/data/spatial/west_in_states.shp"))) {
   west_in_states <- paleomat::extract_WS_pollen_ranges()
 }
 west_in_states <-
-  sf::read_sf("vignettes/data/spatial/west_in_states.shp")
+  sf::read_sf(here::here("vignettes/data/spatial/west_in_states.shp"))
 
 ```
 
 ## Remove Coretops data from the fossil pollen dataset
-```{r removeCT, echo = FALSE, message=FALSE, warning=FALSE, results='hide'}
+```{r removeCT, message=FALSE, warning=FALSE, results='hide'}
 
 # Remove the core tops from the fossil pollen dataset, and then limit fossil pollen sites to just the southwestern United States.
 if (!file.exists(here::here(
@@ -246,8 +241,7 @@ if (!file.exists(here::here("data/fossil_west_post5500.rda"))) {
   
   save(fossil_west_post5500, file = "data/fossil_west_post5500.rda")
 }
-fossil_west_post5500 <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_west_post5500.rds"))
+fossil_west_post5500 <- paleomat::fossil_west_post5500
 
 
 # Cleaning up the fossil dataset.
@@ -281,7 +275,7 @@ fossil_final <-
 
 The first step is to get the locations of the Modern Pollen samples. Next, we use a PRISM climate extraction script, which is adapted from [Bocinsky et al. (2016)](https://github.com/bocinsky/Bocinsky_et_al_2016/blob/master/R/Bocinsky_ET_AL_2016_PRISM_EXTRACTOR.R).
 
-```{r extract_prism_normals, echo = FALSE, warning=FALSE}
+```{r extract_prism_normals, warning=FALSE}
 
 #Load prism data. Note: This is only if having trouble installing/loading paleomat package.
 #filenames <- list.files("data", pattern="*.rda", full.names=TRUE)
@@ -322,7 +316,7 @@ MPCT_climate_final <-
 ```
 
 ## Finalize Modern and Fossil Datasets
-```{r finalize-datasets, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r finalize-datasets, cache=TRUE, results='asis', warning=FALSE}
 
 # Modern Dataset
 
@@ -346,8 +340,7 @@ if (!file.exists(here::here("data/MPCT_proportions.rda"))) {
   
   save(MPCT_proportions, file = "data/MPCT_proportions.rda")
 }
-MPCT_proportions <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_proportions.rds"))
+MPCT_proportions <- paleomat::MPCT_proportions
 
 # Put the modern pollen data into a dataframe and make the sample.id as the row names.
 spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>%
@@ -383,8 +376,7 @@ if (!file.exists(here::here("data/fossil_pollen.rda"))) {
   
   save(fossil_pollen, file = "data/fossil_pollen.rda")
 }
-fossil_pollen <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
+fossil_pollen <- paleomat::fossil_pollen
 
 ```
 
@@ -394,7 +386,7 @@ Here, we use several transfer function and reconstruction diagnostics, such as s
 
 ## Squared-residual Length
 
-```{r squared_residual_length, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r squared_residual_length, cache=TRUE, results='asis', warning=FALSE}
 
 # Step 1: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
 if (!file.exists(here::here(
@@ -484,7 +476,7 @@ fos2 <-
 
 ## randomTF Testing
 
-```{r randomTF, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r randomTF, cache=TRUE, results='asis', warning=FALSE}
 
 # Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance.
 if (!file.exists(here::here(
@@ -548,7 +540,7 @@ fos3_90 <- fos %>%
 
 ## MAT Transfer Function and Prediction
 
-```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r MAT_transfer_prediction, cache=TRUE, results='asis', warning=FALSE}
 
 # Step 3: Run MAT and do prediction/reconstruction.
 
@@ -669,7 +661,7 @@ mat_prediction_4 <-
 
 ## No Analog Threshold (or Minimum Dissimilarity)
 
-```{r MAT_transfer_prediction, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r no_analog, cache=TRUE, results='asis', warning=FALSE}
 
 
 # Step 4: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
@@ -849,11 +841,11 @@ fos_90 <-
 
 # Anomaly Calculation
 
-```{r anomaly_calculation, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
+```{r anomaly_calculation, cache=TRUE, results='asis', warning=FALSE}
 
 # Get the PRISM modern July temperature dataset.
 temp.raster <-
-  raster::raster("./vignettes/data/spatial/temp.raster.tif")
+  raster::raster(here::here("vignettes/data/spatial/temp.raster.tif"))
 
 # Extract the modern mean temperature at each fossil pollen site, and then calculate the anomalies.
 if (!file.exists(
