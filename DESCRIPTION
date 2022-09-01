@@ -63,14 +63,10 @@ Imports:
     usmap,
     shadowtext,
     knitr
-Suggests:
-    devtools,
-    rmarkdown,
-    testthat (>= 3.0.0),
-    knitr
 LazyData: TRUE
 Suggests: testthat
 Encoding: UTF-8
 URL: https://github.com/Archaeo-Programmer/paleomat
 BugReports: https://github.com/Archaeo-Programmer/paleomat/issues
 RoxygenNote: 7.2.1
+Roxygen: list(markdown = TRUE)
