@@ -239,28 +239,16 @@ fossil_metadata_counts_final2 <-
 
 
 # Limit samples to post 5500 BP.
-if (!file.exists(
-  here::here(
-    "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
-  )
-)) {
-  fossil_final_west_metadata_post5500BP <-
+if (!file.exists(here::here("data/fossil_west_post5500.rda"))) {
+  fossil_west_post5500 <-
     fossil_metadata_counts_final2 %>%
     dplyr::filter(age <= 5500)
   
-  readr::write_rds(
-    fossil_final_west_metadata_post5500BP,
-    here::here(
-      "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
-    )
-  )
+  save(fossil_west_post5500, file = "data/fossil_west_post5500.rda")
 }
-fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(
-    here::here(
-      "vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
-    )
-  )
+fossil_west_post5500 <-
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_west_post5500.rds"))
+
 
 # Cleaning up the fossil dataset.
 if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))) {
@@ -279,7 +267,7 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))) 
     sf::st_as_sf() %>%
     dplyr::select(dataset.id, pollen = pollen.counts) %>%
     # Add column that shows the total number of samples for each core.
-    mutate(n_samples = map_dbl(pollen, nrow))
+    mutate(n_samples = purrr::map_dbl(pollen, nrow))
   
   readr::write_rds(fossil_final,
                    here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))
@@ -333,28 +321,33 @@ MPCT_climate_final <-
 
 ```
 
-
 ## Finalize Modern and Fossil Datasets
 ```{r finalize-datasets, cache=TRUE, results='asis', echo=FALSE, warning=FALSE}
 
 # Modern Dataset
 
 # Clean up modern pollen and climate dataframe to prepare for transfer function and reconstruction diagnostics. Here, we transform the pollen data into proportions.
+if (!file.exists(here::here("data/MPCT_proportions.rda"))) {
+  MPCT_proportions <-
+    MPCT_climate_final %>%
+    dplyr::mutate(
+      pollen =
+        purrr::map(pollen,
+                   function(x) {
+                     x / rowSums(x)
+                   }),
+      climate =
+        purrr::map(climate,
+                   function(x) {
+                     x %>%
+                       dplyr::select(month, tavg)
+                   })
+    )
+  
+  save(MPCT_proportions, file = "data/MPCT_proportions.rda")
+}
 MPCT_proportions <-
-  MPCT_climate_final %>%
-  dplyr::mutate(
-    pollen =
-      purrr::map(pollen,
-                 function(x) {
-                   x / rowSums(x)
-                 }),
-    climate =
-      purrr::map(climate,
-                 function(x) {
-                   x %>%
-                     dplyr::select(month, tavg)
-                 })
-  )
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_proportions.rds"))
 
 # Put the modern pollen data into a dataframe and make the sample.id as the row names.
 spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>%
@@ -362,12 +355,10 @@ spp <- dplyr::bind_rows(MPCT_proportions$pollen) %>%
   tibble::column_to_rownames("sample.id")
 
 # Put the modern climate data into a dataframe and make the sample.id as the row names.
-climate_full <- MPCT_proportions %>%
+env <- MPCT_proportions %>%
   dplyr::select(sample.id, climate) %>%
-  tidyr::unnest(climate)
-
-# Pull just the climate (tavg) values as a vector.
-env <- climate_full %>%
+  tidyr::unnest(climate) %>%
+  # Pull just the climate (tavg) values as a vector.
   dplyr::pull(tavg)
 
 # Turn climate value (tavg) vector into a named vector with the sample ids.
@@ -376,7 +367,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 
 # Fossil Dataset
 
-if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))) {
+if (!file.exists(here::here("data/fossil_pollen.rda"))) {
   # Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
   fossil_final$pollen <-
     purrr::map(fossil_final$pollen, function(x)
@@ -390,14 +381,12 @@ if (!file.exists(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds")))
                                  x / rowSums(x)
                                }))
   
-  readr::write_rds(fossil_pollen,
-                   here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
+  save(fossil_pollen, file = "data/fossil_pollen.rda")
 }
 fossil_pollen <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_pollen.rds"))
 
 ```
-
 
 # Transfer Function and Reconstruction Diagnostics and Reconstruction
 
@@ -447,7 +436,7 @@ rlen_removal <-
 # Results
 rlen_full_results1 <- rlen_results %>%
   dplyr::mutate(sample.id = as.integer(levels(sample.id))) %>%
-  dplyr::filter(sample.id %in% fossil_final_west_metadata_post5500BP$sample.id)
+  dplyr::filter(sample.id %in% fossil_west_post5500$sample.id)
 
 if (!file.exists(here::here(
   "vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"
@@ -482,7 +471,7 @@ if (!file.exists(here::here("vignettes/data/diagnostics_reconstruction/fos2.rds"
   # Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
   fos2 <- fos %>%
     dplyr::select(-n_samples) %>%
-    mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>%
+    mutate(rows = purrr::map_dbl(pollen, ~ nrow(.x))) %>%
     filter(!rows %in% c(0, 1))
   
   readr::write_rds(fos2,
@@ -692,7 +681,7 @@ if (!file.exists(here::here(
     dplyr::filter(!sample.id %in% rlen_removal) %>%
     dplyr::left_join(
       .,
-      fossil_final_west_metadata_post5500BP %>%
+      fossil_west_post5500 %>%
         dplyr::select(dataset.id, site.id, sample.id),
       by = "sample.id"
     ) %>%
@@ -708,9 +697,9 @@ if (!file.exists(here::here(
     dplyr::filter(ind %in% pre_minDC_samples) %>%
     dplyr::left_join(
       .,
-      fossil_final_west_metadata_post5500BP %>%
+      fossil_west_post5500 %>%
         dplyr::select(sample.id, dataset.id, site.id, age) %>%
-        dplyr::mutate(age = BPtoBCAD(age)) %>%
+        dplyr::mutate(age = paleomat::BPtoBCAD(age)) %>%
         sf::st_drop_geometry(),
       by = c("ind"  = "sample.id")
     )
@@ -770,8 +759,8 @@ minDC_summary <-
 
 # Need to update age models for some fossil pollen sites that have not been updated with the Bacon age models. Here, we read in the updated age models from individual .csv files.
 updated_age_models <-
-  list.files("./vignettes/data/updated_age_models", full.names = TRUE) %>%
-  map_dfr(read.csv)
+  list.files("vignettes/data/updated_age_models", full.names = TRUE) %>%
+  purrr::map_dfr(read.csv)
 
 # Clean up fossil pollen data to create the final dataset of samples.
 if (!file.exists(here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))) {

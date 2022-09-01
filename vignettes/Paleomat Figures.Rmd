@@ -70,7 +70,7 @@ ggplot2::ggplot() +
 fossil.locs <-
   readr::read_rds(
     here::here(
-      "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+      "data/fossil_west_post5500.rds"
     )
   ) %>%
   tidyr::extract(geometry, c('long', 'lat'), '\\((.*), (.*)\\)', convert = TRUE) %>%
@@ -823,8 +823,8 @@ knitr::kable(table1,
 
 ```{r supptable1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
 
-fossil_final_west_metadata_post5500BP <-
-  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds")) %>%
+fossil_west_post5500 <-
+  readr::read_rds(here::here("data/fossil_west_post5500.rds")) %>%
   dplyr::ungroup %>%
   dplyr::select(site.name, site.id, dataset.id) %>% 
   dplyr::filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
@@ -851,7 +851,7 @@ summary_table <- Threebest %>%
 summary_table_final <-
   readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds")) %>%
   dplyr::left_join(.,
-                   fossil_final_west_metadata_post5500BP,
+                   fossil_west_post5500,
                    by = "dataset.id") %>%
   dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>%
   dplyr::left_join(., summary_table, by = "dataset.id") %>%
@@ -919,7 +919,7 @@ knitr::kable(paleomat_reconstruction,
 ff <-
   readr::read_rds(
     here::here(
-      "./vignettes/data/pollen_cleaned/fossil_final_west_metadata_post5500BP.rds"
+      "data/fossil_west_post5500.rds"
     )
   ) %>%
   filter(!is.na(age) & age <= 5500) %>%
