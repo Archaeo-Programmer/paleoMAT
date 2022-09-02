@@ -1,7 +1,7 @@
 ---
-title: "Paleomat Figures"
+title: "paleoMAT Figures and Tables for 'A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000'"
 author: "Andrew Gillreath-Brown"
-date: "September 1, 2022"
+date: "`r format(Sys.time(), '%d %B %Y')`"
 html_document:
   toc: yes
   toc_depth: 2
@@ -29,7 +29,7 @@ library(ggplot2)
 
 # Figures
 
-```{r fig1, fig.cap="Figure 1. Modern pollen samples used in this study from the Neotoma Paleoecological Database.", echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all', fig.height = 9.83, fig.width = 16.31}
+```{r fig1, fig.cap="Figure 1. Modern pollen samples used in this study from the Neotoma Paleoecological Database.", echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, results = 'hide',fig.keep = 'all', fig.height = 7.73, fig.align = "left"}
 
 MPCT_climate_final <-
   readr::read_rds(here::here("vignettes/data/pollen_cleaned/MPCT_climate_final.rds"))

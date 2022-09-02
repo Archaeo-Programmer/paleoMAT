@@ -30,7 +30,8 @@ Description: This R package repository is to accompany the submission for Gillre
 License: MIT + file LICENSE
 Depends: 
     magrittr,
-    R (>= 3.5.0)
+    R (>= 3.5.0),
+    vegan
 Imports: 
     rebus.numbers,
     leaflet,

@@ -1,7 +1,7 @@
 ---
 author: "Andrew Gillreath-Brown"
 date: "`r format(Sys.time(), '%d %B %Y')`"
-title: "paleomat: A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000"
+title: "paleoMAT: A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000"
 html_document:
   toc: yes
   toc_depth: 2
@@ -21,6 +21,7 @@ keep_md: yes
 
 knitr::opts_chunk$set(echo = TRUE)
 
+# If you have cloned the repository, you can also use devtools::install() to install the package.
 # devtools::install()
 # devtools::load_all()
 library(paleomat)
@@ -33,7 +34,7 @@ Pollen data can be used to do paleo-temperature reconstructions. However, this t
 
 This program allows you to reconstruct the climate for multiple locations across the southwestern United States. In the program below, you can download fossil and modern data from the [Neotoma Paleoecology Database](https://www.neotomadb.org/), then compile the data using Williams and Shuman (2008), so that there will be columns of taxa with counts and associated metadata attached to each of those records/rows. Some data in Neotoma overlaps with what was used by Whitmore et al. (2005) in the North American Modern Pollen Database, which can be obtained from one of two sources [the Laboratory for Paleoclimatology and Climatology](http://www.lpc.uottawa.ca/data/modern/) at the University of Ottawa and [the Williams Paleoecology Lab](http://www.geography.wisc.edu/faculty/williams/lab/Downloads.html) at the University of Wisconsin. However, data from the North American Pollen Database is constantly being uploaded to Neotoma, and in some cases corrections are being made to the data too. Here, we use the Neotoma package, version 1.7.4.
 
-**Note**: While running the code below, if you have any trouble with `paleomat` datasets (e.g., `paleomat::coreTops`), then you can use `here::here` with 'data' as the root folder, then the variable name with .rda, such as `load(file = here::here("data/coreTops.rda"))`, to load the dataset. Additionally, we use `if` statement in a number of places throughout the markdown to save time on items that may take a while to run. However, if you have cloned the repository, then you can run the interior contents of those if statements to overwrite variables.
+**Note**: While running the code below, if you have trouble with `paleomat` datasets (e.g., `paleomat::coreTops`), then you can use `here::here` with `data` as the root folder, then the variable name with `.rda`, such as `load(file = here::here("data/coreTops.rda"))`, to load a dataset. Additionally, we use `if` statements in a number of places throughout the markdown to save time, as some items can take a while to run. However, if you have cloned the repository, then you can run the interior contents of those if statements to overwrite the variables.
 
 # Download Fossil and Modern Pollen Data
 
@@ -79,7 +80,7 @@ NAfossil_metadata_counts <- paleomat::NAfossil_metadata_counts
 
 The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples for the United States, Canada, and Mexico, representing `r ncol(MP_metadata_counts %>% dplyr::select(ABIES:tail(names(.), 1)))` different pollen taxa.
 
-# Data Cleaning for Fossil and Modern Pollen Data and Climate Data
+# Data Cleaning for Fossil and Modern Pollen and Climate Data
 
 ## Load "Core Tops" Data from the Fossil Pollen Dataset
 
@@ -153,7 +154,7 @@ continental.states_union <- sf::st_union(continental.states)
 # Do an intersection and keep only the sites that are within the continental United States.
 buffer <- sf::st_buffer(continental.states_union, 0)
 MPCT_metadata_counts_final <-
-  sf::st_intersection(MPCT_metadata_counts, buffer)
+  suppressWarnings(sf::st_intersection(MPCT_metadata_counts, buffer))
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(
@@ -196,7 +197,7 @@ bb <-
 
 # Do an intersection and keep only the sites that are within the southwestern United States, and remove any samples that do not have an age.
 fossil_metadata_counts_final2 <-
-  sf::st_intersection(fossil_metadata_counts, bb) %>%
+  suppressWarnings(sf::st_intersection(fossil_metadata_counts, bb)) %>%
   dplyr::filter(!is.na(age))
 
 # If you need to write the data to file, then you can uncomment and run the following.
@@ -243,7 +244,7 @@ fossil_final <-
   sf::st_as_sf() %>%
   dplyr::select(dataset.id, pollen = pollen.counts) %>%
   # Add column that shows the total number of samples for each core.
-  mutate(n_samples = purrr::map_dbl(pollen, nrow))
+  dplyr::mutate(n_samples = purrr::map_dbl(pollen, nrow))
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(fossil_final,
@@ -284,7 +285,7 @@ MPCT_climate <-
 
 # Do an intersection and keep only the sites that are within the western continental United States.
 MPCT_climate_final <-
-  sf::st_intersection(MPCT_climate, paleomat::west_in_states) %>%
+  suppressWarnings(sf::st_intersection(MPCT_climate, paleomat::west_in_states)) %>%
   dplyr::select(-FID)
 
 # If you need to write the data to file, then you can uncomment and run the following.
@@ -295,7 +296,7 @@ MPCT_climate_final <-
 
 ```
 
-## Finalize Modern and Fossil Datasets
+## Finalize Modern and Fossil Pollen Datasets
 ```{r finalize-datasets, cache = TRUE, results = 'asis', warning = FALSE}
 
 # Modern Dataset
@@ -345,7 +346,7 @@ names(env) <- c(MPCT_proportions$sample.id)
 # Fossil Dataset
 
 # If you do not want to run the code for creating fossil_pollen, then you can uncomment and run the following line:
-#fossil_pollen <- paleomat::fossil_pollen
+# fossil_pollen <- paleomat::fossil_pollen
 
 # Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
 fossil_final$pollen <-
@@ -371,9 +372,9 @@ Here, we use several transfer function and reconstruction diagnostics, such as s
 
 ## Squared-residual Length
 
-```{r squared_residual_length, cache = TRUE, results = 'asis', warning = FALSE}
+**Step 1**: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
 
-# Step 1: We use squared residual length. Here, we return the residual length for each sample, and the 0.95 quantile.
+```{r squared_residual_length, cache = TRUE, results = 'asis', warning = FALSE}
 
 # If you do not want to run the code for creating rlen_results, then you can uncomment and run the following line:
 # rlen_results <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/rlen_results.rds"))
@@ -381,8 +382,8 @@ Here, we use several transfer function and reconstruction diagnostics, such as s
 rlen_results <-
   purrr::map(
     fossil_pollen$pollen,
-    .f = function(x) {
-      rlen <- analogue::residLen(spp, env, x, method = "cca")
+    .f = function(z) {
+      rlen <- analogue::residLen(spp, env, z, method = "cca")
       
       list(res_lengths = stack(rlen$passive),
            quantile_95 = as.numeric(quantile(rlen$train, probs = 0.95)))
@@ -439,8 +440,8 @@ fos$pollen <-
 # Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
 fos2 <- fos %>%
   dplyr::select(-n_samples) %>%
-  mutate(rows = purrr::map_dbl(pollen, ~ nrow(.x))) %>%
-  filter(!rows %in% c(0, 1))
+  dplyr::mutate(rows = purrr::map_dbl(pollen, ~ nrow(.x))) %>%
+  dplyr::filter(!rows %in% c(0, 1))
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(fos2,
@@ -450,9 +451,10 @@ fos2 <- fos %>%
 
 ## randomTF Testing
 
+**Step 2**: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance.
+
 ```{r randomTF, cache = TRUE, results = 'asis', warning = FALSE}
 
-# Step 2: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance.
 # This line takes approximately 40 minutes to run (depending on your system). If you would like to re-run, then you can run the interior contents of the if statement. 
 if (!file.exists(here::here(
   "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
@@ -513,9 +515,9 @@ fos3_90 <- fos %>%
 
 ## MAT Transfer Function and Prediction
 
-```{r MAT_transfer_prediction, cache = TRUE, results = 'asis', warning = FALSE}
+**Step 3**: Run MAT, then do prediction/reconstruction.
 
-# Step 3: Run MAT and do prediction/reconstruction.
+```{r MAT_transfer_prediction, cache = TRUE, results = 'asis', warning = FALSE}
 
 # Remove any columns in the modern pollen dataset that have 0 for the pollen taxa.
 pollen_input <- spp %>%
@@ -568,7 +570,7 @@ rlgh.mat2 <-
 # rlgh.mat2b4 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"))
 
 
-# Create the transfer function using mat from the analogue package.
+# Create the transfer function using mat from the analogue package. Bootstrapping takes approximately 5-10 minutes (depending on your system).
 rlgh.mat2b4 <-
   analogue:::predict.mat(
     object = swap.mat2,
@@ -614,10 +616,9 @@ mat_prediction_4 <-
 
 ## No Analog Threshold (or Minimum Dissimilarity)
 
+**Step 4**: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
+
 ```{r no_analog, cache = TRUE, results = 'asis', warning = FALSE}
-
-
-# Step 4: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
 
 # If you do not want to run the code for creating minDC_full_results, then you can uncomment and run the following line:
 # minDC_full_results <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"))
@@ -698,9 +699,9 @@ minDC_summary <- list(
 
 ## Update Age Models
 
-```{r update_age_models, cache = TRUE, results = 'asis', warning = FALSE}
+Clean up fossil pollen data to create the final dataset of samples.
 
-# Clean up fossil pollen data to create the final dataset of samples.
+```{r update_age_models, cache = TRUE, results = 'asis', warning = FALSE}
 
 # If you do not want to run the code for creating fos_90, then you can uncomment and run the following line:
 # fos_90 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))
@@ -709,7 +710,7 @@ fos_90 <- mat_prediction_cleaned %>%
   dplyr::mutate(sample.id = as.integer(sample.id)) %>%
   dplyr::filter(sample.id %in% final_approved_samples) %>%
   dplyr::left_join(.,
-                   fossil_metadata_counts_final %>%
+                   fossil_metadata_counts_final2 %>%
                      dplyr::select(dataset.id:pub_year),
                    by = "sample.id") %>%
   dplyr::filter(age <= 5500) %>%
@@ -723,66 +724,6 @@ fos_90 <- mat_prediction_cleaned %>%
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(fos_90,
 #                  here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))
-
-
-
-
-
-
-
-# COMBO #3 - ONLY NO ANALOGUE REMOVAL.
-
-# fos <- fossil_pollen
-# fos2 <- fos %>% 
-#   dplyr::select(-n_samples) %>% 
-#   mutate(rows = map_dbl(pollen, ~ nrow(.x))) %>% 
-#   filter(!rows %in% c(0, 1))
-# 
-# pollen_input <- spp %>% 
-#   dplyr::select(which(colSums(.) > 0))
-# 
-# fossil_input <- do.call(rbind, unname(fos2$pollen)) %>% 
-#   dplyr::select(which(colSums(.) > 0))
-# 
-# keep_cols <- colnames(pollen_input[colSums(pollen_input) > 0])
-# keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
-# 
-# pollen_input <- pollen_input[, keep_cols]
-# fossil_input <- fossil_input[, keep_cols]
-# 
-# 
-# swap.mat2 <- mat(pollen_input, env, method = "SQchord")
-# 
-# rlgh.mat2 <- predict(object = swap.mat2, newdata = fossil_input)
-# 
-# mat_prediction <- as.data.frame(rlgh.mat2$predictions$model$predicted[4,]) %>%
-#   tibble::rownames_to_column("sample.id") %>%
-#   rename(value = 2)
-# 
-# rlgh.mdc <- minDC(rlgh.mat2)
-# 
-# remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
-#   tibble::rownames_to_column("sample.id") %>%
-#   rename(dissimilarity = 2) %>%
-#   filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
-# 
-# mat_prediction_cleaned <- mat_prediction %>%
-#   filter(!sample.id %in% remove_samples$sample.id)
-# 
-# fos_90 <- mat_prediction_cleaned %>% 
-#   mutate(sample.id = as.integer(sample.id)) %>% 
-#   dplyr::left_join(., fossil_metadata_counts_final %>% 
-#   dplyr::select(dataset.id:pub_year), by = "sample.id") %>% 
-#   #dplyr::mutate(error = new_output_recont_fos3_90$SEP.boot[, "MAT"]) %>% 
-#   filter(age <= 5500) %>% 
-#   dplyr::left_join(updated_age_models, by = c("site.id", "dataset.id", "sample.id")) %>%
-#   dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-#   dplyr::select(-age.y, -age.x) %>%
-#   dplyr::mutate(age = round(age)) %>% 
-#   # filter(site.id == 246) %>% 
-#   sf::st_as_sf()
-# 
-# write.csv(fos_90, "Tim_NoAnalogue_Only_1best_analogs.csv", row.names = FALSE)
 
 ```
 
@@ -837,7 +778,9 @@ site.preds.unlisted.anom <- site.preds.unlisted %>%
 #   site.preds.unlisted.anom,
 #   here::here("vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds"))
 
+knitr::kable(site.preds.unlisted.anom,
+             caption = "Reconstruction results from MAT with calculated anomalies, RMSEP, leave-one-out errors, and metadata.")
+
 ```
 
 For figures and tables in the journal article, please see "Paleomat Figures.Rmd".
-
