@@ -3,7 +3,7 @@
 \docType{data}
 \name{fossil_pollen}
 \alias{fossil_pollen}
-\title{Fossil Pollen dataset for SWUS across all time.}
+\title{Fossil pollen dataset for SWUS across all time.}
 \format{
 An object of class \code{tibble}.
 }

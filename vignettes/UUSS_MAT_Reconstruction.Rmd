@@ -55,7 +55,8 @@ if (!file.exists(here::here("data/MP_metadata_counts.rda"))) {
   MP_metadata_counts <-
     paleomat::get_modern_pollen(gpid = NAID)
   
-  save(MP_metadata_counts, file = here::here("data/MP_metadata_counts.rda"))
+  save(MP_metadata_counts,
+       file = here::here("data/MP_metadata_counts.rda"))
 }
 MP_metadata_counts <- paleomat::MP_metadata_counts
 
@@ -63,9 +64,8 @@ if (!file.exists(here::here("data/NAfossil_metadata_counts.rda"))) {
   NAfossil_metadata_counts <-
     paleomat::get_fossil_pollen(gpid = NAID)
   
-  save(NAfossil_metadata_counts, file = here::here(
-      "data/NAfossil_metadata_counts.rda"
-    ))
+  save(NAfossil_metadata_counts,
+       file = here::here("data/NAfossil_metadata_counts.rda"))
 }
 NAfossil_metadata_counts <- paleomat::NAfossil_metadata_counts
 

@@ -3,7 +3,7 @@
 \docType{data}
 \name{MPCT_proportions}
 \alias{MPCT_proportions}
-\title{Modern Pollen dataset for western United States.}
+\title{Modern pollen dataset for western United States.}
 \format{
 An object of class \code{tibble}.
 }

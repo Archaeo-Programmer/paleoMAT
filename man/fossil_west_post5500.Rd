@@ -3,7 +3,7 @@
 \docType{data}
 \name{fossil_west_post5500}
 \alias{fossil_west_post5500}
-\title{Fossil Pollen dataset for SWUS for post 5500 BP.}
+\title{Fossil pollen dataset for SWUS for post 5500 BP.}
 \format{
 An object of class \code{tibble}.
 }
@@ -14,6 +14,6 @@ An object of class \code{tibble}.
 fossil_west_post5500
 }
 \description{
-Fossil Pollen dataset for SWUS for post 5500 BP and that have ages for each sample.
+A \code{tibble} containing the fossil pollen dataset for SWUS for post 5500 BP and that have ages for each sample.
 }
 \keyword{datasets}

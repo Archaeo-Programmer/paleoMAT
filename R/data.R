@@ -8,7 +8,23 @@
 #' @source \url{https://prism.oregonstate.edu/}
 "prism_7"
 
-#' Fossil Pollen dataset for SWUS across all time.
+#' Fossil Pollen dataset for United States, Canada, and Mexico.
+#'
+#' A `tibble` containing the fossil pollen dataset for United States, Canada, and Mexico downloaded from Neotoma using the neotoma r package.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.neotomadb.org/}
+"NAfossil_metadata_counts"
+
+#' Modern Pollen dataset for United States, Canada, and Mexico.
+#'
+#' A `tibble` containing the modern pollen dataset for United States, Canada, and Mexico downloaded from Neotoma using the neotoma r package.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.neotomadb.org/}
+"MP_metadata_counts"
+
+#' Fossil pollen dataset for SWUS across all time.
 #'
 #' A `tibble` containing proportional fossil pollen for the SWUS.
 #'
@@ -16,15 +32,15 @@
 #' @source \url{https://www.neotomadb.org/}
 "fossil_pollen"
 
-#' Fossil Pollen dataset for SWUS for post 5500 BP.
+#' Fossil pollen dataset for SWUS for post 5500 BP.
 #'
-#' Fossil Pollen dataset for SWUS for post 5500 BP and that have ages for each sample.
+#' A `tibble` containing the fossil pollen dataset for SWUS for post 5500 BP and that have ages for each sample.
 #'
 #' @format An object of class `tibble`.
 #' @source \url{https://www.neotomadb.org/}
 "fossil_west_post5500"
 
-#' Modern Pollen dataset for western United States.
+#' Modern pollen dataset for western United States.
 #'
 #' A `tibble` containing proportional modern pollen for western United States.
 #'
