@@ -31,3 +31,53 @@
 #' @format An object of class `tibble`.
 #' @source \url{https://www.neotomadb.org/}
 "MPCT_proportions"
+
+#' Richard Alley’s (2000) Greenland ice core data.
+#'
+#' A `tibble` containing Richard Alley’s (2000) Greenland ice core data.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.ncei.noaa.gov/pub/data/paleo/icecore/greenland/summit/gisp2/isotopes/gisp2_temp_accum_alley2000.txt}
+"alley_2000"
+
+#' Kaufman et al. (2020) terrestrial composite for 30–60 °N.
+#'
+#' A `tibble` containing Kaufman et al. (2020) terrestrial composite for 30–60 °N.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.ncei.noaa.gov/access/paleo-search/study/27330}
+"kaufman_2020"
+
+#' Viau et al. (2006) North American July temperature reconstruction.
+#'
+#' A `tibble` containing Viau et al. (2006) North American July temperature reconstruction.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.ncei.noaa.gov/pub/data/paleo/pollen/recons/northamerica/viau2006namerica-temp.xls}
+"viau_2006"
+
+#' Moberg et al. (2005) Northern Hemisphere low-frequency component.
+#'
+#' A `tibble` containing Moberg et al. (2005) Northern Hemisphere low-frequency component.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.ncei.noaa.gov/pub/data/paleo/contributions_by_author/moberg2005/nhtemp-moberg2005.txt}
+"moberg_2005"
+
+#' State boundaries for USA.
+#'
+#' A `Polygons` of United States' state boundaries.
+#'
+#' @format An object of class `SpatialPolygonsDataFrame`.
+#' @source \url{https://www.sciencebase.gov/catalog/item/4f70b219e4b058caae3f8e19}
+"states"
+
+#' Pollen range for western part of the US.
+#'
+#' A `MULTIPOLYGON` of western pollen ranges.
+#'
+#' @format An object of class `sfc_MULTIPOLYGON`.
+#' @source \url{https://ars.els-cdn.com/content/image/1-s2.0-S0277379108000061-mmc1.zip}
+"west_in_states"
+
+

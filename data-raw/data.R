@@ -9,17 +9,6 @@ usethis::use_data(states,
                   overwrite = TRUE)
 
 
-
-unzip(zipfile = here::here("data-raw/ne_110m_land.zip"),
-      exdir = here::here("data-raw/ne_110m_land"))
-
-world <-
-  here::here("data-raw/ne_110m_land") %>%
-  sf::read_sf() %>%
-  sf::st_transform("EPSG:8857") %>%
-  sf::st_union()
-
-
 # Create shapefile for only the western  United States, as we will only use modern samples from the western United States.
 # Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and
 # use the maximum of all of the splits to designate the extent of the western United States.
@@ -65,4 +54,58 @@ sf::write_sf(all_west,
 
 west_in_states <- sf::read_sf(here::here("data-raw/WS/west_in_states.shp"))
 
-usethis::use_data(west_in_states)
+usethis::use_data(west_in_states,
+                  overwrite = TRUE)
+
+
+# Download Viau et al. 2006 data.
+download.file(
+  url = "https://www.ncei.noaa.gov/pub/data/paleo/pollen/recons/northamerica/viau2006namerica-temp.xls",
+  destfile = here::here("data-raw/viau2006namerica-temp.xls"))
+
+viau_2006 <- read_excel(here::here("data-raw/viau2006namerica-temp.xls"), sheet = 2) %>%
+  dplyr::select(1:4) %>%
+  dplyr::rename(time = 1, temp = 2, CI_plus = 3, CI_minus = 4) %>%
+  dplyr::mutate(time = time*100)
+
+usethis::use_data(viau_2006,
+                  overwrite = TRUE)
+
+
+# Download Moberg et al. 2005 data.
+download.file(
+  url = "https://www.ncei.noaa.gov/pub/data/paleo/contributions_by_author/moberg2005/nhtemp-moberg2005.txt",
+  destfile = here::here("data-raw/nhtemp-moberg2005.txt"))
+
+moberg_2005 <- data.table::fread(here::here("data-raw/nhtemp-moberg2005.txt"),skip = 92, header = T )[, 1:3] %>%
+  tibble::as_tibble() %>%
+  dplyr::filter(LF > -9.89 & Year <= 2000) %>%
+  dplyr::rename(date = Year)
+
+usethis::use_data(moberg_2005,
+                  overwrite = TRUE)
+
+
+# Get data from Kaufman et al. 2020. Original data downloaded from https://www.ncei.noaa.gov/access/paleo-search/study/27330.
+kaufman_2020 <-
+  read.csv(here::here("data-raw/Kaufman 2020_Figure6Data.csv")) %>%
+  tibble::as_tibble()
+
+usethis::use_data(kaufman_2020,
+                  overwrite = TRUE)
+
+
+# Get data from Alley et al. 2000.
+download.file(
+  url = "https://www.ncei.noaa.gov/pub/data/paleo/icecore/greenland/summit/gisp2/isotopes/gisp2_temp_accum_alley2000.txt",
+  destfile = here::here("data-raw/gisp2_temp_accum_alley2000.txt"))
+
+alley_2000 <-
+  data.table::fread(here::here("data-raw/gisp2_temp_accum_alley2000.txt"),skip = 61, header = F, nrows = 1632) %>%
+  dplyr::rename(Age = 1, Temperature = 2) %>%
+  tibble::as_tibble()
+
+usethis::use_data(alley_2000,
+                  overwrite = TRUE)
+
+

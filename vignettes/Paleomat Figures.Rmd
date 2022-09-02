@@ -290,7 +290,7 @@ ggplot2::ggplot() +
 
 # Greenland ice core data (used in Huckleberry 2015) from Alley 2000.
 alley2000 <-
-  read.csv(file = here::here("vignettes/data/external_datasets/gisp2_temp_accum_alley2000.csv"), header = TRUE) %>%
+  paleomat::alley_2000 %>%
   dplyr::mutate(Age = Age * 1000)  %>%
   dplyr::filter(Age <= 20000) %>%
   dplyr::mutate(Age = paleomat::BPtoBCAD(Age))
@@ -396,14 +396,7 @@ alley2000 %>%
 ```{r fig4, fig.cap="Figure 4. Low-frequency component of the Moberg et al. (2005) multi-proxy reconstruction for Northern Hemisphere for AD 133–1925. Anomaly is calculated in comparison to the 1961–1990 average.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 # Moberg et al. 2005 low-frequency reconstruction (only).
-Moberg <-
-  read.delim(here::here(
-    "vignettes/data/external_datasets/nhtemp-moberg2005.txt"),
-    header = TRUE,
-    sep = "\t",
-    dec = "."
-  ) [, 1:3] %>%
-  dplyr::filter(LF > -9.89 & date <= 2000)
+Moberg <- paleomat::moberg_2005
 
 ggplot2::ggplot(data = Moberg, aes(x = date, y = LF)) +
   geom_line(size = 2, color = "#A60F2D") +
@@ -582,11 +575,11 @@ p <- Threebest %>%
 
 anom_loess4 <- ggplot2::ggplot_build(p)$data[[2]]
 
-viau <- read.csv(here::here("vignettes/data/external_datasets/viau.csv")) %>%
+viau <- paleomat::viau_2006 %>%
   dplyr::mutate(time = paleomat::BPtoBCAD(time))
 
 kaufman_standard <-
-  read.csv(here::here("vignettes/data/external_datasets/Kaufman 2020_Figure6Data.csv")) %>%
+  paleomat::kaufman_2020 %>%
   dplyr::mutate(time = paleomat::BPtoBCAD(time_bp),
                 Series = "Kaufman et al. 2020") %>%
   dplyr::select(year = time, anom = zscore, Series) %>%

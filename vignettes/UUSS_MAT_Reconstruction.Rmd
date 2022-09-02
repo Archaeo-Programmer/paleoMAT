@@ -124,15 +124,11 @@ if (!file.exists(here::here(
     sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
   
   # Keep only modern sites in the continental United States.
-  # Read in the United States shapefile, which will be used to filter out modern pollen sites that are outside of the continental United States.
-  states <-
-    rgdal::readOGR("vignettes/data/spatial/statesp010g/statesp010g.shp",
-                   layer = 'statesp010g')
   
   # Transform the states (spatial polygons data frame) to the Coordinate Reference System (CRS) of the PRISM data.
   states <-
     sp::spTransform(
-      states,
+      paleomat::states,
       sp::CRS(
         "+proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0"
       )
@@ -178,11 +174,7 @@ MPCT_metadata_counts_final <-
 
 
 # Create shapefile for only the western  United States, as we will only use modern samples from the western United States. Here, we use the Williams and Shuman 2008 (https://doi.org/10.1016/j.quascirev.2008.01.004) eastern and western splits and use the maximum of all of the splits to designate the extent of the western United States. See extract_WS_pollen_ranges.R for more information.
-if (!file.exists(here::here("vignettes/data/spatial/west_in_states.shp"))) {
-  west_in_states <- paleomat::extract_WS_pollen_ranges()
-}
-west_in_states <-
-  sf::read_sf(here::here("vignettes/data/spatial/west_in_states.shp"))
+west_in_states <- paleomat::west_in_states
 
 ```
 
