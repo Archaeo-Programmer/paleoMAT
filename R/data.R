@@ -24,6 +24,14 @@
 #' @source \url{https://www.neotomadb.org/}
 "MP_metadata_counts"
 
+#' Core tops dataset extracted from the fossil pollen dataset.
+#'
+#' A `tibble` containing the core tops samples for United States, Canada, and Mexico downloaded from Tilia in Neotoma.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.neotomadb.org/}
+"coreTops"
+
 #' Fossil pollen dataset for SWUS across all time.
 #'
 #' A `tibble` containing proportional fossil pollen for the SWUS.
@@ -90,10 +98,24 @@
 
 #' Pollen range for western part of the US.
 #'
-#' A `MULTIPOLYGON` of western pollen ranges.
+#' A `MULTIPOLYGON` of western pollen ranges as defined by [Williams and Shuman 2008](https://doi.org/10.1016/j.quascirev.2008.01.004), which had eastern and western pollen splits.
 #'
 #' @format An object of class `sfc_MULTIPOLYGON`.
 #' @source \url{https://ars.els-cdn.com/content/image/1-s2.0-S0277379108000061-mmc1.zip}
 "west_in_states"
 
+#' Updated Bacon Age Models.
+#'
+#' A `tibble` containing updated Bacon age models for several fossil pollen sites.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.neotomadb.org/}
+"updated_age_models"
 
+#' Mean July Temperature from PRISM (1961-1990).
+#'
+#' A `raster` containing the mean July temperature for 1961-1990 from PRISM for the southwestern US.
+#'
+#' @format An object of class `RasterLayer`.
+#' @source \url{http://www.prism.oregonstate.edu/}
+"temp.raster"

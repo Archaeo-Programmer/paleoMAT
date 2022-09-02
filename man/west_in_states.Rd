@@ -14,6 +14,6 @@ An object of class \code{sfc_MULTIPOLYGON}.
 west_in_states
 }
 \description{
-A \code{MULTIPOLYGON} of western pollen ranges.
+A \code{MULTIPOLYGON} of western pollen ranges as defined by \href{https://doi.org/10.1016/j.quascirev.2008.01.004}{Williams and Shuman 2008}, which had eastern and western pollen splits.
 }
 \keyword{datasets}

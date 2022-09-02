@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(paleomat)
 require(ggh4x)
+library(ggplot2)
 
 ```
 
@@ -86,8 +87,7 @@ fossil.locs <-
   dplyr::select(site.id, site.name, long, lat)
 
 # Get the PRISM modern July temperature dataset.
-temp.raster <-
-  raster::raster(here::here("./vignettes/data/spatial/temp.raster.tif"))
+temp.raster <- paleomat::temp.raster
 
 # Create a bounding box for the upper united states southwest
 bb <-
@@ -773,9 +773,7 @@ Moberg_paleomat %>%
 # Pulling together information for Table 1, except for references, which are done elsewhere.
 
 fossil_metadata_counts_final2 <-
-  readr::read_rds(here::here(
-    "vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"
-  ))
+  readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final2.rds"))
 
 sig_pass <-
   readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds")) %>%
@@ -804,9 +802,9 @@ table1 <-
     "Pass significance test?" = pass
   )
 
-if (!file.exists(here::here("./vignettes/tables/table1.csv"))) {
+if (!file.exists(here::here("vignettes/tables/table1.csv"))) {
   write.csv(table1,
-            "./vignettes/tables/table1.csv",
+            here::here("vignettes/tables/table1.csv"),
             row.names = FALSE)
 }
 
@@ -816,99 +814,6 @@ knitr::kable(table1,
 ```
 
 # Supplemental Materials
-
-## Supplemental Tables
-
-```{r supptable1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
-
-fossil_west_post5500 <-
-  paleomat::fossil_west_post5500 %>%
-  dplyr::ungroup() %>%
-  dplyr::select(site.name, site.id, dataset.id) %>% 
-  dplyr::filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
-      1762L, 1766L, 1970L, 2320L, 2880L, 2897L, 2950L, 3054L, 3056L, 
-      3060L, 3560L, 3561L, 3608L, 3612L, 14517L, 14547L, 14549L, 14650L, 
-      14944L, 14951L, 15106L, 15356L, 15967L, 17419L, 20304L, 20833L, 
-      20838L, 22948L, 25551L, 41580L, 42645L, 46801L)) %>% 
-  dplyr::distinct() %>%
-  sf::st_drop_geometry()
-
-Threebest <-
-  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds")) %>%
-  dplyr::filter(date >= -3000)
-
-summary_table <- Threebest %>%
-  dplyr::group_by(dataset.id) %>%
-  dplyr::summarise(
-    anom_range = max(anom) - min(anom),
-    anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap),
-    rmsep_mean = mean(rmsep),
-    s1_mean = mean(s1)
-  )
-
-summary_table_final <-
-  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds")) %>%
-  dplyr::left_join(.,
-                   fossil_west_post5500,
-                   by = "dataset.id") %>%
-  dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>%
-  dplyr::left_join(., summary_table, by = "dataset.id") %>%
-  dplyr::mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>%
-  dplyr::arrange(a, site.name) %>%
-  dplyr::select(-a) %>%
-  dplyr::filter(!is.na(site.name)) %>%
-  dplyr::mutate(across(c(proportion, pvalue), ~ as.numeric(.x))) %>%
-  dplyr::mutate(across(-c(site.name, site.id, dataset.id), ~ round(.x, digits =
-                                                                     2)))
-
-names(summary_table_final) <-
-  c(
-    "Site Name",
-    "Site ID",
-    "Dataset ID",
-    "Proportion explained variance",
-    "Random TF p",
-    "Anomaly (°C)",
-    "Anomaly Bootstrapped (°C)",
-    "Mean boostrap RMSEP (°C)",
-    "Mean boostrap s1"
-  )
-
-if (!file.exists(here::here("./vignettes/tables/supp_table_s1.csv"))) {
-  write.csv(summary_table_final,
-            "./vignettes/tables/supp_table_s1.csv",
-            row.names = FALSE)
-}
-
-knitr::kable(summary_table_final,
-             caption = "Supplemental Table S1. Results of random TF tests and summaries of MAT prediction output for the fossil pollen cores. Random TF test output is shown for the fossil pollen datasets that were included in the random TF test (36 sites or 40 datasets), which was after some samples were removed using squared residual length. An NA denotes that the site was removed after not passing the significance test.")
-
-
-```
-
-```{r supptable2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
-
-paleomat_reconstruction <- anom_loess4 %>%
-  dplyr::mutate(x = as.integer(x)) %>%
-  dplyr::filter(x >= -3000 & !duplicated(x)) %>%
-  dplyr::mutate(CI = abs(y - ymin)) %>%
-  dplyr::select(
-    Year = x,
-    "Temperature Anomaly (°C)" = y,
-    "Confidence Interval" = CI,
-    "Standard Error" = se
-  )
-
-if (!file.exists(here::here("./vignettes/tables/supp_table_s2.csv"))) {
-  write.csv(paleomat_reconstruction,
-            "./vignettes/tables/supp_table_s2.csv",
-            row.names = FALSE)
-}
-
-knitr::kable(paleomat_reconstruction,
-             caption = "Supplemental Table S2. Final reconstruction output from the loess model for 2999 BC to AD 1996.")
-
-```
 
 # Supplemental Figures
 
@@ -923,11 +828,11 @@ ff <-
 
 
 rlen_results_filtered <-
-  readr::read_rds(here::here("./vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"))$res_lengths %>%
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"))$res_lengths %>%
   dplyr::left_join(., ff, by = "sample.id")
 
 ninety5quant <-
-  readr::read_rds(here::here("./vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"))$quantile_95
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/rlen_full_results2.rds"))$quantile_95
 
 ggplot2::ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengths)) +
   geom_point() +
@@ -1000,7 +905,7 @@ ggplot2::ggplot(data = rlen_results_filtered, aes(x = age, y = Squared_res_lengt
 ```{r suppfig2, fig.cap="Supplemental Figure S2. Summary diagram of the results of a MAT model applied to predict temperature from the modern pollen data set. The leave-one-out error measure (RMSEP) shows that 4 analogs provide the optimal choice (lowest RMSEP).", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 mat_calibration <-
-  readr::read_rds(here::here("./vignettes/data/diagnostics_reconstruction/mat_calibration.rds"))
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_calibration.rds"))
 
 tbl <-
   cbind(
@@ -1086,12 +991,12 @@ as.data.frame(tbl) %>%
 ```{r suppfig3, fig.cap="Supplemental Figure S3. Time series plot of the minimum dissimilarity between each core (fossil) sample and the modern pollen training set samples. The dotted, horizontal lines are drawn at various percentiles of the distribution of the pair-wise dissimilarities for the training set samples. We used the 5th percentile as the cutoff for good analogs. So, samples with distances greater than the 5th percentile (above the line) were removed.", fig.height = 9.83, fig.width = 16.31, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='hide',fig.keep='all'}
 
 minDC_df <-
-  readr::read_rds(here::here("./vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"))$minDC %>%
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"))$minDC %>%
   dplyr::arrange(age)
 
 # Keeping only 1%, 2.5%, and 5%, as I don't want to plot 10%.
 minDC_quantiles <-
-  readr::read_rds(here::here("./vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"))$quantiles[1:3]
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/minDC_full_results.rds"))$quantiles[1:3]
 
 ggplot2::ggplot(data = minDC_df, aes(x = age, y = values)) +
   xlab("Years BC/AD") +
@@ -1327,5 +1232,98 @@ Threebest %>%
   )
 
 #ggplot2::ggsave("vignettes/figures/SuppFigure5.png", dpi = 600)
+
+```
+
+## Supplemental Tables
+
+```{r supptable1, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
+
+fossil_west_post5500 <-
+  paleomat::fossil_west_post5500 %>%
+  dplyr::ungroup() %>%
+  dplyr::select(site.name, site.id, dataset.id) %>% 
+  dplyr::filter(dataset.id %in% c(250L, 347L, 498L, 517L, 1013L, 1162L, 1660L, 1717L, 1761L, 
+      1762L, 1766L, 1970L, 2320L, 2880L, 2897L, 2950L, 3054L, 3056L, 
+      3060L, 3560L, 3561L, 3608L, 3612L, 14517L, 14547L, 14549L, 14650L, 
+      14944L, 14951L, 15106L, 15356L, 15967L, 17419L, 20304L, 20833L, 
+      20838L, 22948L, 25551L, 41580L, 42645L, 46801L)) %>% 
+  dplyr::distinct() %>%
+  sf::st_drop_geometry()
+
+Threebest <-
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/final_paleomat_dataset3.rds")) %>%
+  dplyr::filter(date >= -3000)
+
+summary_table <- Threebest %>%
+  dplyr::group_by(dataset.id) %>%
+  dplyr::summarise(
+    anom_range = max(anom) - min(anom),
+    anom_bootstrap_range = max(anom_bootstrap) - min(anom_bootstrap),
+    rmsep_mean = mean(rmsep),
+    s1_mean = mean(s1)
+  )
+
+summary_table_final <-
+  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds")) %>%
+  dplyr::left_join(.,
+                   fossil_west_post5500,
+                   by = "dataset.id") %>%
+  dplyr::select(site.name, site.id, dataset.id, proportion, pvalue) %>%
+  dplyr::left_join(., summary_table, by = "dataset.id") %>%
+  dplyr::mutate(a = ifelse(!is.na(anom_range), 1, 2)) %>%
+  dplyr::arrange(a, site.name) %>%
+  dplyr::select(-a) %>%
+  dplyr::filter(!is.na(site.name)) %>%
+  dplyr::mutate(dplyr::across(c(proportion, pvalue), ~ as.numeric(.x))) %>%
+  dplyr::mutate(dplyr::across(-c(site.name, site.id, dataset.id), ~ round(.x, digits =
+                                                                     2)))
+
+names(summary_table_final) <-
+  c(
+    "Site Name",
+    "Site ID",
+    "Dataset ID",
+    "Proportion explained variance",
+    "Random TF p",
+    "Anomaly (°C)",
+    "Anomaly Bootstrapped (°C)",
+    "Mean boostrap RMSEP (°C)",
+    "Mean boostrap s1"
+  )
+
+if (!file.exists(here::here("vignettes/tables/supp_table_s1.csv"))) {
+  write.csv(summary_table_final,
+            here::here("vignettes/tables/supp_table_s1.csv"),
+            row.names = FALSE)
+}
+
+knitr::kable(summary_table_final,
+             caption = "Supplemental Table S1. Results of random TF tests and summaries of MAT prediction output for the fossil pollen cores. Random TF test output is shown for the fossil pollen datasets that were included in the random TF test (36 sites or 40 datasets), which was after some samples were removed using squared residual length. An NA denotes that the site was removed after not passing the significance test.")
+
+
+```
+
+```{r supptable2, echo=FALSE,warning=FALSE,message=FALSE,error=FALSE, results='asis'}
+
+paleomat_reconstruction <- anom_loess4 %>%
+  dplyr::mutate(x = as.integer(x)) %>%
+  dplyr::filter(x >= -3000 & !duplicated(x)) %>%
+  dplyr::mutate(CI = abs(y - ymin)) %>%
+  dplyr::select(
+    Year = x,
+    "Temperature Anomaly (°C)" = y,
+    "Confidence Interval" = CI,
+    "Standard Error" = se
+  )
+
+if (!file.exists(here::here("vignettes/tables/supp_table_s2.csv"))) {
+  write.csv(paleomat_reconstruction,
+            here::here("vignettes/tables/supp_table_s2.csv"),
+            row.names = FALSE)
+}
+
+knitr::kable(paleomat_reconstruction,
+             caption = "Supplemental Table S2. Final reconstruction output from the loess model for 2999 BC to AD 1996.")
 
 ```

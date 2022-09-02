@@ -77,7 +77,7 @@ download.file(
   url = "https://www.ncei.noaa.gov/pub/data/paleo/contributions_by_author/moberg2005/nhtemp-moberg2005.txt",
   destfile = here::here("data-raw/nhtemp-moberg2005.txt"))
 
-moberg_2005 <- data.table::fread(here::here("data-raw/nhtemp-moberg2005.txt"),skip = 92, header = T )[, 1:3] %>%
+moberg_2005 <- data.table::fread(here::here("data-raw/nhtemp-moberg2005.txt"), skip = 92, header = TRUE)[, 1:3] %>%
   tibble::as_tibble() %>%
   dplyr::filter(LF > -9.89 & Year <= 2000) %>%
   dplyr::rename(date = Year)
@@ -101,11 +101,43 @@ download.file(
   destfile = here::here("data-raw/gisp2_temp_accum_alley2000.txt"))
 
 alley_2000 <-
-  data.table::fread(here::here("data-raw/gisp2_temp_accum_alley2000.txt"),skip = 61, header = F, nrows = 1632) %>%
+  data.table::fread(here::here("data-raw/gisp2_temp_accum_alley2000.txt"), skip = 61, header = FALSE, nrows = 1632) %>%
   dplyr::rename(Age = 1, Temperature = 2) %>%
   tibble::as_tibble()
 
 usethis::use_data(alley_2000,
                   overwrite = TRUE)
 
+
+# Get core top data from fossil pollen dataset.
+# This was originally used to pull in the core top data; however, the SSL certificate has now expired. The data was saved and can be loaded from the .csv file. Data downloaded on October 23, 2021.
+# coreTops <-
+#   paleomat::get_coreTops() %>%
+#   dplyr::rename(dataset.id = DatasetID,
+#                 site.id = SiteID,
+#                 sample.id = SampleID)
+
+coreTops <-
+  read.csv(here::here("data-raw/coreTops.csv")) %>%
+  tibble::as_tibble()
+
+usethis::use_data(coreTops,
+                  overwrite = TRUE)
+
+
+# Several fossil pollen sites have updated Bacon age models that were not downloaded in the original fossil pollen dataset (i.e., NAfossil_metadata_counts).
+updated_age_models <-
+  list.files(here::here("data-raw/updated_age_models"), full.names = TRUE) %>%
+  purrr::map_dfr(read.csv) %>%
+  tibble::as_tibble()
+
+usethis::use_data(updated_age_models,
+                  overwrite = TRUE)
+
+
+# PRISM mean July temperature for 1961-1990.
+temp.raster <- raster::raster(here::here("data-raw/temp.raster.tif"))
+
+usethis::use_data(temp.raster,
+                  overwrite = TRUE)
 

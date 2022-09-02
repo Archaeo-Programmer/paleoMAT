@@ -35,3 +35,32 @@ The [:file\_folder: vignettes](vignettes) directory contains:
     
 ## How to run the code?
 To reproduce the analysis and output, you will need to clone this repository. Currently, some of the items can take a while to run, so for expediency we have saved some of the output along the way use `if` statements. If you would like to re-run the code, then after you have cloned the repository, you can run the interior contents within the `if` statements to reproduce the results. 
+
+### Reproduce Analysis and Results
+To reproduce the analysis and results, you will need to first clone this repository.
+
+You can do so thus:
+
+```bash
+git clone https://github.com/Archaeo-Programmer/paleomat.git
+cd paleomat
+```
+
+You can compile the paleomat analysis within R:
+
+``` r
+rmarkdown::render(here::here('vignettes/UUSS_MAT_Reconstruction.Rmd'), output_dir = here::here('vignettes/articles'))
+```
+
+Another option is to use the package itself to follow along with the RMarkdown and run the code line by line.
+
+After installing the package (via `install_github` shown above), then you can follow along with the vignette, [:page\_facing\_up: UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd). To retrieve a readable html file, you go to [:page\_facing\_up: UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html). Then, click "Raw" and save the file as "UUSS_MAT_Reconstruction.html" (be sure to use the html extension and save as HTML). Or you enter `rstudioapi::viewer(here::here('vignettes/UUSS_MAT_Reconstruction.html'))` into the R console.
+
+
+
+
+
+
+
+
+
