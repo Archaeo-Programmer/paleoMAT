@@ -32,3 +32,6 @@ The [:file\_folder: vignettes](vignettes) directory contains:
     illustrations, including supplemental
   - [:file\_folder: tables](vignettes/tables): Tables included in 
     the paper, including supplemental
+    
+## How to run the code?
+To reproduce the analysis and output, you will need to clone this repository. Currently, some of the items can take a while to run, so for expediency we have saved some of the output along the way use `if` statements. If you would like to re-run the code, then after you have cloned the repository, you can run the interior contents within the `if` statements to reproduce the results. 
