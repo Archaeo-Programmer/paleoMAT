@@ -56,25 +56,25 @@ You can also compile the figures and tables from the `paleoMAT` analysis within 
 rmarkdown::render(here::here('vignettes/Paleomat_Figures.Rmd'), output_dir = here::here('vignettes'))
 ```
 
-If you do not want to compile the R Markdowns, then you can retrieve a readable HTML file by navigating to [:page\_facing\_up: UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html). Then, click "Raw" and save the file as "UUSS_MAT_Reconstruction.html" (i.e., save file with `.html` extension or as HTML file type). Another option, after installing the `paleoMAT` package, is to use `rstudioapi::viewer` in the R console:  
+If you do not want to compile the R Markdowns, then you can retrieve a readable HTML file by navigating to [UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html). Then, click "Raw" and save the file as "UUSS_MAT_Reconstruction.html" (i.e., save file with `.html` extension or as HTML file type). Another option, after installing the `paleoMAT` package, is to use `rstudioapi::viewer` in the R console:  
 
 ``` r
 rstudioapi::viewer(here::here('vignettes/UUSS_MAT_Reconstruction.html'))
 ```
 
-Another option to reproduce results is to use the package itself and follow along with the vignette, [:page\_facing\_up: UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd) and run the code line by line. Data and functions are already loaded into the package with descriptions. 
+Another option to reproduce results is to use the package itself and follow along with the vignette, [ UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd) and run the code line by line. Data and functions are already loaded into the package with descriptions. 
 There are also comments that point to output saved in the [:file\_folder: data](data/) directory in the root directory or the [:file\_folder: vignettes data](vignettes/data) directory. The purpose was to save various stages of the data throughout the analysis. So, if there is a chunk of code that you do not want to run, then you will have run the 
 applicable line to read in a given file. However, if you want to run the code yourself, then you can just ignore these lines of code (as they are already commented out).
 
 
-### Licenses
+## Licenses
 
 **Code :** [GNU GPLv3](LICENSE.md)
 
 **Data :** [CC-0](http://creativecommons.org/publicdomain/zero/1.0/)
 attribution requested in reuse
 
-### Acknowledgements
+## Acknowledgements
 
 This material is based upon work supported by the National Science Foundation under Grants [SMA-1637171](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1637171) 
 and [SMA-1620462](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1620462), and by the Office of the Chancellor, [Washington State University-Pullman](https://wsu.edu/).
