@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/68630626.svg)](https://zenodo.org/badge/latestdoi/68630626)
+
 # paleoMAT: Paleotemperature Reconstruction from Pollen using the Modern Analog Technique
 
 `paleoMAT` is an *R* package implementing functions to perform
