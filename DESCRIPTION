@@ -1,7 +1,7 @@
 Package: paleomat
 Type: Package
 Title: Creates Temperature Reconstructions from Pollen Data
-Version: 0.1.0
+Version: 1.0.0
 Date: 2022-08-31
 Authors@R: 
     c(
