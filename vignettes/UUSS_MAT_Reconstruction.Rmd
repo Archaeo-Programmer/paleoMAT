@@ -21,7 +21,7 @@ keep_md: yes
 
 knitr::opts_chunk$set(echo = TRUE)
 
-# If you have cloned the repository, you can also use devtools::install() to install the package.
+# If you have cloned the repository, then you can also use devtools::install() to install the package.
 # devtools::install()
 # devtools::load_all()
 library(paleomat)

@@ -9,6 +9,8 @@ which contains all code associated with the analyses described and presented, in
 
 Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2022). A Low-Frequency Summer Temperature Reconstruction for the United 
     States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene* for review.
+    
+All code for analysis and reconstruction is in [UUSS_MAT_Reconstruction.Rmd](vignettes/UUSS_MAT_Reconstruction.Rmd) and all code for figures and tables is in [Paleomat_Figures.Rmd](vignettes/Paleomat_Figures.Rmd).
 
 ## Installation
 
