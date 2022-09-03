@@ -64,7 +64,8 @@ Imports:
     usmap,
     shadowtext,
     knitr,
-    data.table
+    data.table,
+    httr
 LazyData: TRUE
 Suggests: testthat
 Encoding: UTF-8

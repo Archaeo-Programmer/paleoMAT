@@ -1,5 +1,12 @@
+#' @name get_coreTops
+#' @title Get Core Top Data from Fossil Pollen Cores
+#'
+#' @description Get pollen core top sample numbers from fossil pollen cores
+#'
+#' @return A tibble with dataset ID, site ID, and sample ID.
+#' @import httr
+#' @export
 get_coreTops <- function(){
-
   # Currently, to target the core top data from the fossil pollen (or "pollen") data,
   # I am using a service online ( https://tilia.neotomadb.org/retrieve/doc2/), which allows for me
   # to target the core tops through the SKOPE_GetSurfaceSampleData method (use selection #3 for core-top samples; 7 for surface samples).

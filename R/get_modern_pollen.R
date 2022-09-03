@@ -1,3 +1,12 @@
+#' @name get_modern_pollen
+#' @title Download Modern Pollen Data from Neotoma
+#'
+#' @description Download modern pollen data from Neotoma
+#'
+#' @param gpid An integer vector
+#' @return A tibble with modern pollen data.
+#' @import neotoma
+#' @export
 get_modern_pollen <- function(...){
 
   suppressWarnings(

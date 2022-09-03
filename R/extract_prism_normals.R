@@ -1,3 +1,13 @@
+#' @name extract_prism_normals
+#' @title Extract PRISM Climate Data at Site Locations
+#'
+#' @description Extract PRISM Climate Data for July for 1961 to 1990 at Site Locations
+#'
+#' @param sites A numeric vector.
+#' @return A vector with growing degree days.
+#' @importFrom magrittr `%<>%` `%>%`
+#' @importFrom stats na.omit
+#' @export
 extract_prism_normals <-
   function(sites) {
 

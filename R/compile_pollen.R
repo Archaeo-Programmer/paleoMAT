@@ -1,3 +1,13 @@
+#' @name compile_pollen
+#' @title Compile Modern Pollen Data
+#'
+#' @description Compile modern pollen data into a `tibble`
+#'
+#' @param x A download_list from Neotoma.
+#' @return A tibble with modern pollen data.
+#' @importFrom magrittr `%<>%` `%>%`
+#' @export
+
 # Compile function for the modern pollen data from Neotoma.
 compile_pollen <- function(x){
   tibble::tibble(

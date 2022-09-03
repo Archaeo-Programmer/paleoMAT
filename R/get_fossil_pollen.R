@@ -1,3 +1,12 @@
+#' @name get_fossil_pollen
+#' @title Download Fossil Pollen Data from Neotoma
+#'
+#' @description Download fossil pollen data from Neotoma
+#'
+#' @param gpid An integer vector
+#' @return A tibble with fossil pollen data.
+#' @import neotoma
+#' @export
 get_fossil_pollen <- function(...){
   # Get the fossil pollen datasets for the United States and Canada, then download the sites.
   # Next, get the chronology data for each site, so that we can identify the core tops from each site (if available).
