@@ -45,7 +45,7 @@ get_modern_pollen <- function(...){
   # and finally change counts into a tibble. With side IDs.
   MP_counts <- MP_datasets %>%
     purrr::map("counts") %>%
-    purrr::map(as_tibble) %>%
+    purrr::map(tibble::as_tibble) %>%
     purrr::map(neotoma::compile_taxa,
                list.name = "WhitmoreFull") %>%
     purrr::map(as_tibble) %>%

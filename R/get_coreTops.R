@@ -5,6 +5,7 @@
 #'
 #' @return A tibble with dataset ID, site ID, and sample ID.
 #' @import httr
+#' @importFrom magrittr `%<>%` `%>%` `%$%`
 #' @export
 get_coreTops <- function(){
   # Currently, to target the core top data from the fossil pollen (or "pollen") data,
