@@ -1,0 +1,6 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+112476,Carbon-14,Radiocarbon years BP,60,10,4390,80,80,false,,A-5088,gyttja,
+112477,Carbon-14,Radiocarbon years BP,150,10,7720,100,100,false,,A-5086,Picea wood,
+112478,Carbon-14,Radiocarbon years BP,205,10,8715,65,65,false,,AA-5052,Picea macrofossils,
+112479,Carbon-14,Radiocarbon years BP,245,10,10260,230,230,false,,A-4895,Picea macrofossils,
+112480,Carbon-14,Radiocarbon years BP,280,10,11730,290,290,false,,A-5087,gyttja,

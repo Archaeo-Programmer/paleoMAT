@@ -1,0 +1,7 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+108869,Carbon-14,Radiocarbon years BP,52.5,15,2850,90,90,false,,Beta-28624,peat,
+108870,Carbon-14,Radiocarbon years BP,100,10,4240,90,90,false,,Beta-28002,peat,
+108871,Carbon-14,Radiocarbon years BP,187.5,15,11020,190,190,false,,Beta-28625,clay,Shafer (1989) rejects as too old based on pollen correlation with Fryingpan Lake.
+108872,Carbon-14,Radiocarbon years BP,225,10,12870,180,180,false,,Beta-28627,clay,Shafer (1989) rejects as too old based on pollen correlation with Fryingpan Lake.
+108873,Carbon-14,Radiocarbon years BP,275,10,18580,260,260,false,,Beta-28626,clay,Shafer (1989) rejects as too old based on pollen correlation with Fryingpan Lake.
+108874,Carbon-14,Radiocarbon years BP,400,4,11200,240,240,false,,Beta-25526,clay,

@@ -1,0 +1,12 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+108253,Carbon-14,Radiocarbon years BP,52.5,5,780,90,90,false,,WSU-1917,,
+108254,Carbon-14,Radiocarbon years BP,122.5,10,1540,80,80,false,,WSU-2346,,
+108255,Carbon-14,Radiocarbon years BP,202.5,5,2680,80,80,false,,WSU-1918,,A second sample at this depth (120-125cm, SI-3811) measured at 150% modern.
+108256,Carbon-14,Radiocarbon years BP,237.5,5,2825,65,65,false,,SI-3812,,
+108257,Carbon-14,Radiocarbon years BP,277.5,7,3635,80,80,false,,WSU-1571,,
+108258,Carbon-14,Radiocarbon years BP,301,6,4150,100,100,false,,WSU-1572,,
+108259,Carbon-14,Radiocarbon years BP,335.5,5,3955,95,95,false,,SI-3813,,
+108260,Carbon-14,Radiocarbon years BP,346,8,4645,95,95,false,,WSU-1573,,
+108261,Carbon-14,Radiocarbon years BP,370.5,5,5010,110,110,false,,WSU-1919,,
+108262,Carbon-14,Radiocarbon years BP,435,10,4320,110,110,false,,WSU-2122,,
+108263,Carbon-14,Radiocarbon years BP,455,10,10565,135,135,false,,SI-1554,,

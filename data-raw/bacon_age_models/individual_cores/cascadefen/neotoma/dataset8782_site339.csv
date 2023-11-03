@@ -1,0 +1,3 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+112493,Carbon-14,Radiocarbon years BP,193,20,2520,90,90,false,,WIS-69,sedge peat with wood fragments,Depth 183-203 in core 63-1. Correlates with depth 185-205 in core 63-2. [comments from L.J. Maher in COHMAP site files]
+112494,Carbon-14,Radiocarbon years BP,252,18,4170,100,100,false,,WIS-70,sedge peat with wood fragments,Depth 243-261 in core 63-1. "Probably equivalent" to same depth in Core 63-2. [Comments from L.J Maher in COHMAP site files]

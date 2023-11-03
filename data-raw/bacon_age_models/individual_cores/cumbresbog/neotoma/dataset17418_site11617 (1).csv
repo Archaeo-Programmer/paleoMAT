@@ -1,0 +1,9 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+163763,Carbon-14,Radiocarbon years BP,60.5,1,1530,40,40,false,,UGa,Wood,
+163764,Carbon-14,Radiocarbon years BP,156,1,2250,25,25,false,,UGa,Stem,
+163765,Carbon-14,Radiocarbon years BP,274,1,4280,40,40,false,,UGa,Leaf,
+163766,Carbon-14,Radiocarbon years BP,346.5,1,7490,30,30,false,,UGa,Bulk sediment,
+163767,Carbon-14,Radiocarbon years BP,435,1,10090,50,50,false,,UGa,Peat,
+163768,Carbon-14,Radiocarbon years BP,546.5,1,12300,40,40,false,,UGa,Bulk sediment,
+163769,Carbon-14,Radiocarbon years BP,648,1,15130,40,40,false,,UGa,Bulk sediment,
+364696,Carbon-14,Radiocarbon years BP,519,1,8880,50,50,false,,UGa,,Material dated not listed in Johnson (2010). Date not in Johnson et al. (2011). Rejected by Johnson as too young.

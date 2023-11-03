@@ -1,0 +1,6 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+134428,Carbon-14,Radiocarbon years BP,206.5,1,2070,50,50,false,,NSRL-3517,Charcoal,
+134429,Carbon-14,Radiocarbon years BP,265.5,1,5950,70,70,false,,NSRL-3455,Charcoal,
+134430,Carbon-14,Radiocarbon years BP,365.5,1,9840,70,70,false,,NSRL-3411,Picea needles, Pinus ponderosa,
+134431,Carbon-14,Radiocarbon years BP,450.5,1,3150,50,50,false,,NSRL-10095,Picea needles, Pinus ponderosa needles, charcoal,Weng & Jackson (1999) reject this date as too young.
+134432,Carbon-14,Radiocarbon years BP,580.5,1,11320,60,60,false,,NSRL-3456,Picea needles and seed coats,wood,

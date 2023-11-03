@@ -1,0 +1,6 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+134531,Carbon-14,Radiocarbon years BP,312.5,1,3830,60,60,false,,NSRL-3022,Ponderosa pine needle,
+134532,Carbon-14,Radiocarbon years BP,605.5,1,6590,60,60,false,,Beta-88937,Ponderosa pine fascicle/needles,
+134533,Carbon-14,Radiocarbon years BP,680.5,1,8770,70,70,false,,NSRL-3410,Pinus ponderosa needles,
+134534,Carbon-14,Radiocarbon years BP,804.5,1,10990,60,60,false,,Beta-88938,Spruce cone scales,
+134535,Carbon-14,Radiocarbon years BP,1000.5,1,11560,60,60,false,,NSRL-3023,Terrestrial plant pieces,

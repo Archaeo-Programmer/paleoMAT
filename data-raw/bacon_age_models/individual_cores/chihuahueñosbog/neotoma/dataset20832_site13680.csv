@@ -1,0 +1,10 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+192200,Lead-210,Calendar years BP,17,1,60,15,15,false,,,,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192201,Lead-210,Calendar years BP,21,1,85,23,23,false,,,,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192192,Carbon-14,Radiocarbon years BP,49.5,3,1320,40,40,false,,Beta-176475,Charcoal,Date rejeceted as too old
+192193,Carbon-14,Radiocarbon years BP,56,4,990,40,40,false,,Beta-202658,Peat, Chitin,
+192194,Carbon-14,Radiocarbon years BP,103,4,1840,70,70,false,,Beta-160243,Peat,
+192195,Carbon-14,Radiocarbon years BP,164,4,4290,70,70,false,,Beta-160244,Peat,
+192196,Carbon-14,Radiocarbon years BP,188.5,1,8130,40,40,false,,Beta-176476,Charcoal,
+192197,Carbon-14,Radiocarbon years BP,220.5,5,9100,61,61,false,,AA-39836,Sediment,
+192198,Carbon-14,Radiocarbon years BP,345,10,11850,80,80,false,,Beta-114177,Peat,
