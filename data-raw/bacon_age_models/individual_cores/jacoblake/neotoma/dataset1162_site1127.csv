@@ -1,0 +1,61 @@
+"name","group","element","units","context","S24346","S24347","S24348","S24349","S24350","S24351","S24352","S24353","S24354","S24355","S24356","S24357","S24358","S24359","S24360","S24361","S24362","S24363","S24364","S24365"
+AnalysisUnitName,,,,,,,,,,,,,,,,,,,,,,,,
+Depth,,,,,1,9,15,19,25,33,181,191,209,215,227,235,239,253,263,270,274,288,292,295.5
+Thickness,,,,,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1
+Sample Name,,,,,,,,,,,,,,,,,,,,,,,,
+Sample ID,,,,,24346,24347,24348,24349,24350,24351,24352,24353,24354,24355,24356,24357,24358,24359,24360,24361,24362,24363,24364,24365
+NAPD 1,Radiocarbon years BP,,,,--/26/--,--/233/--,--/388/--,--/491/--,--/647/--,--/1091/--,--/11887/--,--/12590/--,--/13856/--,--/14278/--,--/15122/--,--/15684/--,--/15965/--,--/16950/--,--/17653/--,--/18145/--,--/18426/--,--/19410/--,--/19691/--,--/19938/--
+Abies,TRSH,pollen,NISP,,,,,,,,,1,,1,,2,1,,1,,,3,9,3
+Acer cf. A. negundo,TRSH,pollen,NISP,,,,1,,,,1,,,,,,,2,,,,,,
+Amaranthaceae undiff.,UPHE,pollen,NISP,,4,5,3,7,1,4,1,2,2,6,1,4,5,,,1,1,3,2,4
+Ambrosia-type,UPHE,pollen,NISP,,15,16,7,6,1,3,2,3,4,9,2,4,2,3,2,4,,1,3,4
+Apiaceae,UPHE,pollen,NISP,,,,,,,,,,,,1,,4,,,,2,1,,4
+Artemisia,UPHE,pollen,NISP,,6,1,14,8,5,2,7,12,20,35,21,30,53,19,19,5,20,13,9,24
+Asteroideae undiff.,UPHE,pollen,NISP,,19,57,26,39,57,13,41,24,31,46,20,19,47,13,20,7,24,20,22,39
+Berberidaceae,TRSH,pollen,NISP,,,,,,,,,,,,,,,,,,,,,1
+Botryococcus,ALGA,colony,NISP,,,,,,,,5,7,7,3,1,12,3,41,16,9,5,11,19,
+Brassicaceae,UPHE,pollen,NISP,,2,,,,2,,11,1,,2,,2,,7,2,,,,1,
+Caryophyllaceae,UPHE,pollen,NISP,,,,,,,,2,1,,13,3,5,13,3,8,1,1,3,4,4
+Ceanothus,TRSH,pollen,NISP,,1,,,,,,,,,,,,,,,,,,,1
+Cichorioideae,UPHE,pollen,NISP,,1,,,,,,,,,,,,2,,,,,,,
+Convolvulaceae,UPHE,pollen,NISP,,,,,,,,,,,,,,,,,,,,2,1
+Cupressus,TRSH,pollen,NISP,,,,,,,,,1,,,,,,,,,,,,
+Cyperaceae,UPHE,pollen,NISP,,197,135,28,,17,15,,4,1,2,2,4,,2,,,4,7,,4
+Ephedra,TRSH,pollen,NISP,,,,,,1,,,,,,,1,1,1,,,,,,
+Equisetum,VACR,spore,NISP,,,,1,3,9,1,,,,,,,,,,2,,2,,
+Ericaceae,TRSH,pollen,NISP,,,,,2,,,,,,,,,,,,,,,,
+Eucalyptus spike,LABO,counted,number,,890,221,250,337,435,380,2130,1252,560,1406,784,949,1047,2975,2350,239,2382,431,327,939
+Eucalyptus suspension,LABO,concentration,grains/ml,,359843,315541,359843,315541,315541,315541,315541,315541,315541,315541,315541,315541,359843,315541,315541,315541,359843,359843,315541,315541
+Eucalyptus suspension,LABO,quantity added,ml,,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1
+Fabaceae,UPHE,pollen,NISP,,,3,1,,,,,,,,1,,,,,,,,,
+Geranium,UPHE,pollen,NISP,,,,,,,,,,1,,,,,2,,,,,,
+Indeterminable,UNID,pollen/spore,NISP,,,5,7,9,9,1,7,9,7,11,12,4,9,14,5,3,4,3,,3
+Juniperus,TRSH,pollen,NISP,,3,3,4,1,,,,,,,,2,,,1,2,,,2,
+Lamiaceae,UPHE,pollen,NISP,,,,,,,,,1,1,,,,,,,,,,,
+Liliaceae,UPHE,pollen,NISP,,,,,,,,1,,,,,,,1,,,,,2,
+Malvaceae sensu stricto,UPHE,pollen,NISP,,,,,,,,,,,,,,,,,,,,,1
+Nuphar,AQVP,pollen,NISP,,100,29,,4,,1,,,,,,,,,,,,,,
+Pediastrum,ALGA,colony,NISP,,,,,,,,,,,,,1,,,,,,,,
+Phlox,UPHE,pollen,NISP,,,,,,,,3,2,1,,2,2,4,,1,,1,1,1,1
+Picea,TRSH,pollen,NISP,,,,,,,,3,4,2,10,11,14,25,8,2,5,5,7,31,13
+Pinus,TRSH,pollen,NISP,,145,175,181,97,103,107,29,45,58,80,111,129,112,85,114,136,105,205,168,79
+Poaceae,UPHE,pollen,NISP,,2,28,80,135,129,109,72,85,77,60,17,40,26,40,23,23,51,46,43,91
+Polemonium,UPHE,pollen,NISP,,,,,,,,,,,1,,,,,,,,,,
+Polygonaceae undiff.,UPHE,pollen,NISP,,,4,2,,,,1,1,,,1,,2,1,,,,1,,2
+Populus,TRSH,pollen,NISP,,3,,,,,1,,,2,,,,,,,,,,,
+Potamogetonaceae,AQVP,pollen,NISP,,,1,,,,,,,,,,,,,,,,,,
+Potentilla,UPHE,pollen,NISP,,,,,,,,,,,1,,,,,,,,,,
+Quercus,TRSH,pollen,NISP,,5,7,,3,,,12,9,8,10,2,,,2,1,,,,1,1
+Ranunculaceae,UPHE,pollen,NISP,,1,2,1,,,,1,,,,,1,1,,,,,,1,
+Rhus,TRSH,pollen,NISP,,,,1,1,,,,,,,2,,1,,1,,,,,
+Ribes,TRSH,pollen,NISP,,,,,,,,3,,,1,,,,,,1,,,1,
+Rosaceae undiff.,UPHE,pollen,NISP,,,,,,,,1,1,,1,1,,,,1,,,,,
+Rumex,UPHE,pollen,NISP,,,1,,,,,,,,,,,,,,,,,,
+Salix,TRSH,pollen,NISP,,,,,1,,,,1,,,,,,,,,,,,
+Sample quantity,LABO,dry mass,g,,0.5442,2.8122,3.3448,,4.5997,6.3138,3.997,4.6861,4.834,3.9734,1.4016,5.0341,4.665,5.2622,4.4374,5.5242,5.5552,7.3361,6.5359,4.9411
+Sarcobatus vermiculatus,TRSH,pollen,NISP,,,,,,,,,,,,,,5,2,1,,,,,1
+Scrophulariaceae,UPHE,pollen,NISP,,,,,,,,,,,1,,,,,,,,,,
+Tribulus,UPHE,pollen,NISP,,1,,,,,,,,,,,,,,,,,,,
+Typha/Sparganium,AQVP,pollen,NISP,,,,,,,,9,,,,,,,2,,,,1,,
+Unknown,UNID,pollen/spore,NISP,,,4,3,,1,4,5,12,5,4,10,2,23,10,3,,5,5,3,5
+cf. Nymphaea,AQVP,pollen,NISP,,,,41,,,,,,,,,,,,,,,,,

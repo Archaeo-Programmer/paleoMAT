@@ -1,0 +1,10 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+186176,Lead-210,Calendar years BP,8,1,21,10,10,false,,USC Geology,,
+186177,Lead-210,Calendar years BP,14,1,86,10,10,false,,USC Geology,,
+186178,Lead-210,Calendar years BP,18,1,133,10,10,false,,USC Geology,,
+186179,Carbon-14,Radiocarbon years BP,35.5,1,790,40,40,false,,Beta-176479,terrestrial plant macrofossils,
+186180,Carbon-14,Radiocarbon years BP,78.5,1,1880,40,40,false,,Beta-176480,terrestrial plant macrofossils,
+186181,Carbon-14,Radiocarbon years BP,140.5,1,3190,40,40,false,,Beta-176481,terrestrial plant macrofossils,
+186182,Carbon-14,Radiocarbon years BP,238.5,1,6190,40,40,false,,Beta-176482,terrestrial plant macrofossils,
+186183,Carbon-14,Radiocarbon years BP,330.5,1,9930,40,40,false,,Beta-176483,terrestrial plant macrofossils,
+186184,Carbon-14,Radiocarbon years BP,385.5,1,11970,89,89,false,,AA-48623,terrestrial plant macrofossils,

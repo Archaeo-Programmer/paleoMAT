@@ -1,0 +1,7 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+112461,Carbon-14,Radiocarbon years BP,12.5,5,1740,150,150,false,,Beta-30226,bulk sediment,Date is on the Salsola rise and is about 1700 years too old.
+112462,Carbon-14,Radiocarbon years BP,25,10,5230,190,190,false,,A-5142,bulk sediment,
+112463,Carbon-14,Radiocarbon years BP,37.5,5,10490,290,290,false,,Beta-30562,bulk sediment,
+112464,Carbon-14,Radiocarbon years BP,47.5,5,11060,160,160,false,,A-5143,bulk sediment,
+112465,Carbon-14,Radiocarbon years BP,110,20,9440,340,340,false,,A-5144,bulk sediment,Shafer (1989) rejects this date as too young. Date is on low organic matter bulk sediment.
+112466,Carbon-14,Radiocarbon years BP,200,20,10080,650,600,false,,A-5145,bulk sediment,Shafer (1989) rejects this date as too young. Date is on low organic matter bulk sediment.

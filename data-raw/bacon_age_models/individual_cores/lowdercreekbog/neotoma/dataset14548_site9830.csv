@@ -1,0 +1,5 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+131069,Carbon-14,Radiocarbon years BP,150,6,2700,70,70,false,,Beta-93033,Bulk sediment,
+131070,Carbon-14,Radiocarbon years BP,325,6,6410,110,110,false,,Beta-93034,Bulk sediment,
+131071,Carbon-14,Radiocarbon years BP,506,12,9200,100,100,false,,Beta-59897,Bulk sediment,
+131072,Carbon-14,Radiocarbon years BP,712.5,17,13020,690,690,false,,Beta-56945,Bulk sediment,

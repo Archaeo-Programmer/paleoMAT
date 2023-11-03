@@ -1,0 +1,3 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+110718,Carbon-14,Radiocarbon years BP,144.5,5,13360,120,120,false,,Y-1437,bulk sediment,Date is probably too old due to hardwater effect (see Carrara 2011).
+110719,Carbon-14,Radiocarbon years BP,172.5,5,15450,220,220,false,,Y-1147,bulk sediment,Date is probably too old due to hardwater effect (see Carrara 2011).
