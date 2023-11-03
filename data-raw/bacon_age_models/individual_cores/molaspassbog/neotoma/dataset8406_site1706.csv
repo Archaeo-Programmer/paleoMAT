@@ -1,0 +1,3 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+110720,Carbon-14,Radiocarbon years BP,65,10,4940,300,300,false,,LJ-539,conifer-wood fragment,
+110721,Carbon-14,Radiocarbon years BP,127,10,8890,90,90,false,,WIS-349,detritus gyttja, wood frags,

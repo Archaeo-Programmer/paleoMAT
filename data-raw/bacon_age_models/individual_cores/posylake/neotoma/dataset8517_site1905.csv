@@ -1,0 +1,6 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+111218,Carbon-14,Radiocarbon years BP,80,10,2420,80,80,false,,Beta-28098,peat,
+111219,Carbon-14,Radiocarbon years BP,137.5,5,3810,70,70,false,,Beta-28099,wood,
+111220,Carbon-14,Radiocarbon years BP,350,1,4740,110,110,false,,Beta-28100,wood,
+111221,Carbon-14,Radiocarbon years BP,513,1,7330,160,160,false,,Beta-27672,wood,
+111222,Carbon-14,Radiocarbon years BP,580,10,6860,140,140,false,,Beta-28102,peat,Shafer (1989) rejects this date due to reversal, believes date on wood to be more reliable.

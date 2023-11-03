@@ -1,0 +1,9 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+110740,Carbon-14,Radiocarbon years BP,225,10,1526,50,50,false,,AA-2450,charcoal, wood,
+110741,Carbon-14,Radiocarbon years BP,330,10,2885,60,60,false,,AA-2451,charcoal, wood,
+110742,Carbon-14,Radiocarbon years BP,395,10,5540,60,60,false,,AA-4693,charcoal, wood,
+110743,Carbon-14,Radiocarbon years BP,465,10,8003,70,70,false,,AA-2452,Scirpus achenes,
+110744,Carbon-14,Radiocarbon years BP,535,10,14950,350,320,false,-26.7,A-4732,bark,Davis and Shafer (1992) reject as too old.
+110745,Carbon-14,Radiocarbon years BP,887,1,9520,200,200,false,-25.3,A-4733,wood,
+110746,Carbon-14,Radiocarbon years BP,887,1,24910,370,370,false,,AA-5053,wood,Davis and Shafer (1992) reject as too old.
+110747,Carbon-14,Radiocarbon years BP,1015,1,10975,95,95,false,,AA-4694,Juniperus twig,

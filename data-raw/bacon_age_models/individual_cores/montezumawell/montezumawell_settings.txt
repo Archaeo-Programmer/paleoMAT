@@ -1,0 +1,28 @@
+0 #d.min
+1015 #d.max
+1 #d.by
+1 #depths.file
+ #slump
+20 5 15 #acc.mean
+1.5 1.5 1.5 #acc.shape
+0.5 #mem.mean
+4 #mem.strength
+NA #boundary
+465 887 #hiatus.depths
+2 #hiatus.max
+2 #hiatus.max
+0 #BCAD
+1 #cc
+0 #postbomb
+IntCal20 #cc1
+Marine20 #cc2
+SHCal20 #cc3
+ConstCal #cc4
+cm #depth.unit
+0 #normal
+3 #t.a
+4 #t.b
+0 #delta.R
+0 #d.STD
+0.95 #prob
+yr#age.unit

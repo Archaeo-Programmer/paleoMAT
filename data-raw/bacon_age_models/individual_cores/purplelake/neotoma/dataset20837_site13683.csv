@@ -1,0 +1,18 @@
+sampleid,geochrontype,agetype,depth,thickness,age,errorolder,erroryounger,infinite,delta13c,labnumber,materialdated,notes,
+192395,Lead-210,Calendar years BP,0,1,-57,1,1,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192396,Lead-210,Calendar years BP,2,1,-53,1,1,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192397,Lead-210,Calendar years BP,4,1,-44,1,1,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192398,Lead-210,Calendar years BP,6,1,-33,1,1,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192399,Lead-210,Calendar years BP,8,1,-21,1,1,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192400,Lead-210,Calendar years BP,10,1,-13,2,2,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192401,Lead-210,Calendar years BP,12,1,-8,3,3,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192402,Lead-210,Calendar years BP,14,1,-3,3,3,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192403,Lead-210,Calendar years BP,16,1,6,4,4,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192404,Lead-210,Calendar years BP,18,1,23,7,7,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192405,Lead-210,Calendar years BP,20,1,39,10,10,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192406,Lead-210,Calendar years BP,22,1,54,14,14,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192407,Lead-210,Calendar years BP,24,1,99,28,28,FALSE,,,Sediment,Errors were not given in the publication and are an estimate based on the polynomial SD = 1 + 0.05*(X-A) + 0.00125*(X-A)^2, where X = age and A = youngest age.
+192391,Carbon-14,Radiocarbon years BP,68,1,2160,25,25,FALSE,,,Pollen,,
+192392,Carbon-14,Radiocarbon years BP,119,1,3920,25,25,FALSE,,,Pollen,,
+192393,Carbon-14,Radiocarbon years BP,197,1,6920,30,30,FALSE,,,Pollen,,
+192394,Carbon-14,Radiocarbon years BP,276,1,7852,27,27,FALSE,,,Pollen,,
