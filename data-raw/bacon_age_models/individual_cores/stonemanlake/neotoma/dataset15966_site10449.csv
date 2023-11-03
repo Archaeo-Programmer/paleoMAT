@@ -1,0 +1,8 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+154405,Carbon-14,Radiocarbon years BP,52,6,1500,110,110,false,,BETA60838,bulk sediment,
+154406,Carbon-14,Radiocarbon years BP,42,6,1220,100,100,false,,BETA59135,bulk sediment,
+154407,Carbon-14,Radiocarbon years BP,93,6,730,80,80,false,,BETA59136,bulk sediment,Author believes that date was contaminated by recent organic material
+154408,Carbon-14,Radiocarbon years BP,112.5,5,2090,70,70,false,,BETA60839,bulk sediment,
+154409,Carbon-14,Radiocarbon years BP,132.5,5,4600,130,130,false,,BETA71674,bulk sediment,
+154410,Carbon-14,Radiocarbon years BP,152.5,5,6260,90,90,false,,BETA71675,bulk sediment,
+154411,Carbon-14,Radiocarbon years BP,187,6,8450,130,130,false,,BETA54741,bulk sediment,

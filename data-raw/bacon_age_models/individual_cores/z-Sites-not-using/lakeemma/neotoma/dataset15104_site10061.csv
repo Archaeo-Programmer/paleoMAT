@@ -1,0 +1,4 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+136821,Carbon-14,Radiocarbon years BP,81,1,5440,100,100,false,,USGS-2135,wood fragment Abies sp.,
+136822,Carbon-14,Radiocarbon years BP,96,1,6670,70,70,false,,W-4523,wood fragment Picea sp.,
+136823,Carbon-14,Radiocarbon years BP,175,1,9220,120,120,false,,W-4524,wood fragment Picea sp.,

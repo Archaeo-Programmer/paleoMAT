@@ -1,0 +1,16 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+112164,Carbon-14,Radiocarbon years BP,44.5,9,2545,75,75,false,,SI-1754,peat,
+112165,Carbon-14,Radiocarbon years BP,90,10,2890,75,75,false,,SI-1755,peat,
+112166,Carbon-14,Radiocarbon years BP,145,10,4035,60,60,false,,SI-1347,peat,
+112167,Carbon-14,Radiocarbon years BP,180,10,4305,85,85,false,,SI-1756,peat,
+112168,Carbon-14,Radiocarbon years BP,220,6,5990,120,120,false,,WSU-1520L,peat lipds extracted before humic acid extraction,Petersen and Mehringer (1976) report this date as WSU-1515 in an average of the three peat components dated. Amended WSU number provided by Kenneth L. Petersen to E.C. Grimm 16 April 2010.
+112169,Carbon-14,Radiocarbon years BP,220,10,6030,295,295,false,,SI-1757,peat,
+112170,Carbon-14,Radiocarbon years BP,255,10,5575,185,185,false,,SI-1555,peat,Date rejected as too young by Peterson and Mehringer (1976).
+112171,Carbon-14,Radiocarbon years BP,255,6,6650,140,140,false,,WSU-1526L,peat lipds extracted before humic acid extraction.,This date not included in the average age reported by Petersen and Mehringer (1976).
+112172,Carbon-14,Radiocarbon years BP,295,10,8500,90,90,false,,SI-1758,peat,
+112173,Carbon-14,Radiocarbon years BP,345,10,8670,80,80,false,,SI-1759,peat,
+112174,Carbon-14,Radiocarbon years BP,385,10,9765,175,175,false,,SI-1348,wood and spruce macrofossils,
+119364,Carbon-14,Radiocarbon years BP,220,6,5760,130,130,false,,WSU-1520H,peat humic acids,Petersen and Mehringer (1976) report this date as WSU-1520 in an average of the three peat components dated. Amended WSU number provided by Kenneth L. Petersen to E.C. Grimm 16 April 2010.
+119365,Carbon-14,Radiocarbon years BP,220,6,5870,120,120,false,,WSU-1520R,peat residue after lipid and humic acid extraction,Petersen and Mehringer (1976) report this date as WSU-1523 in an average of the three peat components dated. Amended WSU number provided by Kenneth L. Petersen to E.C. Grimm 16 April 2010.
+119366,Carbon-14,Radiocarbon years BP,255,6,6600,120,120,false,,WSU-1526H,peat humic acids,Petersen and Mehringer (1976) report this date as WSU-1516 in an average of the two peat components dated. Amended WSU number provided by Kenneth L. Petersen to E.C. Grimm 16 April 2010.
+119367,Carbon-14,Radiocarbon years BP,255,6,6760,120,120,false,,WSU-1526R,peat residue after lipid and humic acid extraction,Petersen and Mehringer (1976) report this date as WSU-1529 in an average of the two peat components dated. Amended WSU number provided by Kenneth L. Petersen to E.C. Grimm 16 April 2010.

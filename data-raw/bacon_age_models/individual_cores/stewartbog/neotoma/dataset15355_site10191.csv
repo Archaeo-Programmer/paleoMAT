@@ -1,0 +1,13 @@
+"sampleid","geochrontype","agetype","depth","thickness","age","errorolder","erroryounger","infinite","delta13c","labnumber","materialdated","notes"
+142885,Carbon-14,Radiocarbon years BP,8,1,120,60,60,false,,AA-35802,Bulk peat,
+142886,Carbon-14,Radiocarbon years BP,56,1,990,35,35,false,,AA-35801,Bulk peat,
+142887,Carbon-14,Radiocarbon years BP,90,1,2770,45,45,false,,AA-35800,Charcoal,
+142888,Carbon-14,Radiocarbon years BP,127,1,2950,45,45,false,,AA-35799,Bulk peat,
+142889,Carbon-14,Radiocarbon years BP,149,1,3495,50,50,false,,AA-35795,Wood,
+142890,Carbon-14,Radiocarbon years BP,186,1,4550,50,50,false,,AA-35794,Charcoal,
+142891,Carbon-14,Radiocarbon years BP,225,1,5010,50,50,false,,AA-35798,Grassy sediment,
+142892,Carbon-14,Radiocarbon years BP,282,1,7955,20,20,false,,UCI-32510,Wood,
+142893,Carbon-14,Radiocarbon years BP,330,1,9890,60,60,false,,Beta153457,Bulk sediment,
+142894,Carbon-14,Radiocarbon years BP,347,1,10070,60,60,false,,Beta153454,Charred wood,
+142895,Carbon-14,Radiocarbon years BP,370,1,10180,50,50,false,,Beta153455,Charred wood,
+142896,Carbon-14,Radiocarbon years BP,404,1,12120,95,95,false,,AA-35802,Bulk sediment,
