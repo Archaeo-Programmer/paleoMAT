@@ -86,7 +86,7 @@ The Neotoma Modern Pollen Database contains `r nrow(MP_metadata_counts)` samples
 
 ```{r load_coreTops, message = FALSE, warning = FALSE, results = 'hide'}
 
-# Get core tops from the fossil pollen dataset and add to the modern pollen dataset. The data was originally downloaded using Tilia with a function created by Eric Grimm. The SSL certificate has now expired, but the sample numbers, dataset ID, and site ID core tops can be loaded using paleomat::coreTops.
+# Get core tops from the fossil pollen dataset and add to the modern pollen dataset. Data was originally downloaded using Tilia with a function created by Eric Grimm. The SSL certificate has now expired, but the sample numbers, dataset ID, and site ID core tops can be loaded using paleomat::coreTops.
 if (!file.exists(here::here("vignettes/data/pollen_cleaned/CT_metadata_counts.rds"))) {
   CT_metadata_counts <-
     dplyr::left_join(paleomat::coreTops,
@@ -153,6 +153,7 @@ continental.states_union <- sf::st_union(continental.states)
 
 # Do an intersection and keep only the sites that are within the continental United States.
 buffer <- sf::st_buffer(continental.states_union, 0)
+
 MPCT_metadata_counts_final <-
   suppressWarnings(sf::st_intersection(MPCT_metadata_counts, buffer))
 
@@ -162,6 +163,7 @@ MPCT_metadata_counts_final <-
 #   here::here("vignettes/data/pollen_cleaned/MPCT_metadata_counts_final.rds"))
 
 #------End for MPCT_metadata_counts_final--------#
+
 
 ```
 
@@ -195,10 +197,9 @@ bb <-
   sf::st_as_sf(crs = 4326) %>%
   sf::st_transform(crs = 4326)
 
-# Do an intersection and keep only the sites that are within the southwestern United States, and remove any samples that do not have an age.
+# Do an intersection and keep only the sites that are within the southwestern United States. 
 fossil_metadata_counts_final2 <-
-  suppressWarnings(sf::st_intersection(fossil_metadata_counts, bb)) %>%
-  dplyr::filter(!is.na(age))
+  suppressWarnings(sf::st_intersection(fossil_metadata_counts, bb))
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(
@@ -208,19 +209,76 @@ fossil_metadata_counts_final2 <-
 #------End for fossil_metadata_counts_final2--------#
 
 
+```
 
-# Limit samples to post 5500 BP.
-fossil_west_post5500 <- paleomat::fossil_west_post5500
-# If you want to recreate fossil_west_post5500, then you can uncomment and run the following code:
-# fossil_west_post5500 <-
-#   fossil_metadata_counts_final2 %>%
-#   dplyr::filter(age <= 5500)
+## Add Bacon Age-depth Models to Fossil Pollen Dataset
+
+```{r age_models, message = FALSE, warning = FALSE, results = 'hide'}
+
+# If you do not want to run the code for creating fossil_metadata_counts_final3, then you can uncomment and run the following line:
+# fossil_metadata_counts_final3 <- readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final3.rds"))
+
+# Keep only sites that have new age models. Most sites that are removed from fossil_metadata_counts_final2 did not have ages, and were primarily archaeological sites with one sample.
+fossil_metadata_counts_final3 <- fossil_metadata_counts_final2 %>% 
+  dplyr::filter(dataset.id %in% paleomat::bacon_age_models$dataset.id) %>% 
+  dplyr::left_join(., paleomat::bacon_age_models, by = c("dataset.id", "site.id", "depth")) %>% 
+  dplyr::relocate(min, max, median, mean, .after = age) %>% 
+  dplyr::select(-site.name.y) %>% 
+  dplyr::rename(site.name = site.name.x)
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   fossil_metadata_counts_final3,
+#   here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final3.rds"))
+
+```
+
+## Apply Quality Control Filters to the Fossil Pollen Dataset
+
+```{r clean_fossil_dataset, message = FALSE, warning = FALSE, results = 'hide'}
+
+# If you do not want to run the code for creating fossil_metadata_counts_final4, then you can uncomment and run the following line:
+# fossil_metadata_counts_final4 <- readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final4.rds"))
+
+# Apply quality control filters to the fossil pollen dataset.
+fossil_metadata_counts_final4 <- fossil_metadata_counts_final3 %>% 
+  # Calculate the total pollen grains identified in each sample. 
+  dplyr::mutate(total_grains = rowSums(dplyr::select(sf::st_drop_geometry(.), ABIES:XANTHIUM))) %>% 
+  # A sample must have a minimum of 200 counted pollen grains to be included in the dataset.
+  dplyr::filter(total_grains >= 200) %>% 
+  # Convert to proportions.
+  dplyr::mutate(dplyr::across(ABIES:XANTHIUM, ~.x / total_grains)) %>%
+  # Replace observations with < 1% abundance with 0.
+  dplyr::mutate(dplyr::across(ABIES:XANTHIUM, ~dplyr::if_else(.x < .005, 0, .x)))
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   fossil_metadata_counts_final4,
+#   here::here("vignettes/data/pollen_cleaned/fossil_metadata_counts_final4.rds"))
+
+# Remove taxa that do not occur in at least 20 samples. Retrieve column names to remove.
+rm_taxa <- fossil_metadata_counts_final4 %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::select(ABIES:XANTHIUM) %>% 
+  dplyr::select_if(~!(is.numeric(.) && (sum(.x > 0) > 20))) %>% 
+  colnames()
+
+fossil_metadata_counts_final5 <- fossil_metadata_counts_final4 %>% 
+  # Remove taxa columns that did not have at least 20 samples.
+  dplyr::select(-c(dplyr::all_of(rm_taxa))) %>% 
+  # Select sites that have 5 or more unique taxa.
+  dplyr::mutate(taxa_count = rowSums(!dplyr::near(dplyr::select(sf::st_drop_geometry(.), ABIES:THALICTRUM), 0))) %>%
+  dplyr::filter(taxa_count >= 5) %>%
+  dplyr::select(-taxa_count, -total_grains)
+
+# Limit samples to post 6000 BP.
+fossil_west_post5500 <- fossil_metadata_counts_final5 %>% 
+  dplyr::filter(max <= 6000)
 
 # If you want to re-save fossil_west_post5500.
 #save(fossil_west_post5500, file = here::here("data/fossil_west_post5500.rda"))
 
 #------End for fossil_west_post5500--------#
-
 
 
 # Cleaning up the fossil dataset.
@@ -230,15 +288,11 @@ fossil_west_post5500 <- paleomat::fossil_west_post5500
 #   readr::read_rds(here::here("vignettes/data/pollen_cleaned/fossil_final.rds"))
 
 fossil_final <-
-  fossil_metadata_counts_final2 %>%
+  fossil_west_post5500 %>%
   # Remove any rows that do not have age data.
   dplyr::filter(!is.na(age)) %>%
   dplyr::select(!c(site.id, site.name:pub_year)) %>%
   tibble::as_tibble() %>%
-  # For the pollen columns, replace any NA with a 0.
-  dplyr::mutate(across(-c(dataset.id, geometry), ~ tidyr::replace_na(.x, 0))) %>%
-  # For the pollen columns, replace any negative number with a 0 (in case of any errors).
-  dplyr::mutate(dplyr::across(!c(dataset.id, geometry), ~ ifelse(.x < 0, 0, .x))) %>%
   # Nest the pollen data into a nested dataframe.
   tidyr::nest(pollen.counts = -c(dataset.id, geometry)) %>%
   sf::st_as_sf() %>%
@@ -274,14 +328,11 @@ MPCT_climate <-
   sf::st_drop_geometry() %>%
   dplyr::left_join(MPCT_metadata_counts_final, by = "sample.id") %>%
   dplyr::select(sample.id,
+                elev,
                 prism.normals,
                 geometry,
-                ABIES:XANTHIUM) %>%
-  tidyr::nest(pollen.counts = -c(sample.id, prism.normals, geometry)) %>%
-  sf::st_as_sf() %>%
-  dplyr::select(sample.id,
-                climate = prism.normals,
-                pollen = pollen.counts)
+                ABIES:XANTHIUM) %>% 
+  sf::st_as_sf()
 
 # Do an intersection and keep only the sites that are within the western continental United States.
 MPCT_climate_final <-
@@ -296,24 +347,74 @@ MPCT_climate_final <-
 
 ```
 
+# Apply Quality Control Filters to Modern Pollen Dataset
+
+```{r modern_quality control, warning = FALSE}
+
+MPCT_climate_final2 <- MPCT_climate_final %>% 
+  dplyr::mutate(total_grains = rowSums(dplyr::select(sf::st_drop_geometry(.), ABIES:XANTHIUM))) %>% 
+  # A sample must have a minimum of 200 counted pollen grains to be included in the dataset.
+  dplyr::filter(total_grains >= 200) %>% 
+  dplyr::mutate(dplyr::across(ABIES:XANTHIUM, ~.x / total_grains)) %>%
+  # Replace observations with < 1% abundance with 0.
+  dplyr::mutate(dplyr::across(ABIES:XANTHIUM, ~dplyr::if_else(.x < .005, 0, .x)))
+
+# Remove taxa that do not occur in at least 20 samples. Retrieve column names to remove.
+rm_taxa <- MPCT_climate_final2 %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::select(ABIES:XANTHIUM) %>% 
+  dplyr::select_if(~!(is.numeric(.) && (sum(.x > 0) > 20))) %>% 
+  colnames()
+
+MP_coords <- dplyr::bind_rows(MP_metadata_counts, CT_metadata_counts) %>% 
+  dplyr::select(sample.id, long, lat)
+
+MPCT_climate_final3 <- MPCT_climate_final2 %>% 
+  dplyr::select(-c(dplyr::all_of(rm_taxa))) %>% 
+  # Select sites that have 5 or more unique taxa.
+  dplyr::mutate(taxa_count = rowSums(!dplyr::near(dplyr::select(sf::st_drop_geometry(.), ABIES:ULMUS), 0))) %>%
+  dplyr::filter(taxa_count >= 5) %>%
+  dplyr::select(-taxa_count, -total_grains) %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::left_join(., MP_coords, by = "sample.id") %>% 
+  tidyr::nest(pollen.counts = -c(sample.id, elev, prism.normals, long, lat)) %>%
+  dplyr::select(sample.id,
+                elev,
+                climate = prism.normals,
+                pollen = pollen.counts,
+                long, 
+                lat) %>% 
+  sf::st_as_sf(coords = c("long", "lat"), crs = 4326)
+
+# Check that the recorded elevation from Neotoma is not too different from elevation (using the elevatr package) of the location.
+df_elev_epqs <- elevatr::get_elev_point(MPCT_climate_final3 %>% dplyr::select(-c(climate, pollen)), prj = 4326, src = "aws") %>% 
+  # Calculate the absolute difference between the elevations.
+  dplyr::mutate(diff = abs(elevation - elev))
+
+# Remove samples that do not match the DEM.
+mismatch <- df_elev_epqs %>% 
+  dplyr::filter(diff > 1000) %>% 
+  dplyr::pull(sample.id)
+
+MPCT_climate_final3 <- MPCT_climate_final3 %>% 
+  dplyr::filter(!sample.id %in% mismatch) %>% 
+  dplyr::select(-elev)
+
+```
+
 ## Finalize Modern and Fossil Pollen Datasets
 ```{r finalize-datasets, cache = TRUE, results = 'asis', warning = FALSE}
 
 # Modern Dataset
 
-# Clean up modern pollen and climate dataframe to prepare for transfer function and reconstruction diagnostics. Here, we transform the pollen data into proportions.
+# Clean up modern pollen and climate dataframe to prepare for transfer function and reconstruction diagnostics. We have already changed the data to proportions, so just select the climate variables of interest.
 
 # If you do not want to run the code for creating MPCT_proportions, then you can uncomment and run the following line:
 # MPCT_proportions <- paleomat::MPCT_proportions
 
 MPCT_proportions <-
-  MPCT_climate_final %>%
+  MPCT_climate_final3 %>%
   dplyr::mutate(
-    pollen =
-      purrr::map(pollen,
-                 function(x) {
-                   x / rowSums(x)
-                 }),
     climate =
       purrr::map(climate,
                  function(x) {
@@ -324,6 +425,45 @@ MPCT_proportions <-
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # save(MPCT_proportions, file = here::here("data/MPCT_proportions.rda"))
+
+
+
+# Fossil Dataset
+
+# If you do not want to run the code for creating fossil_pollen, then you can uncomment and run the following line:
+# fossil_pollen <- paleomat::fossil_pollen
+
+# Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
+fossil_final$pollen <-
+  purrr::map(fossil_final$pollen, function(x)
+    tibble::column_to_rownames(x, "sample.id"))
+
+fossil_pollen <- fossil_final
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# save(fossil_pollen, file = here::here("data/fossil_pollen.rda"))
+
+
+
+# Keep only taxa that are the same between the modern and fossil pollen dataset.
+keep_cols <- intersect(colnames(dplyr::bind_rows(fossil_pollen$pollen) %>% dplyr::select(-Other)), colnames(dplyr::bind_rows(MPCT_proportions$pollen)))
+
+
+fossil_pollen <- fossil_pollen %>%
+  dplyr::mutate(pollen =
+                  purrr::map(pollen,
+                             function(x) {
+                               x %>% 
+                                 dplyr::select(dplyr::all_of(keep_cols))
+                             }))
+
+MPCT_proportions <- MPCT_proportions %>%
+  dplyr::mutate(pollen =
+                  purrr::map(pollen,
+                             function(x) {
+                               x %>% 
+                                 dplyr::select(dplyr::all_of(keep_cols))
+                             }))
 
 
 # Put the modern pollen data into a dataframe and make the sample.id as the row names.
@@ -340,29 +480,6 @@ env <- MPCT_proportions %>%
 
 # Turn climate value (tavg) vector into a named vector with the sample ids.
 names(env) <- c(MPCT_proportions$sample.id)
-
-
-
-# Fossil Dataset
-
-# If you do not want to run the code for creating fossil_pollen, then you can uncomment and run the following line:
-# fossil_pollen <- paleomat::fossil_pollen
-
-# Prepare fossil pollen dataset for transfer function and reconstruction diagnostics.
-fossil_final$pollen <-
-  purrr::map(fossil_final$pollen, function(x)
-    tibble::column_to_rownames(x, "sample.id"))
-
-# Transform fossil pollen data into proportions, as we did with the modern pollen data above.
-fossil_pollen <- fossil_final %>%
-  dplyr::mutate(pollen =
-                  purrr::map(pollen,
-                             function(x) {
-                               x / rowSums(x)
-                             }))
-  
-  # If you need to write the data to file, then you can uncomment and run the following.
-  #save(fossil_pollen, file = here::here("data/fossil_pollen.rda"))
 
 ```
 
@@ -405,7 +522,7 @@ rlen_results <- purrr::map_dfr(rlen_results, `[[`, 1) %>%
 rlen_removal <-
   as.numeric(levels(rlen_results$sample.id))[rlen_results$Squared_res_lengths > rlen_ninety5quant]
 
-# Results from rlen with sample.id for last 5500 years.
+# Results from rlen with sample.id for last 6000 years.
 rlen_full_results1 <- rlen_results %>%
   dplyr::mutate(sample.id = as.integer(levels(sample.id))) %>%
   dplyr::filter(sample.id %in% fossil_west_post5500$sample.id)
@@ -437,11 +554,11 @@ fos$pollen <-
 # If you do not want to run the code for creating fos2, then you can uncomment and run the following line:
 # fos2 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/fos2.rds"))
 
-# Remove any sites that have 0 or 1 samples from the fossil pollen dataset.
+# Remove any sites that have 0 samples from the fossil pollen dataset.
 fos2 <- fos %>%
   dplyr::select(-n_samples) %>%
   dplyr::mutate(rows = purrr::map_dbl(pollen, ~ nrow(.x))) %>%
-  dplyr::filter(!rows %in% c(0, 1))
+  dplyr::filter(!rows %in% c(0))
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(fos2,
@@ -451,71 +568,101 @@ fos2 <- fos %>%
 
 ## randomTF Testing
 
-**Step 2**: We use Random TF to remove sites where tJuly cannot explain at least 90% of the variance.
+You can explore the fossil pollen sites using the Random TF function to understand how much of the variance can be explained by tJuly. We do not use this step to remove any sites.
 
 ```{r randomTF, cache = TRUE, results = 'asis', warning = FALSE}
 
-# This line takes approximately 40 minutes to run (depending on your system). If you would like to re-run, then you can run the interior contents of the if statement. 
-if (!file.exists(here::here(
-  "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
-))) {
-  sig_results2_full <-
-    purrr::map2(fos2$pollen, fos2$dataset.id, function(x, y) {
-      output <- palaeoSig::randomTF(
-        spp = spp,
-        env = data.frame(tjul = env),
-        fos = x,
-        n = 10000,
-        fun = MAT,
-        col = 1
-      )
-      prop <- output$EX
-      names(prop) <- y
-      sig_out <- output$sig
-      names(sig_out) <- y
-      return(list(prop, sig_out))
-    })
-  
-  # Extract the proportion explained variance and the dataset ID.
-  sig_results2_proportions <- sapply(sig_results2_full, "[[", 1) %>%
-    stack(.) %>%
-    dplyr::rename(dataset.id = ind, proportion = values)
-  
-  # Extract the p-values and the dataset ID.
-  sig_results2_pvalues <- sapply(sig_results2_full, "[[", 2) %>%
-    stack(.) %>%
-    dplyr::rename(dataset.id = ind, pvalue = values)
-  
-  # Put the proportion of variance and p-value into the same dataframe.
-  sig_results2_final <-
-    dplyr::left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>%
-    dplyr::select(dataset.id, proportion, pvalue) %>%
-    dplyr::mutate(dataset.id = as.numeric(levels(dataset.id)))
-  
-  readr::write_rds(
-    sig_results2_final,
-    here::here(
-      "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
-    )
-  )
-}
-sig_results2_final <-
-  readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"))
-
-# Pull out the dataset IDs that have p-values less than the 0.10.
-only_90b <- sig_results2_final %>%
-  dplyr::filter(pvalue <= 0.10) %>%
-  dplyr::pull(dataset.id)
-
-# Finally, subset the fossil pollen dataset by keeping only the dataset IDs that passed randomTF.
-fos3_90 <- fos %>%
-  dplyr::filter(dataset.id %in% only_90b)
+# # This line takes approximately 40 minutes to run (depending on your system). If you would like to re-run, then you can run the interior contents of the if statement. 
+# if (!file.exists(here::here(
+#   "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
+# ))) {
+#   sig_results2_full <-
+#     purrr::map2(fos2$pollen, fos2$dataset.id, function(x, y) {
+#       output <- palaeoSig::randomTF(
+#         spp = spp,
+#         env = data.frame(tjul = env),
+#         fos = x,
+#         n = 10000,
+#         fun = MAT,
+#         col = 1
+#       )
+#       prop <- output$EX
+#       names(prop) <- y
+#       sig_out <- output$sig
+#       names(sig_out) <- y
+#       return(list(prop, sig_out))
+#     })
+#   
+#   # Extract the proportion explained variance and the dataset ID.
+#   sig_results2_proportions <- sapply(sig_results2_full, "[[", 1) %>%
+#     stack(.) %>%
+#     dplyr::rename(dataset.id = ind, proportion = values)
+#   
+#   # Extract the p-values and the dataset ID.
+#   sig_results2_pvalues <- sapply(sig_results2_full, "[[", 2) %>%
+#     stack(.) %>%
+#     dplyr::rename(dataset.id = ind, pvalue = values)
+#   
+#   # Put the proportion of variance and p-value into the same dataframe.
+#   sig_results2_final <-
+#     dplyr::left_join(sig_results2_proportions, sig_results2_pvalues, by = "dataset.id") %>%
+#     dplyr::select(dataset.id, proportion, pvalue) %>%
+#     dplyr::mutate(dataset.id = as.numeric(levels(dataset.id)))
+#   
+#   readr::write_rds(
+#     sig_results2_final,
+#     here::here(
+#       "vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"
+#     )
+#   )
+# }
+# sig_results2_final <-
+#   readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sig_results2_final.rds"))
+# 
+# # Pull out the dataset IDs that have p-values less than the 0.10.
+# only_90b <- sig_results2_final %>%
+#   dplyr::filter(pvalue <= 0.10) %>%
+#   dplyr::pull(dataset.id)
+# 
+# # Finally, subset the fossil pollen dataset by keeping only the dataset IDs that passed randomTF.
+# fos3_90 <- fos %>%
+#   dplyr::filter(dataset.id %in% only_90b)
+# 
 
 ```
 
 ## MAT Transfer Function and Prediction
 
-**Step 3**: Run MAT, then do prediction/reconstruction.
+### Spatial Autocorrelation
+```{r spatial_autocorrelation, cache = TRUE, results = 'asis', warning = FALSE}
+
+# To reduce the effects of spatial autocorrelation, we first get the geographic euclidean distance between fossil and modern pollen sites. So, that we do not use samples within 300 km of the target site.
+
+# Get list of modern pollen samples and geometry.
+fos3_90 <- fos2
+modern_samples <- MPCT_proportions %>% 
+  dplyr::select(sample.id, geometry)
+
+# Get list of fossil samples and geometry.
+fossil_samples <- fos3_90 %>% 
+  dplyr::mutate(pollen = purrr::map(
+    pollen,
+    ~ .x %>% tibble::rownames_to_column("sample.id") %>% dplyr::select(sample.id)
+  )) %>% 
+  tidyr::unnest(cols = "pollen") %>% 
+  dplyr::select(sample.id, geometry)
+
+# Calculate distances between all modern and fossil samples.
+sample_dist <- sf::st_distance(modern_samples, fossil_samples) %>% 
+  data.frame() %>% 
+  dplyr::mutate(dplyr::across(dplyr::everything(), ~as.numeric(.x)/1000))
+
+colnames(sample_dist) <- fossil_samples$sample.id
+rownames(sample_dist) <- modern_samples$sample.id
+
+```
+
+**Step 2**: Run MAT, then do prediction/reconstruction.
 
 ```{r MAT_transfer_prediction, cache = TRUE, results = 'asis', warning = FALSE}
 
@@ -534,89 +681,174 @@ keep_cols <- keep_cols[keep_cols %in% colnames(fossil_input)]
 pollen_input <- pollen_input[, keep_cols]
 fossil_input <- fossil_input[, keep_cols]
 
+# Exclude modern samples if sample is within h distance to target (fossil pollen sample). Here, I get a list of the modern samples that are greater than 300 km for each site.
+sample_dist2 <- sample_dist %>%
+  tibble::rownames_to_column("modern.sample.id") %>%
+  tidyr::pivot_longer(
+    -modern.sample.id,
+    names_to = "fossil.sample.id",
+    values_to = "dist_km",
+    values_drop_na = TRUE
+  ) %>%
+  dplyr::filter(dist_km > 300) %>%
+  dplyr::select(-dist_km) %>%
+  dplyr::group_by(fossil.sample.id) %>%
+  dplyr::mutate(modern.sample.id = as.numeric(modern.sample.id)) %>%
+  dplyr::summarize(modern.sample.id = list(unique(modern.sample.id))) %>%
+  dplyr::mutate(fossil.sample.id = as.numeric(fossil.sample.id)) %>%
+  dplyr::left_join(
+    .,
+    fossil_west_post5500 %>%
+      dplyr::select(sample.id, site.id) %>%
+      sf::st_drop_geometry(),
+    by = c("fossil.sample.id" = "sample.id")
+  ) %>%
+  dplyr::select(-fossil.sample.id) %>%
+  dplyr::distinct()
+
+# Put fossil pollen data into a list where each site is its own dataframe.
+fossil_input2 <- fossil_input %>%
+  tibble::rownames_to_column("sample.id") %>%
+  dplyr::mutate(sample.id = as.integer(sample.id)) %>%
+  dplyr::left_join(
+    .,
+    fossil_west_post5500 %>%
+      dplyr::select(sample.id, site.id) %>%
+      sf::st_drop_geometry(),
+    by = "sample.id"
+  ) %>%
+  dplyr::group_split(site.id) %>%
+  purrr::set_names(purrr::map_chr(., ~ as.character(.x$site.id[1]))) %>%
+  purrr::map(.,
+             ~ .x %>%
+               dplyr::select(-site.id) %>%
+               tibble::column_to_rownames("sample.id"))
+
+
+# If you want to run the code for creating reconstructions (i.e., the predict.mat and predict.mat bootstrap output for each site), then you can uncomment the section below (the code takes approximately 30 minutes to run, depending on your machine). Here, we load the existing reconstruction file to save time. First, comment out the following line:
+reconstructions <- readRDS(here::here("vignettes/data/full_reconstruction_output_FINAL.rds"))
+
+# Iterate over the fossil pollen data to create reconstructions for each transfer function. 
+# reconstructions <-
+#   purrr::map2(.x = fossil_input2, .y = as.numeric(names(fossil_input2)), function(.x, .y) {
+#     modern_samps <- sample_dist2 %>%
+#       dplyr::filter(site.id == .y) %>%
+#       dplyr::select(modern.sample.id) %>%
+#       unlist() %>%
+#       unname()
+#     
+#     pollen_input2 <- pollen_input %>%
+#       tibble::rownames_to_column("sample.id") %>%
+#       dplyr::mutate(sample.id = as.integer(sample.id)) %>%
+#       dplyr::filter(sample.id %in% modern_samps) %>%
+#       tibble::column_to_rownames("sample.id")
+#     
+#     env2 <- env[as.numeric(names(env)) %in% modern_samps]
+#     
+#     noK <- 4
+#     # Create the transfer function using mat from the analogue package.
+#     swap.mat2 <-
+#       analogue::mat(pollen_input2, env2, method = "SQchord")
+#     
+#     # Create the transfer function using mat from the analogue package.
+#     rlgh.mat2 <-
+#       analogue:::predict.mat(object = swap.mat2,
+#                              newdata = .x,
+#                              k = noK)
+#     
+#     # Create the transfer function using mat from the analogue package. Bootstrapping takes approximately 5-10 minutes (depending on your system).
+#     rlgh.mat2b4 <-
+#       analogue:::predict.mat(
+#         object = swap.mat2,
+#         newdata = .x,
+#         k = noK,
+#         bootstrap = TRUE
+#       )
+#     
+#     mat_prediction_4 <-
+#       as.data.frame(rlgh.mat2b4$predictions$model$predicted[noK, ]) %>%
+#       dplyr::mutate(site.id = as.numeric(.y)) %>%
+#       tibble::rownames_to_column("sample.id") %>%
+#       dplyr::select(sample.id, site.id, value = 2) %>%
+#       # Pull out the bootstrap predicted values.
+#       dplyr::left_join(
+#         .,
+#         as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][, noK]) %>%
+#           dplyr::mutate(site.id = as.numeric(.y)) %>%
+#           tibble::rownames_to_column("sample.id") %>%
+#           dplyr::select(sample.id, site.id, bootstrap = 2),
+#         by = c("sample.id", "site.id")
+#       ) %>%
+#       # Pull out the bootstrap rmsep.
+#       dplyr::left_join(
+#         .,
+#         as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][, noK]) %>%
+#           dplyr::mutate(site.id = as.numeric(.y)) %>%
+#           tibble::rownames_to_column("sample.id") %>%
+#           dplyr::select(sample.id, site.id, rmsep = 2),
+#         by = c("sample.id", "site.id")
+#       ) %>%
+#       # Pull out the bootstrap s1 errors.
+#       dplyr::left_join(
+#         .,
+#         as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][, noK]) %>%
+#           dplyr::mutate(site.id = as.numeric(.y)) %>%
+#           tibble::rownames_to_column("sample.id") %>%
+#           dplyr::select(sample.id, site.id, s1 = 2),
+#         by = c("sample.id", "site.id")
+#       )
+#     
+#     return(
+#       list(
+#         fossil.sample.id = .y,
+#         recon = rlgh.mat2,
+#         recon_bootstrap = rlgh.mat2b4,
+#         recon_df = mat_prediction_4
+#       )
+#     )
+#     
+#   })
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# saveRDS(reconstructions, here::here("vignettes/data/full_reconstruction_output_FINAL.rds"))
+
 # Save output of MAT.
-# If you do not want to run the code for creating swap.mat2, then you can uncomment and run the following line:
-# swap.mat2 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_calibration.rds"))
+# If you do not want to run the code for creating mat_transfer, then you can uncomment and run the following line:
+# mat_transfer <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_calibration.rds"))
 
 # Create the transfer function using mat from the analogue package.
-swap.mat2 <- analogue::mat(pollen_input, env, method = "SQchord")
+mat_transfer <- analogue::mat(pollen_input, env, method = "SQchord")
+noK <- 4
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(
-#   swap.mat2,
+#   mat_transfer,
 #   here::here("vignettes/data/diagnostics_reconstruction/mat_calibration.rds"))
 
-
-# Here, we run the prediction twice, so that we can extract the minimum dissimilarity and distances from the predict.mat object.
-
-# If you do not want to run the code for creating rlgh.mat2, then you can uncomment and run the following line:
-# rlgh.mat2 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_prediction.rds"))
+# Run the prediction. If you do not want to run the code for creating mat_predict, then you can uncomment and run the following line:
+# mat_predict <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_prediction.rds"))
 
 # Create the transfer function using mat from the analogue package.
-rlgh.mat2 <-
-  analogue:::predict.mat(object = swap.mat2,
+mat_predict <-
+  analogue:::predict.mat(object = mat_transfer,
                          newdata = fossil_input,
-                         k = 4)
+                         k = noK)
 
 # If you need to write the data to file, then you can uncomment and run the following.
 # readr::write_rds(
-#   rlgh.mat2,
+#   mat_predict,
 #   here::here("vignettes/data/diagnostics_reconstruction/mat_prediction.rds"))
 
-
-# Here, we run the prediction again in order to get the bootstrap estimates.
-
-# If you do not want to run the code for creating rlgh.mat2b4, then you can uncomment and run the following line:
-# rlgh.mat2b4 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"))
-
-
-# Create the transfer function using mat from the analogue package. Bootstrapping takes approximately 5-10 minutes (depending on your system).
-rlgh.mat2b4 <-
-  analogue:::predict.mat(
-    object = swap.mat2,
-    newdata = fossil_input,
-    k = 4,
-    bootstrap = TRUE
-  )
-
-# If you need to write the data to file, then you can uncomment and run the following.
-# readr::write_rds(
-#   rlgh.mat2b4,
-#   here::here("vignettes/data/diagnostics_reconstruction/mat_prediction_bootstrap.rds"))
-
-
-# Here, we pull out the data from the predict.mat object. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the fourth record here.
+# Here, we pull out the data from the predict.mat objects. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the four record here.
 mat_prediction_4 <-
-  as.data.frame(rlgh.mat2b4$predictions$model$predicted[4,]) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  dplyr::rename(value = 2) %>%
-  # Pull out the bootstrap predicted values.
-  dplyr::left_join(
-    .,
-    as.data.frame(rlgh.mat2b4[["predictions"]][["bootstrap"]][["predicted"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
-      dplyr::rename(bootstrap = 2),
-    by = "sample.id"
-  ) %>%
-  # Pull out the bootstrap rmsep.
-  dplyr::left_join(
-    .,
-    as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["rmsep"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
-      dplyr::rename(rmsep = 2),
-    by = "sample.id"
-  ) %>%
-  # Pull out the bootstrap s1 errors.
-  dplyr::left_join(
-    .,
-    as.data.frame(rlgh.mat2b4[["predictions"]][["sample.errors"]][["s1"]][, 4]) %>% tibble::rownames_to_column("sample.id") %>%
-      dplyr::rename(s1 = 2),
-    by = "sample.id"
-  )
+  purrr::map_df(reconstructions, "recon_df")
 
 ```
 
+
 ## No Analog Threshold (or Minimum Dissimilarity)
 
-**Step 4**: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
+**Step 3**: Remove any fossil pollen samples that have a minimum dissimilarity that is greater than the 5% quantile.
 
 ```{r no_analog, cache = TRUE, results = 'asis', warning = FALSE}
 
@@ -632,15 +864,16 @@ pre_minDC_samples <- rlen_full_results1 %>%
       dplyr::select(dataset.id, site.id, sample.id),
     by = "sample.id"
   ) %>%
-  dplyr::filter(dataset.id %in% only_90b) %>%
+  #dplyr::filter(dataset.id %in% only_90b) %>%
   dplyr::pull(sample.id)
 
-# Get the minimum dissimilarity for each sample.
-rlgh.mdc <- analogue::minDC(rlgh.mat2)
+rlgh.mdc2 <- purrr::map(reconstructions, "recon") %>% 
+  purrr::map_df(., "minDC") %>% 
+  tidyr::pivot_longer(everything(), names_to = "ind", values_to = "values", values_drop_na = TRUE)
 
 # Put the results into a list.
-minDC_results <- stack(rlgh.mdc$minDC) %>%
-  dplyr::mutate(ind = as.integer(levels(ind))) %>%
+minDC_results <- rlgh.mdc2 %>%
+  dplyr::mutate(ind = as.integer(ind)) %>%
   dplyr::filter(ind %in% pre_minDC_samples) %>%
   dplyr::left_join(
     .,
@@ -653,7 +886,7 @@ minDC_results <- stack(rlgh.mdc$minDC) %>%
 
 # Put the results into a list structure.
 minDC_full_results <- structure(list(minDC = minDC_results,
-                                     quantiles = rlgh.mdc$quantiles),
+                                     quantiles = mat_predict$quantiles),
                                 class = "list")
 
 # If you need to write the data to file, then you can uncomment and run the following.
@@ -669,10 +902,11 @@ minDC_full_results <- structure(list(minDC = minDC_results,
 # minDC_summary <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/minDC_summary.rds"))
 
 # Get sample IDs and dissimilarity for samples that did not pass the threshold (i.e., samples that will need to be removed).
-remove_samples <- as.data.frame(rlgh.mdc$minDC) %>%
-  tibble::rownames_to_column("sample.id") %>%
-  dplyr::rename(dissimilarity = 2) %>%
-  dplyr::filter(dissimilarity > as.numeric(rlgh.mat2$quantiles["5%"]))
+no_analog_threshold <- mat_predict[["quantiles"]][["5%"]]
+
+remove_samples <- rlgh.mdc2 %>%
+  dplyr::rename(dissimilarity = 2, sample.id = ind) %>%
+  dplyr::filter(dissimilarity > no_analog_threshold)
 
 # Remove the samples from the dataset.
 mat_prediction_cleaned <- mat_prediction_4 %>%
@@ -697,11 +931,11 @@ minDC_summary <- list(
 
 ```
 
-## Update Age Models
+## Clean Up Data
 
 Clean up fossil pollen data to create the final dataset of samples.
 
-```{r update_age_models, cache = TRUE, results = 'asis', warning = FALSE}
+```{r clean_up_data, cache = TRUE, results = 'asis', warning = FALSE}
 
 # If you do not want to run the code for creating fos_90, then you can uncomment and run the following line:
 # fos_90 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/fos_90.rds"))
@@ -710,14 +944,10 @@ fos_90 <- mat_prediction_cleaned %>%
   dplyr::mutate(sample.id = as.integer(sample.id)) %>%
   dplyr::filter(sample.id %in% final_approved_samples) %>%
   dplyr::left_join(.,
-                   fossil_metadata_counts_final2 %>%
+                   fossil_west_post5500 %>%
                      dplyr::select(dataset.id:pub_year),
                    by = "sample.id") %>%
-  dplyr::filter(age <= 5500) %>%
-  dplyr::left_join(paleomat::updated_age_models,
-                   by = c("site.id", "dataset.id", "sample.id")) %>%
-  dplyr::mutate(age = dplyr::coalesce(age.y, age.x)) %>%
-  dplyr::select(-c(age.y, age.x)) %>%
+  dplyr::filter(age <= 6000) %>%
   dplyr::mutate(age = round(age)) %>%
   sf::st_as_sf()
 
@@ -743,8 +973,9 @@ tavg_new_90 <- fos_90 %>%
   # Remove/drop geometry. 
   dplyr::select(-geometry) %>%
   sf::st_drop_geometry() %>%
+  dplyr::mutate(age = mean) %>% 
   # Create a date column with BC/AD ages.
-  dplyr::mutate(date = paleomat::BPtoBCAD(age)) %>%
+  dplyr::mutate(date = paleomat::BPtoBCAD(mean)) %>%
   # Remove any data older than 5500 years old.
   dplyr::filter(age <= 5500) %>%
   # Create 100 year periods. 
@@ -756,7 +987,7 @@ tavg_new_90 <- fos_90 %>%
 modern_temperature <-
   as.data.frame(
     raster::extract(
-      x =  paleomat::temp.raster,
+      x =  temp.raster,
       y = tavg_new_90 %>% dplyr::ungroup() %>%
         dplyr::select(long, lat)
     )
@@ -768,7 +999,7 @@ site.preds.unlisted <-
   dplyr::bind_cols(tavg_new_90, modern = modern_temperature$modern)
 
 # Calculate the temperature anomaly and the bootstrapped temperature anomaly.
-site.preds.unlisted.anom <- site.preds.unlisted %>%
+site.preds.unlisted.anom <- site.preds.unlisted %>% 
   dplyr::rowwise() %>%
   dplyr::mutate(anom = value - modern) %>%
   dplyr::mutate(anom_bootstrap = bootstrap - modern)
@@ -783,4 +1014,137 @@ knitr::kable(site.preds.unlisted.anom,
 
 ```
 
-For figures and tables in the journal article, please see "Paleomat Figures.Rmd".
+# Age-depth Simulation
+
+```{r age_depth_simulation, cache = TRUE, results = 'asis', warning = FALSE}
+
+# If you do not want to run the code for creating final_paleomat_output, then you can uncomment and run the following line:
+# final_paleomat_output <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/final_paleomat_output.rds"))
+
+site.preds.unlisted.anom2 <- site.preds.unlisted.anom
+# Initialize a Year column. 
+site.preds.unlisted.anom2$Year <- NA
+
+site.preds.unlisted.anom2 <- site.preds.unlisted.anom2 %>%
+  dplyr::group_by(dataset.id) %>% 
+  tidyr::nest()
+
+final_paleomat_output <- site.preds.unlisted.anom2 %>%
+  dplyr::mutate(data = purrr::map(
+    data,
+    ~ purrr::map_dfr(
+      # We run 100 simulations for the age-depth model.
+      1:100,
+      \(i) paleomat::simulate_age_model(.) %>% dplyr::mutate(Simulation = i, Year = paleomat::BPtoBCAD(Year))
+    )
+  )) %>%
+  tidyr::unnest(cols = c(data)) %>%
+  dplyr::bind_rows(.,
+                   site.preds.unlisted.anom %>%
+                     dplyr::mutate(Year = paleomat::BPtoBCAD(mean),
+                                   Simulation = 0)) %>%
+  dplyr::mutate(date = Year)
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   final_paleomat_output,
+#   here::here("vignettes/data/diagnostics_reconstruction/final_paleomat_output.rds"))
+
+
+# Getting ages for all 100 simulations for all fossil pollen samples (n = 773). This is for plotting in the supplemental figures.
+# If you do not want to run the code for creating sim_ages3, then you can uncomment and run the following line:
+# sim_ages3 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/sim_ages3.rds"))
+sim_ages <- paleomat::fossil_west_post5500 %>% 
+  dplyr::select(dataset.id:mean)
+
+sim_ages2 <- sim_ages
+
+sim_ages2$Year <- NA
+
+sim_ages2 <- sim_ages2 %>%
+  dplyr::select(dataset.id:mean, Year) %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::group_by(dataset.id) %>% 
+  tidyr::nest()
+
+sim_ages3 <- sim_ages2 %>%
+  dplyr::mutate(data = purrr::map(
+    data,
+    ~ purrr::map_dfr(
+      1:100,
+      \(i) paleomat::simulate_age_model(.) %>% dplyr::mutate(Simulation = i, Year = paleomat::BPtoBCAD(Year))
+    )
+  )) %>%
+  tidyr::unnest(cols = c(data)) %>%
+  dplyr::bind_rows(.,
+                   sim_ages %>%
+                     dplyr::mutate(Year = paleomat::BPtoBCAD(mean),
+                                   Simulation = 0)) %>%
+  dplyr::mutate(date = Year)
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   sim_ages3,
+#   here::here("vignettes/data/diagnostics_reconstruction/sim_ages3.rds"))
+
+```
+
+For figures and tables in the journal article, please see "Paleomat_Figures.Rmd".
+
+
+```{r sample_numbers_for_article, cache = TRUE, results = 'asis', warning = FALSE}
+
+# Get counts for throughout this Rmarkdown to show how number of sites, datasets, and samples change.
+
+# Get elevation stats for fossil pollen sites.
+fossil_elev <- fossil_metadata_counts_final3 %>% 
+  dplyr::select(site.id) %>% 
+  dplyr::distinct() %>% 
+  elevatr::get_elev_point(., prj = 4326, src = "aws")
+
+fossil_elev2 <- fossil_elev %>% 
+  dplyr::filter(site.id %in% fossil_metadata_counts_final5$site.id)
+
+fossil_elev3 <- fossil_elev %>% 
+  dplyr::filter(site.id %in% paleomat::fossil_west_post5500$site.id)
+
+fos_join <- dplyr::left_join(fos2, fossil_metadata_counts_final5 %>% dplyr::select(site.id, dataset.id) %>% sf::st_drop_geometry() %>% dplyr::distinct(), by = "dataset.id")
+
+# Put all information into a dataframe.
+data.frame(Stage = c("Initial", "Quality Control", "Less Than 6000 BP", "resLength", "No Analogue"),
+          noSites = c(length(unique(fossil_metadata_counts_final3$site.id)),
+                      length(unique(fossil_metadata_counts_final5$site.id)),
+                      length(unique(fossil_west_post5500$site.id)),
+                      length(unique(fos_join$site.id)),
+                      length(unique(fos_90$site.id.x))
+                      ),
+          noDatasets = c(length(unique(fossil_metadata_counts_final3$dataset.id)),
+                         length(unique(fossil_metadata_counts_final5$dataset.id)),
+                         length(unique(fossil_west_post5500$dataset.id)),
+                         length(unique(fos_join$dataset.id)),
+                         length(unique(fos_90$dataset.id))
+                         ),
+          noSamples = c(nrow(fossil_metadata_counts_final3),
+                        nrow(fossil_metadata_counts_final5),
+                        nrow(fossil_west_post5500),
+                        nrow(dplyr::bind_rows(fos_join$pollen)),
+                        nrow(fos_90)
+                        ),
+          meanElev = c(mean(fossil_elev$elevation),
+                       mean(fossil_elev2$elevation),
+                       mean(fossil_elev3$elevation),
+                       NA,
+                       NA),
+          minElev = c(min(fossil_elev$elevation),
+                      min(fossil_elev2$elevation),
+                      min(fossil_elev3$elevation),
+                      NA,
+                      NA),
+          maxElev = c(max(fossil_elev$elevation),
+                      max(fossil_elev2$elevation),
+                      max(fossil_elev3$elevation),
+                      NA,
+                      NA)
+          )
+
+```

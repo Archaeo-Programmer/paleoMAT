@@ -71,5 +71,5 @@ Suggests: testthat
 Encoding: UTF-8
 URL: https://github.com/Archaeo-Programmer/paleomat
 BugReports: https://github.com/Archaeo-Programmer/paleomat/issues
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.3
 Roxygen: list(markdown = TRUE)

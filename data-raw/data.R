@@ -1,4 +1,5 @@
 library(magrittr)
+library(data.table)
 
 # Use states data to create a spatial polygon.
 states <-
@@ -108,6 +109,29 @@ alley_2000 <-
 usethis::use_data(alley_2000,
                   overwrite = TRUE)
 
+# Get data from PAGES 2k Consortium et al. 2019. Original data downloaded from https://www.ncei.noaa.gov/pub/data/paleo/pages2k/neukom2019temp/recons/Full_ensemble_median_and_95pct_range.txt.
+pages2k_2019 <-
+  read.csv(here::here("data-raw/Full_ensemble_median_and 95pct_range.csv")) %>%
+  tibble::as_tibble()
+
+usethis::use_data(pages2k_2019,
+                  overwrite = TRUE)
+
+# Get data from Osman et al. 2021. Original data downloaded from https://doi.org/10.1038/s41586-021-03984-4 - Source Data Fig. 2.
+osman_2021 <-
+  readxl::read_xlsx(here::here("data-raw/41586_2021_3984_MOESM3_ESM.xlsx")) %>%
+  tibble::as_tibble()
+
+usethis::use_data(osman_2021,
+                  overwrite = TRUE)
+
+# Get data from Routson et al. 2021. Original data downloaded from https://doi.org/10.6084/m9.figshare.12863843.v1 (wNAmTempComposites.xlsx).
+routson_2021 <-
+  readxl::read_xlsx(here::here("data-raw/wNAmTempComposites.xlsx")) %>%
+  tibble::as_tibble()
+
+usethis::use_data(routson_2021,
+                  overwrite = TRUE)
 
 # Get core top data from fossil pollen dataset.
 # This was originally used to pull in the core top data; however, the SSL certificate has now expired. The data was saved and can be loaded from the .csv file. Data downloaded on October 23, 2021.
@@ -125,18 +149,37 @@ usethis::use_data(coreTops,
                   overwrite = TRUE)
 
 
-# Several fossil pollen sites have updated Bacon age models that were not downloaded in the original fossil pollen dataset (i.e., NAfossil_metadata_counts).
-updated_age_models <-
-  list.files(here::here("data-raw/updated_age_models"), full.names = TRUE) %>%
-  purrr::map_dfr(read.csv) %>%
+# Fossil pollen sites used in this study have updated Bacon age models.
+list_of_files <- list.files(path = here::here("data-raw/bacon_age_models"), recursive = TRUE,
+                            pattern = "ages\\.txt$",
+                            full.names = TRUE) %>%
+  stringr::str_subset(., "old|z-Sites-not-using", negate = TRUE)
+
+list_of_files2 <- list.files(path = here::here("data-raw/bacon_age_models/individual_cores"), recursive = TRUE,
+                             pattern = "ages\\.txt$",
+                             full.names = F) %>%
+  stringr::str_subset(., "old|z-Sites-not-using", negate = TRUE) %>%
+  stringr::word(.,1,sep = "\\/")
+
+# Read all the files and create a FileName column to store filenames
+bacon_age_models <- list_of_files %>%
+  purrr::set_names(list_of_files2) %>%
+  purrr::map_df(data.table::fread, .id = "FileName")
+
+bacon_age_models <-
+  dplyr::left_join(as.data.frame(bacon_age_models), read.csv(here::here("data-raw/bacon_age_models/filename_key.csv")), by = "FileName") %>%
+  dplyr::select(dataset.id, site.id, site.name, everything(), -FileName) %>%
+  dplyr::filter(site.name != "Alpine Pond") %>%
+  dplyr::bind_rows(., read.csv(here::here("data-raw/bacon_age_models/alpine_correction.csv"))) %>%
   tibble::as_tibble()
 
-usethis::use_data(updated_age_models,
+usethis::use_data(bacon_age_models,
                   overwrite = TRUE)
 
 
 # PRISM mean July temperature for 1961-1990.
 temp.raster <- raster::raster(here::here("data-raw/temp.raster.tif"))
+# temp.raster <- raster::raster("/Users/andrewgillreath-brown/Library/CloudStorage/Dropbox/WSU/SKOPEII/model/Archived\ versions/data_08-30-2022/raw_data/temp.raster.tif")
 
 usethis::use_data(temp.raster,
                   overwrite = TRUE)

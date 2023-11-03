@@ -72,6 +72,22 @@
 #' @source \url{https://www.ncei.noaa.gov/access/paleo-search/study/27330}
 "kaufman_2020"
 
+#' Osman et al. (2021) globally resolved surface temperatures data.
+#'
+#' A `tibble` containing Osman et al. (2021) globally resolved surface temperatures data.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://static-content.springer.com/esm/art%3A10.1038%2Fs41586-021-03984-4/MediaObjects/41586_2021_3984_MOESM3_ESM.xlsx}
+"osman_2021"
+
+#' PAGES 2k Consortium (2019) temperature anomalies (50th percentile) with respect to 1961–1990 CE.
+#'
+#' A `tibble` containing PAGES 2k Consortium (2019) temperature anomalies (50th percentile) with respect to 1961–1990 CE.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://www.ncei.noaa.gov/pub/data/paleo/pages2k/neukom2019temp/recons/Full_ensemble_median_and_95pct_range.txt}
+"pages2k_2019"
+
 #' Viau et al. (2006) North American July temperature reconstruction.
 #'
 #' A `tibble` containing Viau et al. (2006) North American July temperature reconstruction.
@@ -79,6 +95,14 @@
 #' @format An object of class `tibble`.
 #' @source \url{https://www.ncei.noaa.gov/pub/data/paleo/pollen/recons/northamerica/viau2006namerica-temp.xls}
 "viau_2006"
+
+#' Routson et al. (2021) summer temperature composite (500-year bins) for Western North America.
+#'
+#' A `tibble` containing Routson et al. (2021) summer temperature composite (500-year bins) for Western North America.
+#'
+#' @format An object of class `tibble`.
+#' @source \url{https://doi.org/10.6084/m9.figshare.12863843.v1}
+"routson_2021"
 
 #' Moberg et al. (2005) Northern Hemisphere low-frequency component.
 #'
@@ -104,13 +128,13 @@
 #' @source \url{https://ars.els-cdn.com/content/image/1-s2.0-S0277379108000061-mmc1.zip}
 "west_in_states"
 
-#' Updated Bacon Age Models.
+#' Bacon Age-depth Models.
 #'
-#' A `tibble` containing updated Bacon age models for several fossil pollen sites.
+#' A `tibble` containing  Bacon age models for fossil pollen sites.
 #'
 #' @format An object of class `tibble`.
 #' @source \url{https://www.neotomadb.org/}
-"updated_age_models"
+"bacon_age_models"
 
 #' Mean July Temperature from PRISM (1961-1990).
 #'

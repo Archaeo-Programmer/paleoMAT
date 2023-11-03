@@ -30,4 +30,12 @@ yoursession.RData
 .Rproj.user/
 .Rproj.user
 .Ruserdata
-Icon
+Icon
+
+# Specific Files for pushing to Git
+data-raw/bacon_age_models
+vignettes/data/full_reconstruction_output_FINAL.rds
+vignettes/data/diagnostics_reconstruction
+vignettes/data/pollen_cleaned
+vignettes/figures
+
