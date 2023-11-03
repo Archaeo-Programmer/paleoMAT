@@ -33,6 +33,5 @@ yoursession.RData
 Icon
 
 # Specific Files for pushing to Git
-data-raw/bacon_age_models/individual_cores/ignore
 vignettes/data/full_reconstruction_output_FINAL.rds
 
