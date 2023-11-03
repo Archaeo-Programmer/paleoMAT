@@ -179,7 +179,6 @@ usethis::use_data(bacon_age_models,
 
 # PRISM mean July temperature for 1961-1990.
 temp.raster <- raster::raster(here::here("data-raw/temp.raster.tif"))
-# temp.raster <- raster::raster("/Users/andrewgillreath-brown/Library/CloudStorage/Dropbox/WSU/SKOPEII/model/Archived\ versions/data_08-30-2022/raw_data/temp.raster.tif")
 
 usethis::use_data(temp.raster,
                   overwrite = TRUE)
