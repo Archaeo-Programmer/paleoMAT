@@ -7,10 +7,10 @@ temporal paleoclimate reconstruction from pollen using the
 MAT (Modern Analog Technique).
 
 This is the official R package for [paleoMAT](https://github.com/Archaeo-Programmer/paleomat), 
-which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2022 (submitted): 
+which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2023 (revisions submitted): 
 
-Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2022). A Low-Frequency Summer Temperature Reconstruction for the United 
-    States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene* for review.
+Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2023). A Low-Frequency Summer Temperature Reconstruction for the United 
+    States Southwest, 3000 BC – AD 2000. Revisions submitted to *The Holocene* for further review.
     
 All code for analysis and reconstruction is in [UUSS_MAT_Reconstruction.Rmd](vignettes/UUSS_MAT_Reconstruction.Rmd) and all code for figures and tables is in [Paleomat_Figures.Rmd](vignettes/Paleomat_Figures.Rmd).
 
@@ -28,10 +28,10 @@ devtools::install_github("Archaeo-Programmer/paleomat")
 The [:file\_folder: vignettes](vignettes) directory contains:
 
   - [:page\_facing\_up: UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd): R
-    Markdown document with all analysis for the submitted paper (Gillreath-Brown et al. 2022).
+    Markdown document with all analysis for the submitted paper (Gillreath-Brown et al. 2023).
     It also has a rendered version, [UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html).
   - [:page\_facing\_up: Paleomat_Figures](vignettes/Paleomat_Figures.Rmd): R
-    Markdown document that includes code to reproduce the figures and tables for the submitted paper (Gillreath-Brown et al. 2022).
+    Markdown document that includes code to reproduce the figures and tables for the submitted paper (Gillreath-Brown et al. 2023).
     It also has a rendered version, [Paleomat_Figures.html](vignettes/Paleomat_Figures.html).
   - [:file\_folder: figures](vignettes/figures): Plots, figures, and illustrations in the paper, including supplementary materials.
   - [:file\_folder: tables](vignettes/tables): Tables in the paper, including supplementary materials.
@@ -79,7 +79,7 @@ attribution requested in reuse
 ## Acknowledgements
 
 This material is based upon work supported by the National Science Foundation under Grants [SMA-1637171](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1637171) 
-and [SMA-1620462](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1620462), and by the Office of the Chancellor, [Washington State University-Pullman](https://wsu.edu/).
+and [SMA-1620462](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1620462), and by the Office of the Chancellor, [Washington State University-Pullman](https://wsu.edu/). Data were obtained from the [Neotoma Paleoecology Database](http://www.neotomadb.org) on October 23, 2021 and its constituent database(s) (North American Pollen Database). The work of data contributors, data stewards, and the Neotoma community is gratefully acknowledged.
 
 
 
