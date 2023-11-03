@@ -725,8 +725,10 @@ fossil_input2 <- fossil_input %>%
                tibble::column_to_rownames("sample.id"))
 
 
-# If you want to run the code for creating reconstructions (i.e., the predict.mat and predict.mat bootstrap output for each site), then you can uncomment the section below (the code takes approximately 30 minutes to run, depending on your machine). Here, we load the existing reconstruction file to save time. First, comment out the following line:
-reconstructions <- readRDS(here::here("vignettes/data/full_reconstruction_output_FINAL.rds"))
+# If you want to run the code for creating reconstructions (i.e., the predict.mat and predict.mat bootstrap output for each site), then you can uncomment the section below (the code takes approximately 30 minutes to run, depending on your machine). Below, we load output files from the model to save time.
+
+# You can use this line once you have ran the reconstruction. The file output was too large to load into GitHub.
+# reconstructions <- readRDS(here::here("vignettes/data/full_reconstruction_output_FINAL.rds"))
 
 # Iterate over the fossil pollen data to create reconstructions for each transfer function. 
 # reconstructions <-
@@ -839,9 +841,29 @@ mat_predict <-
 #   mat_predict,
 #   here::here("vignettes/data/diagnostics_reconstruction/mat_prediction.rds"))
 
+
+
 # Here, we pull out the data from the predict.mat objects. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the four record here.
-mat_prediction_4 <-
-  purrr::map_df(reconstructions, "recon_df")
+# Since, I do not run the reconstructions script here. I saved the output as a tibble.
+mat_prediction_4 <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/mat_prediction_4.rds"))
+
+# mat_prediction_4 <-
+#   purrr::map_df(reconstructions, "recon_df")
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   mat_prediction_4,
+#   here::here("vignettes/data/diagnostics_reconstruction/mat_prediction_4.rds"))
+
+
+# Since, I do not run the reconstructions script here. I saved the output as a tibble.
+predictMat <- readr::read_rds(here::here("vignettes/data/diagnostics_reconstruction/predictMat.rds"))
+# predictMat <- purrr::map(reconstructions, "recon")
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   predictMat,
+#   here::here("vignettes/data/diagnostics_reconstruction/predictMat.rds"))
 
 ```
 
@@ -867,7 +889,7 @@ pre_minDC_samples <- rlen_full_results1 %>%
   #dplyr::filter(dataset.id %in% only_90b) %>%
   dplyr::pull(sample.id)
 
-rlgh.mdc2 <- purrr::map(reconstructions, "recon") %>% 
+rlgh.mdc2 <- predictMat %>% 
   purrr::map_df(., "minDC") %>% 
   tidyr::pivot_longer(everything(), names_to = "ind", values_to = "values", values_drop_na = TRUE)
 
@@ -987,7 +1009,7 @@ tavg_new_90 <- fos_90 %>%
 modern_temperature <-
   as.data.frame(
     raster::extract(
-      x =  temp.raster,
+      x =  paleomat::temp.raster,
       y = tavg_new_90 %>% dplyr::ungroup() %>%
         dplyr::select(long, lat)
     )

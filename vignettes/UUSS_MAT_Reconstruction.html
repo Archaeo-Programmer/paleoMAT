@@ -11,7 +11,7 @@
 
 <meta name="author" content="Andrew Gillreath-Brown" />
 
-<meta name="date" content="2023-11-02" />
+<meta name="date" content="2023-11-03" />
 
 <title>paleoMAT: A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000</title>
 
@@ -1631,7 +1631,7 @@ pre code {
 Temperature Reconstruction for the United States Southwest, 3000 BC – AD
 2000</h1>
 <h4 class="author">Andrew Gillreath-Brown</h4>
-<h4 class="date">02 November 2023</h4>
+<h4 class="date">03 November 2023</h4>
 
 </div>
 
@@ -2317,8 +2317,10 @@ fossil_input2 &lt;- fossil_input %&gt;%
                tibble::column_to_rownames(&quot;sample.id&quot;))
 
 
-# If you do not want to run the code for creating reconstructions (which takes approximately 30 minutes to run, depending on your machine), then you can uncomment and run the following line:
-reconstructions &lt;- readRDS(here::here(&quot;vignettes/data/full_reconstruction_output_FINAL.rds&quot;))
+# If you want to run the code for creating reconstructions (i.e., the predict.mat and predict.mat bootstrap output for each site), then you can uncomment the section below (the code takes approximately 30 minutes to run, depending on your machine). Below, we load output files from the model to save time.
+
+# You can use this line once you have ran the reconstruction. The file output was too large to load into GitHub.
+# reconstructions &lt;- readRDS(here::here(&quot;vignettes/data/full_reconstruction_output_FINAL.rds&quot;))
 
 # Iterate over the fossil pollen data to create reconstructions for each transfer function. 
 # reconstructions &lt;-
@@ -2431,9 +2433,29 @@ mat_predict &lt;-
 #   mat_predict,
 #   here::here(&quot;vignettes/data/diagnostics_reconstruction/mat_prediction.rds&quot;))
 
+
+
 # Here, we pull out the data from the predict.mat objects. First, we pull out the predicted values for the four best analogues. In the analogue package, the analogues have cumulative means, so we only need to extract the four record here.
-mat_prediction_4 &lt;-
-  purrr::map_df(reconstructions, &quot;recon_df&quot;)</code></pre>
+# Since, I do not run the reconstructions script here. I saved the output as a tibble.
+mat_prediction_4 &lt;- readr::read_rds(here::here(&quot;vignettes/data/diagnostics_reconstruction/mat_prediction_4.rds&quot;))
+
+# mat_prediction_4 &lt;-
+#   purrr::map_df(reconstructions, &quot;recon_df&quot;)
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   mat_prediction_4,
+#   here::here(&quot;vignettes/data/diagnostics_reconstruction/mat_prediction_4.rds&quot;))
+
+
+# Since, I do not run the reconstructions script here. I saved the output as a tibble.
+predictMat &lt;- readr::read_rds(here::here(&quot;vignettes/data/diagnostics_reconstruction/predictMat.rds&quot;))
+# predictMat &lt;- purrr::map(reconstructions, &quot;recon&quot;)
+
+# If you need to write the data to file, then you can uncomment and run the following.
+# readr::write_rds(
+#   predictMat,
+#   here::here(&quot;vignettes/data/diagnostics_reconstruction/predictMat.rds&quot;))</code></pre>
 </div>
 </div>
 <div id="no-analog-threshold-or-minimum-dissimilarity" class="section level2">
@@ -2455,7 +2477,7 @@ pre_minDC_samples &lt;- rlen_full_results1 %&gt;%
   #dplyr::filter(dataset.id %in% only_90b) %&gt;%
   dplyr::pull(sample.id)
 
-rlgh.mdc2 &lt;- purrr::map(reconstructions, &quot;recon&quot;) %&gt;% 
+rlgh.mdc2 &lt;- predictMat %&gt;% 
   purrr::map_df(., &quot;minDC&quot;) %&gt;% 
   tidyr::pivot_longer(everything(), names_to = &quot;ind&quot;, values_to = &quot;values&quot;, values_drop_na = TRUE)
 
@@ -2568,7 +2590,7 @@ tavg_new_90 &lt;- fos_90 %&gt;%
 modern_temperature &lt;-
   as.data.frame(
     raster::extract(
-      x =  temp.raster,
+      x =  paleomat::temp.raster,
       y = tavg_new_90 %&gt;% dplyr::ungroup() %&gt;%
         dplyr::select(long, lat)
     )
