@@ -2,7 +2,7 @@ Package: paleomat
 Type: Package
 Title: Creates Temperature Reconstructions from Pollen Data
 Version: 1.0.0
-Date: 2022-08-31
+Date: 2023-12-19
 Authors@R: 
     c(
     person(given = "Andrew",
@@ -22,11 +22,11 @@ Authors@R:
            comment = c(ORCID = "0000-0002-3414-6660"))
            )
 Maintainer: Andrew Gillreath-Brown <andrew.d.brown@wsu.edu>
-Description: This R package repository is to accompany the submission for Gillreath-Brown et al. 2022, which preforms paleoclimate 
+Description: This R package repository is to accompany the submission for Gillreath-Brown et al. 2023, which preforms paleoclimate 
     (i.e., temperature) reconstruction from pollen data using the modern analog technique (MAT). This package contains all code 
-    associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2022 (submitted): 
-    Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2022). A Low-Frequency Summer Temperature Reconstruction for the United 
-    States Southwest, 3000 BC – AD 2000. Submitted to *The Holocene*.
+    associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2023: 
+    Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2023). A Low-Frequency Summer Temperature Reconstruction for the United 
+    States Southwest, 3000 BC – AD 2000. *The Holocene*.
 License: MIT + file LICENSE
 Depends: 
     magrittr,

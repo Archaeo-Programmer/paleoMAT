@@ -7,10 +7,9 @@ temporal paleoclimate reconstruction from pollen using the
 MAT (Modern Analog Technique).
 
 This is the official R package for [paleoMAT](https://github.com/Archaeo-Programmer/paleomat), 
-which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2023 (revisions submitted): 
+which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2023: 
 
-Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2023). A Low-Frequency Summer Temperature Reconstruction for the United 
-    States Southwest, 3000 BC – AD 2000. Revisions submitted to *The Holocene* for further review.
+Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2023). A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000. *The Holocene*.
     
 All code for analysis and reconstruction is in [UUSS_MAT_Reconstruction.Rmd](vignettes/UUSS_MAT_Reconstruction.Rmd) and all code for figures and tables is in [Paleomat_Figures.Rmd](vignettes/Paleomat_Figures.Rmd).
 
@@ -79,7 +78,7 @@ attribution requested in reuse
 ## Acknowledgements
 
 This material is based upon work supported by the National Science Foundation under Grants [SMA-1637171](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1637171) 
-and [SMA-1620462](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1620462), and by the Office of the Chancellor, [Washington State University-Pullman](https://wsu.edu/). Data were obtained from the [Neotoma Paleoecology Database](http://www.neotomadb.org) on October 23, 2021 and its constituent database(s) (North American Pollen Database). The work of data contributors, data stewards, and the Neotoma community is gratefully acknowledged.
+and [SMA-1620462](https://www.nsf.gov/awardsearch/showAward?AWD_ID=1620462), and by the Office of the Chancellor, [Washington State University-Pullman](https://wsu.edu/). Data were obtained from the [Neotoma Paleoecology Database](http://www.neotomadb.org) on October 23, 2021 using the neotoma 1.0 R package and its constituent database(s) (North American Pollen Database). The work of data contributors, data stewards, and the Neotoma community is gratefully acknowledged.
 
 
 
