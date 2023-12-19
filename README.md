@@ -27,10 +27,10 @@ devtools::install_github("Archaeo-Programmer/paleomat")
 The [:file\_folder: vignettes](vignettes) directory contains:
 
   - [:page\_facing\_up: UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd): R
-    Markdown document with all analysis for the submitted paper (Gillreath-Brown et al. 2023).
+    Markdown document with all analysis for Gillreath-Brown et al. 2023.
     It also has a rendered version, [UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html).
   - [:page\_facing\_up: Paleomat_Figures](vignettes/Paleomat_Figures.Rmd): R
-    Markdown document that includes code to reproduce the figures and tables for the submitted paper (Gillreath-Brown et al. 2023).
+    Markdown document that includes code to reproduce the figures and tables for Gillreath-Brown et al. 2023.
     It also has a rendered version, [Paleomat_Figures.html](vignettes/Paleomat_Figures.html).
   - [:file\_folder: figures](vignettes/figures): Plots, figures, and illustrations in the paper, including supplementary materials.
   - [:file\_folder: tables](vignettes/tables): Tables in the paper, including supplementary materials.
