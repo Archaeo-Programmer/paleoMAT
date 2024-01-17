@@ -7,9 +7,9 @@ temporal paleoclimate reconstruction from pollen using the
 MAT (Modern Analog Technique).
 
 This is the official R package for [paleoMAT](https://github.com/Archaeo-Programmer/paleomat), 
-which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2023: 
+which contains all code associated with the analyses described and presented, including figures and tables, in Gillreath-Brown et al. 2024: 
 
-Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2023). A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000. *The Holocene*.
+Gillreath-Brown, A., R. K. Bocinsky, and T. A. Kohler (2024). A Low-Frequency Summer Temperature Reconstruction for the United States Southwest, 3000 BC – AD 2000. *The Holocene*. [https://doi.org/10.1177/09596836231219482](https://doi.org/10.1177/09596836231219482)
     
 All code for analysis and reconstruction is in [UUSS_MAT_Reconstruction.Rmd](vignettes/UUSS_MAT_Reconstruction.Rmd) and all code for figures and tables is in [Paleomat_Figures.Rmd](vignettes/Paleomat_Figures.Rmd).
 
@@ -27,10 +27,10 @@ devtools::install_github("Archaeo-Programmer/paleomat")
 The [:file\_folder: vignettes](vignettes) directory contains:
 
   - [:page\_facing\_up: UUSS_MAT_Reconstruction](vignettes/UUSS_MAT_Reconstruction.Rmd): R
-    Markdown document with all analysis for Gillreath-Brown et al. 2023.
+    Markdown document with all analysis for Gillreath-Brown et al. 2024.
     It also has a rendered version, [UUSS_MAT_Reconstruction.html](vignettes/UUSS_MAT_Reconstruction.html).
   - [:page\_facing\_up: Paleomat_Figures](vignettes/Paleomat_Figures.Rmd): R
-    Markdown document that includes code to reproduce the figures and tables for Gillreath-Brown et al. 2023.
+    Markdown document that includes code to reproduce the figures and tables for Gillreath-Brown et al. 2024.
     It also has a rendered version, [Paleomat_Figures.html](vignettes/Paleomat_Figures.html).
   - [:file\_folder: figures](vignettes/figures): Plots, figures, and illustrations in the paper, including supplementary materials.
   - [:file\_folder: tables](vignettes/tables): Tables in the paper, including supplementary materials.
